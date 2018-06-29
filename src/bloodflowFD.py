@@ -14,6 +14,10 @@ A = πR²
 
 r_0 = constant
 
+q(0,t) = q_inlet(t)
+q(L,t) = q(0,t), as the fluid is incompressible (?).
+q(x,0) = q_inlet(0) since r_0 = constant, which makes the artery a perfect cylinder.
+
 --------------------------------------
 """
 
@@ -37,14 +41,14 @@ data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
 t = data_q[:,0]
 q_inlet = data_q[:,1]
 
-N = len(t)
+N = len(t)-1
 M = 100
 
 L = 20.8
 Tf = t[-1]
 
-dx = L/M # Constant
-# dt is not constant.
+dx = L/M            # constant
+dt = t[1:] - t[:-1] # dt is not constant
 
 
 r0 = 0.37
@@ -54,7 +58,7 @@ Re = 1.0
 nu = 1.0
 T = 1.0
 db = np.sqrt(nu*T/2/np.pi)
-A0 = pi*r0**2
+A0 = np.pi*r0**2
 
 f = 4*E*H/3/r0
 
@@ -70,36 +74,32 @@ def S(U):
 	
 #####################################################################
 
-# We want to store the discrete solution U_m^n, 0<=m<=M, 0<=n<=N not as a matrix, but as a vector containing all the columns of the matrix. This allows us to write the passage from time step n to n+1 as an affine transformation.
+# Initialisation
+U = np.zeros([2,M+1,N+1])
 
-# Returns the index k of the vector associated with the matrix (U_m^n)mn
-def indk(m,n):
-	return m + (M+1)*n
+U[0,:,0] = A0*np.ones(M+1)
+U[0,0,:] = A0*np.ones(N+1)
+U[0,-1,:] = A0*np.ones(N+1)
 
-# Returns the index mn of the matrix associated with the vector (U_k)k
-def indmn(k):
-	return k - k%(M+1, k%(M+1)
+U[1,0,:] = q_inlet
+U[1,-1,:] = q_inlet
+U[1,:,0] = q_inlet[0]*np.ones(M+1)
 
-# Returns the vector form of the matrix (U_m^n)mn
-def vect(U):
-	vectU = np.zeros((M+1)*(N+1))
-	for n in range(N+1):
-		for m in range(M+1):
-			vectU[indk(m,n)] = U[m,n]
-	return vectU
+# Time loop
+for n in range(N):
+	# Definitions for compact formulae
+	dtn = dt[n]
+	Un = U[:,:,n]
+	Fn = F(Un)
+	Sn = S(Un)
+	# Half step
+	U_half = (Un[:,1:]+Un[:,:-1])/2 - dtn/dx/2*(Fn[:,1:]-Fn[:,:1]) + dtn/4*(Sn[:,1:]+Sn[:,:1])
+	F_half = F(U_half)
+	S_half = S(U_half)
+	#Complete step
+	Un1 = Un[:,1:-1] - dtn/dx*(F_half[:,1:]-F_half[:,:-1]) + dtn/2*(S_half[:,1:]+S_half[:,:-1])
+	U[:,1:-1,n+1] = Un1
 
-# Returns the matrix for of the vector (U_k)k
-def mat(U):
-	matU = np.zeros([(M+1),(N+1)])
-	for n in range(N+1):
-		for m in range(M+1):
-			matU[m,n] = U[indk(m,n)]
-	return matU
-
-####################################################################
-
-# We write 
-
-
-
-
+plt.imshow(U)
+plt.colorbar()
+plt.savefig('flow.png')
