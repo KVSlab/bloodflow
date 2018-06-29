@@ -42,7 +42,7 @@ t = data_q[:,0]
 q_inlet = data_q[:,1]
 
 N = len(t)-1
-M = 100
+M = 5
 
 L = 20.8
 Tf = t[-1]
@@ -50,12 +50,13 @@ Tf = t[-1]
 dx = L/M            # constant
 dt = t[1:] - t[:-1] # dt is not constant
 
+x = np.linspace(0,L,M+1)
 
 r0 = 0.37
-E = 1.0
+E = 1.0e+6
 H = 0.01
 Re = 1.0
-nu = 1.0
+nu = 0.04
 T = 1.0
 db = np.sqrt(nu*T/2/np.pi)
 A0 = np.pi*r0**2
@@ -66,40 +67,54 @@ f = 4*E*H/3/r0
 
 # We define F and S as functions of U, where U[0] = A and U[1] = q
 
-def F(U):
-	return np.array([U[1], U[1]**2 + np.sqrt(A0*U[0])])
+def F(A,q):
+	return np.array([q, q**2 + f*np.sqrt(A0*A)])
 
-def S(U):
-	return np.array([0, -2*np.sqrt(np.pi)/db/Re*U[1]/np.sqrt(U[0])])
+def S(A,q):
+	return np.array([0*A, -2*np.sqrt(np.pi)/db/Re*q/np.sqrt(A)])
 	
 #####################################################################
 
 # Initialisation
-U = np.zeros([2,M+1,N+1])
+A = np.zeros([M+1,N+1])
+q = np.zeros([M+1,N+1])
 
-U[0,:,0] = A0*np.ones(M+1)
-U[0,0,:] = A0*np.ones(N+1)
-U[0,-1,:] = A0*np.ones(N+1)
+A[:,0] = A0*np.ones(M+1)
+A[0,:] = A0*np.ones(N+1)
+A[-1,:] = A0*np.ones(N+1)
 
-U[1,0,:] = q_inlet
-U[1,-1,:] = q_inlet
-U[1,:,0] = q_inlet[0]*np.ones(M+1)
+q[0,:] = q_inlet
+q[-1,:] = q_inlet
+q[:,0] = q_inlet[0]*np.ones(M+1)
 
 # Time loop
 for n in range(N):
+
 	# Definitions for compact formulae
 	dtn = dt[n]
-	Un = U[:,:,n]
-	Fn = F(Un)
-	Sn = S(Un)
+	An = A[:,n]
+	qn = q[:,n]
+	Fn = F(An,qn)
+	Sn = S(An,qn)
+	
 	# Half step
-	U_half = (Un[:,1:]+Un[:,:-1])/2 - dtn/dx/2*(Fn[:,1:]-Fn[:,:1]) + dtn/4*(Sn[:,1:]+Sn[:,:1])
-	F_half = F(U_half)
-	S_half = S(U_half)
+	A_half = (An[1:]+An[:-1])/2 - dtn/dx/2*(Fn[0,1:]-Fn[0,:1]) + dtn/4*(Sn[0,1:]+Sn[0,:1])
+	q_half = (qn[1:]+qn[:-1])/2 - dtn/dx/2*(Fn[1,1:]-Fn[1,:1]) + dtn/4*(Sn[1,1:]+Sn[1,:1])
+	F_half = F(A_half, q_half)
+	S_half = S(A_half, q_half)
+	
 	#Complete step
-	Un1 = Un[:,1:-1] - dtn/dx*(F_half[:,1:]-F_half[:,:-1]) + dtn/2*(S_half[:,1:]+S_half[:,:-1])
-	U[:,1:-1,n+1] = Un1
+	An1 = An[1:-1] - dtn/dx*(F_half[0,1:]-F_half[0,:-1]) + dtn/2*(S_half[0,1:]+S_half[0,:-1])
+	qn1 = qn[1:-1] - dtn/dx*(F_half[1,1:]-F_half[1,:-1]) + dtn/2*(S_half[1,1:]+S_half[1,:-1])
+	A[1:-1,n+1] = An1
+	q[1:-1,n+1] = qn1
+	
+fig1 = plt.figure()
+plt.imshow(A)
+plt.colorbar()
+plt.savefig('area.png')
 
-plt.imshow(U)
+fig2 = plt.figure()
+plt.imshow(q)
 plt.colorbar()
 plt.savefig('flow.png')
