@@ -8,9 +8,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
-print(data_q)
-plt.plot(data_q[:,0], data_q[:,1])
-plt.savefig('data.png')
+#print(data_q)
+#plt.plot(data_q[:,0], data_q[:,1])
+#plt.savefig('data.png')
+
+tt = data_q[:,0]
+qq = data_q[:,1]
 
 L, Tfinal = 20.8, data_q[-1,0]
 Nx, Nt = 100, len(data_q[:,0])
@@ -35,7 +38,7 @@ R = Function(V)
 q = Function(V)
 A = pi*pow(R,2)
 
-q_inlet = project(data_q, W)
+q_inlet = project(tt,qq, W)
 
 
 U = as_vector([A,q])
