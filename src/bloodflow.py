@@ -83,16 +83,29 @@ bcs = [bc_inlet, bc_init]
 
 U = Function(V2)
 A, q = split(U)
+
+#UR = Function(V2)
+#R, q = split(UR)
+
 v1, v2 = TestFunctions(V2)
 
 e1 = Constant((1,0))
 e2 = Constant((0,1))
+
 
 FF = div(A*e2)*v1*dx\
   + div(q*(v1*e1+v2*e2))*dx\
   + div((pow(q,2)/A+f*sqrt(A0*A))*e1)*v2*dx\
   + 2*sqrt(pi)/db/Re*q/sqrt(A)*v2*dx
 
+
+"""
+FFR = 2*pi*R*dot(grad(R),e2)*v1*dx\
+    + dot(grad(q),e1)*v1*dx\
+    + dot(grad(q),e2)*v2*dx\
+    + (2/pi*q/pow(R,2)*dot(grad(q),e1)-4/pi*pow(q,2)/pow(R,2)+f*sqrt(pi*A0)*dot(grad(R),e1))*v2*dx\
+    + 2/db/Re*q/R*v2*dx
+"""
 solve(FF == 0, U, bcs)
 
 
