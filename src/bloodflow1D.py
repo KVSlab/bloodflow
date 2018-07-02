@@ -33,7 +33,7 @@ tt = data_q[:,0]
 qq = data_q[:,1]
 
 L, T = 20.8, data_q[-1,0]
-Nx, Nt = 5, 5000 # len(data_q[:,0])
+Nx, Nt = 10, 10 # len(data_q[:,0])
 
 r0 = 0.37
 E = 1.0e+6
@@ -44,19 +44,13 @@ db = np.sqrt(nu*T/2/pi)
 
 f = 4*E*H/3/r0
 
-mesh = RectangleMesh(Point(0,0), Point(L, T), Nx, Nt)
+mesh = IntervalMesh(0, L, Nx)
 
 V = FiniteElement("CG", mesh.ufl_cell(), 1)
 V2 = FunctionSpace(mesh, V*V)
 
-
-U0 = Function(V2)
-#A00, q0 = split(U0)
-#q0 = U0.sub(1)
-
-q0 = Constant(5.0)
-q_inlet = q0
-q_outlet = q0
+q_inlet = Constant(5.0)
+q0 = q_inlet
 
 A0 = Constant(pi*pow(r0,2))
 
@@ -74,38 +68,33 @@ def init_bdry(x, on_boundary):
 
 bc_inlet = DirichletBC(V2.sub(1), q_inlet, inlet_bdry)
 bc_outlet = DirichletBC(V2.sub(1), q_outlet, outlet_bdry)
-bc_init = DirichletBC(V2.sub(0), Constant(A0), init_bdry)
 
-#bcs = [bc_inlet, bc_outlet, bc_init]
-bcs = [bc_inlet, bc_init]
+#bcs = [bc_inlet, bc_outlet]
+bcs = [bc_inlet]
 
 
 U = Function(V2)
 A, q = split(U)
 
-#UR = Function(V2)
-#R, q = split(UR)
+U_n = Constant((A0,q0))
 
 v1, v2 = TestFunctions(V2)
 
-e1 = Constant((1,0))
-e2 = Constant((0,1))
+for n in range(Nt):
+
+	FF = A*v1*dx\
+	   + q*v2*dx\
+	   + dt*grad(q)*v1*dx\
+	   + dt*(pow(q,2)/A+f*sqrt(A0*A)*v2*ds\
+	   + dt*grad(pow(q,2)/A+f*sqrt(A0*A))*grad(v2)*dx\
+	   + dt*2*sqrt(pi)/db/Re*q/sqrt(A)*v2*dx\
+	   - dot(U_n,(v1,v2))*dx
+#+ dt*grad(pow(q,2)/A+f*sqrt(A0*A))*v2*dx\
+	solve(FF == 0, U, bcs)
+	
+	U_n.assign(U)
 
 
-FF = div(A*e2)*v1*dx\
-  + div(q*(v1*e1+v2*e2))*dx\
-  + div((pow(q,2)/A+f*sqrt(A0*A))*e1)*v2*dx\
-  + 2*sqrt(pi)/db/Re*q/sqrt(A)*v2*dx
-
-
-"""
-FFR = 2*pi*R*dot(grad(R),e2)*v1*dx\
-    + dot(grad(q),e1)*v1*dx\
-    + dot(grad(q),e2)*v2*dx\
-    + (2/pi*q/pow(R,2)*dot(grad(q),e1)-4/pi*pow(q,2)/pow(R,2)+f*sqrt(pi*A0)*dot(grad(R),e1))*v2*dx\
-    + 2/db/Re*q/R*v2*dx
-"""
-solve(FF == 0, U, bcs)
 
 
 
