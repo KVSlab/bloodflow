@@ -5,9 +5,9 @@ Author : Syver Døving Agdestein
 
 dU/dt + dF/dx = S
 
-             | A(x,t) |                |       q            |                  |       0        |
-U = U(x,t) = |        |,    F = F(U) = |                    |,      S = S(U) = |                |
-             | q(x,t) |                | q²/A + sqrt(A_0*A) |                  | -2πR/dbRe q/A  |
+             | A(x,t) |                |            q            |                  |       0        |
+U = U(x,t) = |        |,    F = F(U) = |                         |,      S = S(U) = |                |
+             | q(x,t) |                | q²/A + f(r0)sqrt(A_0*A) |                  | -2πR/dbRe q/A  |
 
 A = πR²
 
@@ -23,18 +23,28 @@ q(x,0) = q_inlet(0) since r_0 = constant, which makes the artery a perfect cylin
 from fenics import *
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.interpolate as ip
 
 data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
 #print(data_q)
 #plt.plot(data_q[:,0], data_q[:,1])
 #plt.savefig('data.png')
 
-tt = data_q[:,0]
-qq = data_q[:,1]
+ttt = data_q[:,0]
+qqq = data_q[:,1]
 
 L, T = 20.8, data_q[-1,0]
-Nx, Nt = 10, 10 # len(data_q[:,0])
+Nx, Nt = 10, 500 # len(data_q[:,0])
 
+qt = ip.interp1d(ttt, qqq)
+tt = np.linspace(0,T,Nt)
+qq = qt(tt)
+
+#plt.plot(tt,qq)
+#plt.savefig('ttqq.png')
+
+#dt = ttt[1:]-ttt[:-1]
+#dt = min(ttt[1:]-ttt[:-1])
 dt = T/Nt
 
 r0 = 0.37
@@ -48,12 +58,14 @@ f = 4*E*H/3/r0
 
 mesh = IntervalMesh(Nx, 0, L)
 
-V = FiniteElement("CG", mesh.ufl_cell(), 1)
-V2 = FunctionSpace(mesh, V*V)
+elV = FiniteElement("CG", mesh.ufl_cell(), 1)
+V = FunctionSpace(mesh, elV)
+V2 = FunctionSpace(mesh, elV*elV)
 
-q_inlet = Constant(5.0)
-q0 = q_inlet
-
+#q_inlet = Constant(5.0)
+#q0 = Constant(qq[0])
+q0 = Function(V)
+q0.assign(Constant(qq[0]))
 A0 = Constant(pi*pow(r0,2))
 
 
@@ -72,8 +84,8 @@ bc_inlet_q = DirichletBC(V2.sub(1), q0, inlet_bdry)
 bc_outlet_q = DirichletBC(V2.sub(1), q0, outlet_bdry)
 
 #bcs = [bc_inlet_A, bc_outlet_A, bc_inlet_q, bc_outlet_q]
-#bcs = [bc_inlet, bc_outlet]
-bcs = [bc_inlet_q]
+bcs = [bc_inlet_q, bc_outlet_q]
+#bcs = [bc_inlet_q]
 
 
 U = Function(V2)
@@ -82,30 +94,42 @@ A, q = split(U)
 v1, v2 = TestFunctions(V2)
 
 U_n = Function(V2)
-U_n.assign(Constant((A0,q0)))
+U_n.assign(Constant((A0,q0(0))))
 
 xdmffile_U = XDMFFile('bloodflow1D.xdmf')
 #xdmffile_A = XDMFFile('bloodflow1D_A.xdmf')
 #xdmffile_q = XDMFFile('bloodflow1D_q.xdmf')
 
-for n in range(Nt):
+FF = A*v1*dx\
+   + q*v2*dx\
+   + dt*grad(q)[0]*v1*dx\
+   + dt*grad(pow(q,2)/A+f*sqrt(A0*A))[0]*v2*dx\
+   + dt*grad(f*sqrt(A0*A))[0]*v2*dx\
+   - U_n[0]*v1*dx\
+   - U_n[1]*v2*dx
 
-	FF = A*v1*dx\
-	   + q*v2*dx\
-	   + dt*grad(q)*v1*dx\
-	   + dt*(pow(q,2)/A+f*sqrt(A0*A)*v2*ds\
-	   + dt*grad(pow(q,2)/A+f*sqrt(A0*A))*grad(v2)*dx\
-	   + dt*2*sqrt(pi)/db/Re*q/sqrt(A)*v2*dx\
-	   - dot(U_n,(v1,v2))*dx
-#+ dt*grad(pow(q,2)/A+f*sqrt(A0*A))*v2*dx\
-	solve(FF == 0, U, bcs)
-	
-	U_n.assign(U)
+for i in range(1):
 
-	xdmffile_U.write(U, n*T/Nt)
-	#xdmffile_A.write(A, n*T/Nt)
-	#xdmffile_q.write(q, n*T/Nt)
-	
+	t = 0
+
+	for n in range(Nt-1):
+		
+		t += dt
+
+		solve(FF == 0, U, bcs)
+		if n % (int(Nt/10)) == 0:
+			plot(q)
+		U_n.assign(U)
+		
+		q0.assign(Constant(qq[n]))
+
+		xdmffile_U.write(U, dt)
+		#xdmffile_A.write(A, dt)
+		#xdmffile_q.write(q, dt)
+
+
+plt.ylim(0, 25)
+plt.savefig('q.png')
 
 
 
