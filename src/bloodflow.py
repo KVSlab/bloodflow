@@ -88,15 +88,11 @@ A, q = split(U)
 
 v1, v2 = TestFunctions(V2)
 
-e1 = Constant((1,0))
-e2 = Constant((0,1))
-
-
-FF = div(A*e2)*v1*dx\
-  + div(q*(v1*e1+v2*e2))*dx\
-  + div((pow(q,2)/A+f*sqrt(A0*A))*e1)*v2*dx\
+FF = grad(A)[1]*v1*dx\
+  + grad(q)[0]*v1*dx\
+  + grad(q)[1]*v2*dx\
+  + grad(pow(q,2)/A+f*sqrt(A0*A))[0]*v2*dx\
   + 2*sqrt(pi)/db/Re*q/sqrt(A)*v2*dx
-
 
 """
 FFR = 2*pi*R*dot(grad(R),e2)*v1*dx\
