@@ -34,11 +34,13 @@ ttt = data_q[:,0]
 qqq = data_q[:,1]
 
 L, T = 20.8, data_q[-1,0]
-Nx, Nt = 10, 500 # len(data_q[:,0])
+Nx, Nt = 3000, 300 # len(data_q[:,0])
 
 qt = ip.interp1d(ttt, qqq)
 tt = np.linspace(0,T,Nt)
 qq = qt(tt)
+#qq = np.linspace(0,25,Nt)
+#qq = 5.0*np.ones(Nt)
 
 #plt.plot(tt,qq)
 #plt.savefig('ttqq.png')
@@ -50,15 +52,15 @@ dt = T/Nt
 r0 = 0.37
 E = 1.0e+6
 H = 0.01
-Re = 1.0
 nu = 0.046
+Re = 10.0/nu/1.0
 db = np.sqrt(nu*T/2/pi)
 
 f = 4*E*H/3/r0
 
 mesh = IntervalMesh(Nx, 0, L)
 
-elV = FiniteElement("CG", mesh.ufl_cell(), 1)
+elV = FiniteElement("CG", mesh.ufl_cell(), 2)
 V = FunctionSpace(mesh, elV)
 V2 = FunctionSpace(mesh, elV*elV)
 
@@ -84,9 +86,9 @@ bc_inlet_q = DirichletBC(V2.sub(1), q0, inlet_bdry)
 bc_outlet_q = DirichletBC(V2.sub(1), q0, outlet_bdry)
 
 #bcs = [bc_inlet_A, bc_outlet_A, bc_inlet_q, bc_outlet_q]
-bcs = [bc_inlet_q, bc_outlet_q]
-#bcs = [bc_inlet_q]
-
+#bcs = [bc_inlet_q, bc_outlet_q]
+#bcs = [bc_inlet_A, bc_inlet_q]
+bcs = [bc_inlet_q]
 
 U = Function(V2)
 A, q = split(U)
@@ -103,10 +105,12 @@ xdmffile_U = XDMFFile('bloodflow1D.xdmf')
 FF = A*v1*dx\
    + q*v2*dx\
    + dt*grad(q)[0]*v1*dx\
-   + dt*grad(pow(q,2)/A+f*sqrt(A0*A))[0]*v2*dx\
-   + dt*grad(f*sqrt(A0*A))[0]*v2*dx\
+   + dt*grad(pow(q,2)/(A+1.e-14)+f*sqrt(A0*(A+1.e-14)))[0]*v2*dx\
+   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-14)*v2*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
+
+qmat = np.zeros([Nx, Nt])
 
 for i in range(1):
 
@@ -114,11 +118,19 @@ for i in range(1):
 
 	for n in range(Nt-1):
 		
+		#VV = FunctionSpace(mesh, 'CG', 1)
+		#qvect = interpolate(q,VV)
+		#qmat[:,n] = qvect.vector().array()[1]
+		
+		print('Iteration '+str(n))
+		
 		t += dt
 
 		solve(FF == 0, U, bcs)
-		if n % (int(Nt/10)) == 0:
+		
+		if n % (int(Nt/100)) == 0:
 			plot(q)
+			
 		U_n.assign(U)
 		
 		q0.assign(Constant(qq[n]))
@@ -126,8 +138,11 @@ for i in range(1):
 		xdmffile_U.write(U, dt)
 		#xdmffile_A.write(A, dt)
 		#xdmffile_q.write(q, dt)
+		
+#qmat[:,-1] = U.vector().array()[1]		
+#plt.imshow(qmat)
 
-
+plt.scatter(0,qq[0])
 plt.ylim(0, 25)
 plt.savefig('q.png')
 
