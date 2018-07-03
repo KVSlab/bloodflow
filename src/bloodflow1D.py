@@ -24,6 +24,7 @@ from fenics import *
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.interpolate as ip
+from mpl_toolkits.mplot3d import Axes3D
 
 data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
 #print(data_q)
@@ -34,7 +35,9 @@ ttt = data_q[:,0]
 qqq = data_q[:,1]
 
 L, T = 20.8, data_q[-1,0]
-Nx, Nt = 3000, 300 # len(data_q[:,0])
+Nx, Nt = 100, 100 # len(data_q[:,0])
+
+xx = np.linspace(0,L,Nx)
 
 qt = ip.interp1d(ttt, qqq)
 tt = np.linspace(0,T,Nt)
@@ -112,38 +115,46 @@ FF = A*v1*dx\
 
 qmat = np.zeros([Nx, Nt])
 
-for i in range(1):
+qmat[:,0] = qq[0]*np.ones(Nx)
 
+for i in range(3):
+	
 	t = 0
 
 	for n in range(Nt-1):
-		
-		#VV = FunctionSpace(mesh, 'CG', 1)
-		#qvect = interpolate(q,VV)
-		#qmat[:,n] = qvect.vector().array()[1]
 		
 		print('Iteration '+str(n))
 		
 		t += dt
 
 		solve(FF == 0, U, bcs)
-		
-		if n % (int(Nt/100)) == 0:
-			plot(q)
+		#if n % (int(Nt/100)) == 0:
+		#	plot(A)
 			
 		U_n.assign(U)
 		
 		q0.assign(Constant(qq[n]))
-
+		
 		xdmffile_U.write(U, dt)
 		#xdmffile_A.write(A, dt)
 		#xdmffile_q.write(q, dt)
 		
-#qmat[:,-1] = U.vector().array()[1]		
-#plt.imshow(qmat)
+		
+		qmat[:,n+1] = np.array([q([xx[i]]) for i in range(Nx)])
+		
+		
 
-plt.scatter(0,qq[0])
-plt.ylim(0, 25)
+plt.imshow(qmat)
+
+#plt.scatter(0,qq[0])
+#plt.ylim(-5, 30)
+
+X, Y = np.meshgrid(tt, xx)
+
+fig = plt.figure(figsize=(12,8))
+ax = fig.gca(projection='3d')
+surf = ax.plot_surface(X, Y, qmat, cmap='viridis', linewidth=0, antialiased=False)
+
 plt.savefig('q.png')
 
 
