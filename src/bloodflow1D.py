@@ -63,7 +63,7 @@ f = 4*E*H/3/r0
 
 mesh = IntervalMesh(Nx, 0, L)
 
-elV = FiniteElement("CG", mesh.ufl_cell(), 2)
+elV = FiniteElement("CG", mesh.ufl_cell(), 1)
 V = FunctionSpace(mesh, elV)
 V2 = FunctionSpace(mesh, elV*elV)
 
@@ -117,32 +117,28 @@ qmat = np.zeros([Nx, Nt])
 
 qmat[:,0] = qq[0]*np.ones(Nx)
 
-# Loop for multiple cardiac cycles
-for i in range(1):
 	
-	t = 0
+t = 0
 
-	for n in range(Nt-1):
-		
-		print('Iteration '+str(n))
-		
-		t += dt
+for n in range(Nt-1):
+	
+	print('Iteration '+str(n))
+	
+	t += dt
 
-		solve(FF == 0, U, bcs)
-		#if n % (int(Nt/100)) == 0:
-		#	plot(A)
-			
-		U_n.assign(U)
+	solve(FF == 0, U, bcs)
+	#if n % (int(Nt/100)) == 0:
+	#	plot(A)
 		
-		q0.assign(Constant(qq[n]))
-		
-		xdmffile_U.write(U, dt)
-		#xdmffile_A.write(A, dt)
-		#xdmffile_q.write(q, dt)
-		
-		
-		qmat[:,n+1] = [q([x]) for x in xx]
-		
+	U_n.assign(U)
+	
+	q0.assign(Constant(qq[n]))
+	
+	xdmffile_U.write(U, dt)
+	#xdmffile_A.write(A, dt)
+	#xdmffile_q.write(q, dt)
+	
+	qmat[:,n+1] = [q([x]) for x in xx]
 		
 
 plt.imshow(qmat)
