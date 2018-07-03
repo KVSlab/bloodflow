@@ -39,7 +39,7 @@ Nx, Nt = 100, 100 # len(data_q[:,0])
 
 xx = np.linspace(0,L,Nx)
 
-qt = ip.interp1d(ttt, qqq)
+qt = ip.interp1d(ttt, qqq, kind = 'cubic')
 tt = np.linspace(0,T,Nt)
 qq = qt(tt)
 #qq = np.linspace(0,25,Nt)
@@ -108,8 +108,8 @@ xdmffile_U = XDMFFile('bloodflow1D.xdmf')
 FF = A*v1*dx\
    + q*v2*dx\
    + dt*grad(q)[0]*v1*dx\
-   + dt*grad(pow(q,2)/(A+1.e-14)+f*sqrt(A0*(A+1.e-14)))[0]*v2*dx\
-   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-14)*v2*dx\
+   + dt*grad(pow(q,2)/(A+1.e-16)+f*sqrt(A0*(A+1.e-16)))[0]*v2*dx\
+   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-16)*v2*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
 
@@ -117,7 +117,8 @@ qmat = np.zeros([Nx, Nt])
 
 qmat[:,0] = qq[0]*np.ones(Nx)
 
-for i in range(3):
+# Loop for multiple cardiac cycles
+for i in range(1):
 	
 	t = 0
 
@@ -140,7 +141,7 @@ for i in range(3):
 		#xdmffile_q.write(q, dt)
 		
 		
-		qmat[:,n+1] = np.array([q([xx[i]]) for i in range(Nx)])
+		qmat[:,n+1] = [q([x]) for x in xx]
 		
 		
 
@@ -153,9 +154,12 @@ X, Y = np.meshgrid(tt, xx)
 
 fig = plt.figure(figsize=(12,8))
 ax = fig.gca(projection='3d')
-surf = ax.plot_surface(X, Y, qmat, cmap='viridis', linewidth=0, antialiased=False)
+surf = ax.plot_surface(X, Y, qmat, rstride=1, cstride=1,  cmap='viridis', linewidth=0, antialiased=False)
+ax.set_xlabel('t')
+ax.set_ylabel('x')
+ax.set_zlabel('q')
+ax.set_ylim(min(xx), max(xx))
+ax.set_xlim(min(tt), max(tt))
+#ax.set_zlim(-15,0.0)
 
 plt.savefig('q.png')
-
-
-
