@@ -51,21 +51,23 @@ qq = qt(tt)
 #dt = min(ttt[1:]-ttt[:-1])
 dt = T/Nt
 
-ru = 0.37
-rd = 0.37
-E = 1.0e+6
-H = 0.01
 nu = 0.046
 Re = 10.0/nu/1.0
 db = np.sqrt(nu*T/2/pi)
+
+ru = 0.37
+rd = 0.37
+k = ln(rd/ru)/L
 
 k1 = 2.0e7
 k2 = -22.53
 k3 = 8.65e5
 
+Eh = ru*(k1*exp(k2*ru)+k3)
+
 mesh = IntervalMesh(Nx, 0, L)
 
-elV = FiniteElement("CG", mesh.ufl_cell(), 2)
+elV = FiniteElement("CG", mesh.ufl_cell(), 1)
 V = FunctionSpace(mesh, elV)
 V2 = FunctionSpace(mesh, elV*elV)
 
@@ -74,8 +76,8 @@ V2 = FunctionSpace(mesh, elV*elV)
 q0 = Function(V)
 q0.assign(Constant(qq[0]))
 
-r0 = 0.37
-A0 = Constant(pi*pow(r0,2))
+
+A0 = Expression('pi*pow(ru,2)*pow(rd/ru,2*x[0]/L)', degree = 2, ru = ru, rd = rd, L = L)
 
 tol = 1.e-14
 
@@ -102,7 +104,8 @@ A, q = split(U)
 v1, v2 = TestFunctions(V2)
 
 U_n = Function(V2)
-U_n.assign(Constant((A0,q0(0))))
+U_n.assign(Expression(('pi*pow(ru,2)*pow(rd/ru,2*x[0]/L)', 'q00'), degree = 2, ru = ru, rd = rd, L = L, q00 = qq[0]))
+
 
 xdmffile_U = XDMFFile('bloodflow1D.xdmf')
 #xdmffile_A = XDMFFile('bloodflow1D_A.xdmf')
@@ -111,8 +114,12 @@ xdmffile_U = XDMFFile('bloodflow1D.xdmf')
 FF = A*v1*dx\
    + q*v2*dx\
    + dt*grad(q)[0]*v1*dx\
-   + dt*grad(pow(q,2)/(A+1.e-14)+f*sqrt(A0*(A+1.e-14)))[0]*v2*dx\
-   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-14)*v2*dx\
+   + dt*grad(pow(q,2)/(A+1.e-16)+4/3*Eh/ru*pow(ru/rd,x[0]/L)*sqrt(A0*(A+1.e-16)))[0]*v2*dx\
+   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-16)*v2*dx\
+   - (2*sqrt(A)*(sqrt(pi)*4/3*Eh/ru*pow(ru/rd,x[0]/L)\
+                +sqrt(A0)*4/3*k1*k2*exp(k2*ru*pow(rd/ru,x[0]/L)))\
+     -A*4/3*k1*k2*exp(k2*ru*pow(rd/ru,x[0]/L))\
+     )*ln(rd/ru)/L*ru*pow(rd/ru,x[0]/L)*v2*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
 
