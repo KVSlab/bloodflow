@@ -76,8 +76,11 @@ V2 = FunctionSpace(mesh, elV*elV)
 q0 = Function(V)
 q0.assign(Constant(qq[0]))
 
-
+r0 = Expression('ru*pow(rd/ru, x[0]/L)', degree = 2, ru = ru, rd = rd, L = L)
 A0 = Expression('pi*pow(ru,2)*pow(rd/ru,2*x[0]/L)', degree = 2, ru = ru, rd = rd, L = L)
+f = Expression('4/3*Eh/ru*pow(ru/rd,x[0]/L)', degree = 2, ru = ru, rd = rd, L = L, Eh = Eh)
+dfdr = Expression('4/3*k1*k2*exp(k2*ru*pow(rd/ru,x[0]/L))', degree = 2, ru = ru, rd = rd, L = L, Eh = Eh, k1 = k1, k2 = k2)
+drdx = Expression('log(rd/ru)/L*ru*pow(rd/ru,x[0]/L)', degree = 2, ru = ru, rd = rd, L = L)
 
 tol = 1.e-14
 
@@ -110,7 +113,7 @@ U_n.assign(Expression(('pi*pow(ru,2)*pow(rd/ru,2*x[0]/L)', 'q00'), degree = 2, r
 xdmffile_U = XDMFFile('bloodflow1D.xdmf')
 #xdmffile_A = XDMFFile('bloodflow1D_A.xdmf')
 #xdmffile_q = XDMFFile('bloodflow1D_q.xdmf')
-
+"""
 FF = A*v1*dx\
    + q*v2*dx\
    + dt*grad(q)[0]*v1*dx\
@@ -122,36 +125,44 @@ FF = A*v1*dx\
      )*ln(rd/ru)/L*ru*pow(rd/ru,x[0]/L)*v2*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
+"""
+
+FF = A*v1*dx\
+   + q*v2*dx\
+   + dt*grad(q)[0]*v1*dx\
+   + dt*grad(pow(q,2)/(A+1.e-16)+f*sqrt(A0*(A+1.e-16)))[0]*v2*dx\
+   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-16)*v2*dx\
+   - dt*(2*sqrt(A+1.e-16)*(sqrt(pi)*f+sqrt(A0)*dfdr)-(A+1.e-16)*dfdr)*drdx*v2*dx\
+   - U_n[0]*v1*dx\
+   - U_n[1]*v2*dx
+
 
 qmat = np.zeros([Nx, Nt])
 
 qmat[:,0] = qq[0]*np.ones(Nx)
 
-for i in range(3):
+
+t = 0
+
+for n in range(Nt-1):
 	
-	t = 0
+	print('Iteration '+str(n))
+	
+	t += dt
 
-	for n in range(Nt-1):
-		
-		print('Iteration '+str(n))
-		
-		t += dt
-
-		solve(FF == 0, U, bcs)
-		#if n % (int(Nt/100)) == 0:
-		#	plot(A)
-			
-		U_n.assign(U)
-		
-		q0.assign(Constant(qq[n]))
-		
-		xdmffile_U.write(U, dt)
-		#xdmffile_A.write(A, dt)
-		#xdmffile_q.write(q, dt)
-		
-		
-		qmat[:,n+1] = np.array([q([xx[i]]) for i in range(Nx)])
-		
+	solve(FF == 0, U, bcs)
+	#if n % (int(Nt/100)) == 0:
+	#	plot(A)
+	
+	U_n.assign(U)
+	
+	q0.assign(Constant(qq[n]))
+	
+	xdmffile_U.write(U, dt)
+	#xdmffile_A.write(A, dt)
+	#xdmffile_q.write(q, dt)
+	
+	qmat[:,n+1] = np.array([q([xx[i]]) for i in range(Nx)])
 		
 
 plt.imshow(qmat)
@@ -166,6 +177,5 @@ ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, qmat, cmap='viridis', linewidth=0, antialiased=False)
 
 plt.savefig('q.png')
-
 
 
