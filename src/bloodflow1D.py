@@ -176,11 +176,23 @@ bc_inlet = DirichletBC(V2.sub(1), q_in, inlet_bdry)
 bcs = [bc_inlet, bc_outlet]
 
 
+""" # Before integration by parts
 # Variational form: FF == 0
 FF = A*v1*dx\
    + q*v2*dx\
    + dt*grad(q)[0]*v1*dx\
    + dt*grad(pow(q,2)/(A+1.e-16)+f*sqrt(A0*(A+1.e-16)))[0]*v2*dx\
+   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-16)*v2*dx\
+   - U_n[0]*v1*dx\
+   - U_n[1]*v2*dx
+"""
+
+# Variational form: FF == 0
+FF = A*v1*dx\
+   + q*v2*dx\
+   + dt*grad(q)[0]*v1*dx\
+   + dt*(pow(q,2)/(A+1.e-16)+f*sqrt(A0*(A+1.e-16)))*v2*ds\
+   - dt*(pow(q,2)/(A+1.e-16)+f*sqrt(A0*(A+1.e-16)))*grad(v2)[0]*dx\
    + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-16)*v2*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
