@@ -54,7 +54,7 @@ r_0 = constant
 ------------------------
 
 
-Left border:
+Left (inlet) border:
 
 	q(0,t) = q_inlet(t), a given function
 
@@ -62,9 +62,9 @@ Left border:
 Bottom border:
 
 	q(x,0) = q_inlet(0) since r_0 = constant, which makes the artery a perfect cylinder.
-	R(x,0) = r_0 => A(x,0) = A_0
+	R(x,0) = r_0 <=> A(x,0) = A_0
 
-Right border:
+Right (outlet) border:
 
 	p = p_0  <=> A = A_0
 
@@ -98,6 +98,7 @@ import matplotlib.pyplot as plt
 import scipy.interpolate as ip
 from mpl_toolkits.mplot3d import Axes3D
 
+# Import the inlet flow data
 data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
 #print(data_q)
 #plt.plot(data_q[:,0], data_q[:,1])
@@ -155,12 +156,12 @@ A0 = Constant(pi*pow(r0,2))
 # Definition of test functions
 v1, v2 = TestFunctions(V2)
 
-# The initial value of the trial function is deduced from the bottom boundary condition
+# The initial value of the trial function is deduced from the bottom boundary conditions
 U_n = Function(V2)
 U_n.assign(Constant((A0,q0(0))))
 
 
-# Spatial boundaries
+# Spatial boundary conditions
 tol = 1.e-14
 
 def inlet_bdry(x, on_boundary):
@@ -175,7 +176,7 @@ bc_inlet = DirichletBC(V2.sub(1), q0, inlet_bdry)
 bcs = [bc_inlet, bc_outlet]
 
 
-# Variational form
+# Variational form: FF == 0
 FF = A*v1*dx\
    + q*v2*dx\
    + dt*grad(q)[0]*v1*dx\
