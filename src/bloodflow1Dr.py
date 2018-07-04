@@ -192,13 +192,24 @@ FF = A*v1*dx\
      )*ln(rd/ru)/L*ru*pow(rd/ru,x[0]/L)*v2*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
-"""
 
 # Variational form: FF == 0
 FF = A*v1*dx\
    + q*v2*dx\
    + dt*grad(q)[0]*v1*dx\
    + dt*grad(pow(q,2)/(A+1.e-16)+f*sqrt(A0*(A+1.e-16)))[0]*v2*dx\
+   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-16)*v2*dx\
+   - dt*(2*sqrt(A+1.e-16)*(sqrt(pi)*f+sqrt(A0)*dfdr)-(A+1.e-16)*dfdr)*drdx*v2*dx\
+   - U_n[0]*v1*dx\
+   - U_n[1]*v2*dx
+"""
+
+# Variational form: FF == 0
+FF = A*v1*dx\
+   + q*v2*dx\
+   + dt*grad(q)[0]*v1*dx\
+   + dt*(pow(q,2)/(A+1.e-16)+f*sqrt(A0*(A+1.e-16)))*v2*ds\
+   - dt*(pow(q,2)/(A+1.e-16)+f*sqrt(A0*(A+1.e-16)))*grad(v2)[0]*dx\
    + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-16)*v2*dx\
    - dt*(2*sqrt(A+1.e-16)*(sqrt(pi)*f+sqrt(A0)*dfdr)-(A+1.e-16)*dfdr)*drdx*v2*dx\
    - U_n[0]*v1*dx\
@@ -249,7 +260,10 @@ for n in range(Nt-1):
 
 X, Y = np.meshgrid(tt, xx)
 
-pmat = f*(1-np.sqrt(A0(0)/Amat))
+# Assembly of the pressure matrix
+for n in range(Nt):
+	for i in range(Nx):
+		pmat[i,n] = f(xx[i])*(1-np.sqrt(A0([xx[i]])/Amat[i,n]))
 
 
 # Area plot

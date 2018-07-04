@@ -229,6 +229,7 @@ for n in range(Nt-1):
 
 X, Y = np.meshgrid(tt, xx)
 
+# Assembly of the pressure matrix
 pmat = f*(1-np.sqrt(A0(0)/Amat))
 
 
