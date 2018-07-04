@@ -98,10 +98,17 @@ import matplotlib.pyplot as plt
 import scipy.interpolate as ip
 from mpl_toolkits.mplot3d import Axes3D
 
+# Pressure unit converting functions ('unit' = g cm-1 s-2)
+def unit_to_mmHg(p):
+	return 76/101325*p
+	
+def mmHg_to_unit(p):
+	return 101325/76*p
+
 # Import the inlet flow data
 data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
 #plt.plot(data_q[:,0], data_q[:,1])
-#plt.savefig('../output/data.png')
+#plt.savefig('../output/constant_r0/data.png')
 
 ttt = data_q[:,0]
 qqq = data_q[:,1]
@@ -117,7 +124,7 @@ tt = np.linspace(0,T,Nt)
 qq = qt(tt)
 
 #plt.plot(tt,qq)
-#plt.savefig('../output/interpolated_data.png')
+#plt.savefig('../output/constant_r0/interpolated_data.png')
 
 #dt = ttt[1:]-ttt[:-1]
 #dt = min(ttt[1:]-ttt[:-1])
@@ -126,6 +133,7 @@ dt = T/Nt
 nu = 0.046
 Re = 10.0/nu/1.0
 db = np.sqrt(nu*T/2/pi)
+p0 = mmHg_to_unit(80) # Unit: g cm-1 s-2
 
 r0 = 0.37
 
@@ -133,7 +141,7 @@ k1 = 2.0e7
 k2 = -22.53
 k3 = 8.65e5
 f = 4/3*(k1*exp(k2*r0)+k3)
-
+print(f)
 
 mesh = IntervalMesh(Nx, 0, L)
 
@@ -148,13 +156,14 @@ A, q = split(U)
 # Definition of test functions
 v1, v2 = TestFunctions(V2)
 
+# Initial area
+A0 = Constant(pi*pow(r0,2))
+
 # Inlet flow at a given time t_n (initially t_0)
 q_in = Function(V)
 q_in.assign(Constant(qq[0]))
 
-# Initial area
-A0 = Constant(pi*pow(r0,2))
-
+A_out = Constant(A0/pow(1+p0/f,2))
 
 # The initial value of the trial function is deduced from the bottom boundary conditions
 U_n = Function(V2)
@@ -170,7 +179,7 @@ def inlet_bdry(x, on_boundary):
 def outlet_bdry(x, on_boundary):
 	return on_boundary and near(x[0],L,tol)
 
-bc_outlet = DirichletBC(V2.sub(0), A0, outlet_bdry)
+bc_outlet = DirichletBC(V2.sub(0), A_out, outlet_bdry)
 bc_inlet = DirichletBC(V2.sub(1), q_in, inlet_bdry)
 
 bcs = [bc_inlet, bc_outlet]
@@ -205,7 +214,7 @@ pmat = np.zeros([Nx, Nt])
 qmat[:,0] = qq[0]*np.ones(Nx)
 Amat[:,0] = A0(0)*np.ones(Nx)
 
-#xdmffile_U = XDMFFile('../output/bloodflow1D.xdmf')
+#xdmffile_U = XDMFFile('../output/constant_r0/bloodflow1D.xdmf')
 
 # Progress bar
 progress = Progress('Time-stepping')
@@ -242,7 +251,7 @@ for n in range(Nt-1):
 X, Y = np.meshgrid(tt, xx)
 
 # Assembly of the pressure matrix
-pmat = f*(1-np.sqrt(A0(0)/Amat))
+pmat = unit_to_mmHg(p0 + f*(1-np.sqrt(A0(0)/Amat)))
 
 
 # Area plot
@@ -254,7 +263,7 @@ ax.set_ylabel('x')
 ax.set_zlabel('A')
 ax.set_ylim(min(xx), max(xx))
 ax.set_xlim(min(tt), max(tt))
-plt.savefig('../output/area.png')
+plt.savefig('../output/constant_r0/area.png')
 
 
 # Flow plot
@@ -267,7 +276,7 @@ ax.set_zlabel('q')
 ax.set_ylim(min(xx), max(xx))
 ax.set_xlim(min(tt), max(tt))
 #ax.set_zlim(-15,0.0)
-plt.savefig('../output/flow.png')
+plt.savefig('../output/constant_r0/flow.png')
 
 
 # Pressure plot
@@ -276,7 +285,7 @@ ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, pmat, rstride=1, cstride=1,  cmap='viridis', linewidth=0, antialiased=False)
 ax.set_xlabel('t')
 ax.set_ylabel('x')
-ax.set_zlabel('p - p_0')
+ax.set_zlabel('p')
 ax.set_ylim(min(xx), max(xx))
 ax.set_xlim(min(tt), max(tt))
-plt.savefig('../output/pressure.png')
+plt.savefig('../output/constant_r0/pressure.png')
