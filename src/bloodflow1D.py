@@ -17,23 +17,23 @@ Variables: x and t:
 	where L is the length of the artery and T is the duration of one cardiac cycle (period).
 
 
-	t
-	^
-	|
-	|
+    t
+    ^
+    |
+    |
   T +--------------------------------+
-	|                                .
-	|                                .
-	|                                .
-	|                                .
-	|                                .
-	|                                .
-	|                                .
-	|                                .
-	|                                .
-	|                                .
+    |                                .
+    |                                .
+    |                                .
+    |                                .
+    |                                .
+    |                                .
+    |                                .
+    |                                .
+    |                                .
+    |                                .
   0 +––––––––––––––––––––––––––––––––+–––> x
-	0                                L
+    0                                L
 
 
 dU/dt + dF/dx = S
@@ -68,23 +68,23 @@ Right border:
 
 	p = p_0  <=> A = A_0
 
-	t
-	^
-	|
-	|
-  T +--------------------------------+
-	|                                '
-	|                                '
-	|                                '
-	|                                '
-q=q0|                                ' p=p_0 (A = A_0)
-	|                                '
-	|                                '
-	|                                '
-	|                                '
-	|                                '
-  0 +––––––––––––––––––––––––––––––––+–––> x
-	0             R=r_0              L
+     t
+     ^
+     |
+     |
+   T +--------------------------------+
+     |                                '
+     |                                '
+     |                                '
+     |                                '
+q=q_0|                                ' p=p_0 (A = A_0)
+     |                                '
+     |                                '
+     |                                '
+     |                                '
+     |                                '
+   0 +––––––––––––––––––––––––––––––––+–––> x
+     0          q=q_0, R=r_0          L
 
 
 -----------------------------------------------------------
@@ -107,15 +107,14 @@ ttt = data_q[:,0]
 qqq = data_q[:,1]
 
 L, T = 20.8, data_q[-1,0]
-Nx, Nt = 100, 100 # len(data_q[:,0])
+#Nx, Nt = 100, len(data_q[:,0])
+Nx, Nt = 100, 100
 
 xx = np.linspace(0,L,Nx)
 
 qt = ip.interp1d(ttt, qqq, kind = 'cubic')
 tt = np.linspace(0,T,Nt)
 qq = qt(tt)
-#qq = np.linspace(0,25,Nt)
-#qq = 5.0*np.ones(Nt)
 
 #plt.plot(tt,qq)
 #plt.savefig('../output/interpolated_data.png')
@@ -135,19 +134,33 @@ k2 = -22.53
 k3 = 8.65e5
 f = 4/3*(k1*exp(k2*r0)+k3)
 
+
 mesh = IntervalMesh(Nx, 0, L)
 
 elV = FiniteElement("CG", mesh.ufl_cell(), 1)
 V = FunctionSpace(mesh, elV)
 V2 = FunctionSpace(mesh, elV*elV)
 
-#q_inlet = Constant(5.0)
-#q0 = Constant(qq[0])
+# Definition of trial function
+U = Function(V2)
+A, q = split(U)
+
+# Inlet flow
 q0 = Function(V)
 q0.assign(Constant(qq[0]))
+
+# Initial area
 A0 = Constant(pi*pow(r0,2))
 
+# Definition of test functions
+v1, v2 = TestFunctions(V2)
 
+# The initial value of the trial function is deduced from the bottom boundary condition
+U_n = Function(V2)
+U_n.assign(Constant((A0,q0(0))))
+
+
+# Spatial boundaries
 tol = 1.e-14
 
 def inlet_bdry(x, on_boundary):
@@ -156,20 +169,13 @@ def inlet_bdry(x, on_boundary):
 def outlet_bdry(x, on_boundary):
 	return on_boundary and near(x[0],L,tol)
 
+bc_outlet = DirichletBC(V2.sub(0), A0, outlet_bdry)
+bc_inlet = DirichletBC(V2.sub(1), q0, inlet_bdry)
 
-bc_outlet_A = DirichletBC(V2.sub(0), A0, outlet_bdry)
-bc_inlet_q = DirichletBC(V2.sub(1), q0, inlet_bdry)
+bcs = [bc_inlet, bc_outlet]
 
-bcs = [bc_inlet_q, bc_outlet_A]
 
-U = Function(V2)
-A, q = split(U)
-
-v1, v2 = TestFunctions(V2)
-
-U_n = Function(V2)
-U_n.assign(Constant((A0,q0(0))))
-
+# Variational form
 FF = A*v1*dx\
    + q*v2*dx\
    + dt*grad(q)[0]*v1*dx\
@@ -178,6 +184,7 @@ FF = A*v1*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
 
+# The solution is stored in matrices
 qmat = np.zeros([Nx, Nt])
 Amat = np.zeros([Nx, Nt])
 pmat = np.zeros([Nx, Nt])
@@ -186,34 +193,45 @@ qmat[:,0] = qq[0]*np.ones(Nx)
 Amat[:,0] = A0(0)*np.ones(Nx)
 
 #xdmffile_U = XDMFFile('../output/bloodflow1D.xdmf')
-#xdmffile_A = XDMFFile('../output/bloodflow1D_A.xdmf')
-#xdmffile_q = XDMFFile('../output/bloodflow1D_q.xdmf')
+
+# Progress bar
+progress = Progress('Time-stepping')
+set_log_level(PROGRESS)
 
 t = 0
 
+# Time-stepping
 for n in range(Nt-1):
 	
 	print('Iteration '+str(n))
 	
 	t += dt
-
+	
+	# U_n+1 is solution of FF == 0
 	solve(FF == 0, U, bcs)
-		
+	
+	# Update previous solution
 	U_n.assign(U)
 	
+	# Update inlet boundary condition
 	q0.assign(Constant(qq[n]))
 	
 	#xdmffile_U.write(U, dt)
-	#xdmffile_A.write(A, dt)
-	#xdmffile_q.write(q, dt)
 	
+	# Store solution at time t_n+1
 	qmat[:,n+1] = [q([x]) for x in xx]
 	Amat[:,n+1] = [A([x]) for x in xx]
-	
+	0
+	# Update progress bar
+	progress.update((t+dt)/T)
+
+
 X, Y = np.meshgrid(tt, xx)
+
 pmat = f*(1-np.sqrt(A0(0)/Amat))
 
 
+# Area plot
 fig = plt.figure(figsize=(8,6))
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, Amat, rstride=1, cstride=1,  cmap='viridis', linewidth=0, antialiased=False)
@@ -222,9 +240,10 @@ ax.set_ylabel('x')
 ax.set_zlabel('A')
 ax.set_ylim(min(xx), max(xx))
 ax.set_xlim(min(tt), max(tt))
-plt.savefig('../output/A.png')
-plt.show()
+plt.savefig('../output/area.png')
 
+
+# Flow plot
 fig = plt.figure(figsize=(8,6))
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, qmat, rstride=1, cstride=1,  cmap='viridis', linewidth=0, antialiased=False)
@@ -234,9 +253,10 @@ ax.set_zlabel('q')
 ax.set_ylim(min(xx), max(xx))
 ax.set_xlim(min(tt), max(tt))
 #ax.set_zlim(-15,0.0)
-plt.savefig('../output/q.png')
-plt.show()
+plt.savefig('../output/flow.png')
 
+
+# Pressure plot
 fig = plt.figure(figsize=(8,6))
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, pmat, rstride=1, cstride=1,  cmap='viridis', linewidth=0, antialiased=False)
@@ -245,8 +265,4 @@ ax.set_ylabel('x')
 ax.set_zlabel('p - p_0')
 ax.set_ylim(min(xx), max(xx))
 ax.set_xlim(min(tt), max(tt))
-plt.savefig('../output/p.png')
-plt.show()
-
-
-
+plt.savefig('../output/pressure.png')
