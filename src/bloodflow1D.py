@@ -148,9 +148,9 @@ A, q = split(U)
 # Definition of test functions
 v1, v2 = TestFunctions(V2)
 
-# Inlet flow
-q0 = Function(V)
-q0.assign(Constant(qq[0]))
+# Inlet flow at a given time t_n (initially t_0)
+q_in = Function(V)
+q_in.assign(Constant(qq[0]))
 
 # Initial area
 A0 = Constant(pi*pow(r0,2))
@@ -158,7 +158,7 @@ A0 = Constant(pi*pow(r0,2))
 
 # The initial value of the trial function is deduced from the bottom boundary conditions
 U_n = Function(V2)
-U_n.assign(Constant((A0,q0(0))))
+U_n.assign(Constant((A0,q_in(0))))
 
 
 # Spatial boundary conditions
@@ -171,7 +171,7 @@ def outlet_bdry(x, on_boundary):
 	return on_boundary and near(x[0],L,tol)
 
 bc_outlet = DirichletBC(V2.sub(0), A0, outlet_bdry)
-bc_inlet = DirichletBC(V2.sub(1), q0, inlet_bdry)
+bc_inlet = DirichletBC(V2.sub(1), q_in, inlet_bdry)
 
 bcs = [bc_inlet, bc_outlet]
 
@@ -215,7 +215,7 @@ for n in range(Nt-1):
 	U_n.assign(U)
 	
 	# Update inlet boundary condition
-	q0.assign(Constant(qq[n]))
+	q_in.assign(Constant(qq[n]))
 	
 	#xdmffile_U.write(U, dt)
 	

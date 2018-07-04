@@ -150,10 +150,10 @@ A, q = split(U)
 v1, v2 = TestFunctions(V2)
 
 # Inlet flow
-q0 = Function(V)
-q0.assign(Constant(qq[0]))
+q_in = Function(V)
+q_in.assign(Constant(qq[0]))
 
-# Initial vessel-radius and deduced quantities
+# Initial vessel-radius and deduced quantities, all functions of the spatial variable
 r0 = Expression('ru*pow(rd/ru, x[0]/L)', degree = 2, ru = ru, rd = rd, L = L)
 A0 = Expression('pi*pow(ru,2)*pow(rd/ru,2*x[0]/L)', degree = 2, ru = ru, rd = rd, L = L)
 f = Expression('4/3*Eh/ru*pow(ru/rd,x[0]/L)', degree = 2, ru = ru, rd = rd, L = L, Eh = Eh)
@@ -176,7 +176,7 @@ def outlet_bdry(x, on_boundary):
 	return on_boundary and near(x[0],L,tol)
 
 bc_outlet = DirichletBC(V2.sub(0), A0, outlet_bdry)
-bc_inlet = DirichletBC(V2.sub(1), q0, inlet_bdry)
+bc_inlet = DirichletBC(V2.sub(1), q_in, inlet_bdry)
 
 bcs = [bc_inlet, bc_outlet]
 
@@ -235,7 +235,7 @@ for n in range(Nt-1):
 	U_n.assign(U)
 	
 	# Update inlet boundary condition
-	q0.assign(Constant(qq[n]))
+	q_in.assign(Constant(qq[n]))
 	
 	#xdmffile_U.write(U, dt)
 	
