@@ -100,7 +100,6 @@ from mpl_toolkits.mplot3d import Axes3D
 
 # Import the inlet flow data
 data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
-#print(data_q)
 #plt.plot(data_q[:,0], data_q[:,1])
 #plt.savefig('../output/data.png')
 
@@ -146,6 +145,9 @@ V2 = FunctionSpace(mesh, elV*elV)
 U = Function(V2)
 A, q = split(U)
 
+# Definition of test functions
+v1, v2 = TestFunctions(V2)
+
 # Inlet flow
 q0 = Function(V)
 q0.assign(Constant(qq[0]))
@@ -153,8 +155,6 @@ q0.assign(Constant(qq[0]))
 # Initial area
 A0 = Constant(pi*pow(r0,2))
 
-# Definition of test functions
-v1, v2 = TestFunctions(V2)
 
 # The initial value of the trial function is deduced from the bottom boundary conditions
 U_n = Function(V2)
@@ -222,7 +222,7 @@ for n in range(Nt-1):
 	# Store solution at time t_n+1
 	qmat[:,n+1] = [q([x]) for x in xx]
 	Amat[:,n+1] = [A([x]) for x in xx]
-	0
+	
 	# Update progress bar
 	progress.update((t+dt)/T)
 
