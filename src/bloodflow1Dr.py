@@ -166,12 +166,13 @@ f = Expression('4/3*Eh/ru*pow(ru/rd,x[0]/L)', degree = 2, ru = ru, rd = rd, L = 
 dfdr = Expression('4/3*k1*k2*exp(k2*ru*pow(rd/ru,x[0]/L))', degree = 2, ru = ru, rd = rd, L = L, Eh = Eh, k1 = k1, k2 = k2)
 drdx = Expression('log(rd/ru)/L*ru*pow(rd/ru,x[0]/L)', degree = 2, ru = ru, rd = rd, L = L)
 
-# Inlet flow
+# Inlet flow, defined at one single given time t_n (starting at t_0)
 q_in = Function(V)
 q_in.assign(Constant(qq[0]))
 
 # Outlet area
-A_out = Constant(A0(L)/pow(1+p0/f(L),2))
+#A_out = Constant(A0(L)/pow(1+p0/f(L),2))
+A_out = Constant(A0(L))
 
 # The initial value of the trial function is deduced from the bottom boundary conditions
 U_n = Function(V2)

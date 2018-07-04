@@ -163,7 +163,9 @@ A0 = Constant(pi*pow(r0,2))
 q_in = Function(V)
 q_in.assign(Constant(qq[0]))
 
-A_out = Constant(A0/pow(1+p0/f,2))
+# Outlet area
+#A_out = Constant(A0/pow(1+p0/f,2))
+A_out = Constant(A0)
 
 # The initial value of the trial function is deduced from the bottom boundary conditions
 U_n = Function(V2)
