@@ -133,7 +133,7 @@ dt = T/Nt
 nu = 0.046
 Re = 10.0/nu/1.0
 db = np.sqrt(nu*T/2/pi)
-p0 = mmHg_to_unit(80) # Unit: g cm-1 s-2
+p0 = mmHg_to_unit(90) # Unit: g cm-1 s-2
 
 ru = 0.37
 rd = 0.37
@@ -229,7 +229,7 @@ FF = A*v1*dx\
    - U_n[1]*v2*dx
 
 
-# The solution is stored in matrices
+# Matrices for storing the solution
 qmat = np.zeros([Nx, Nt])
 Amat = np.zeros([Nx, Nt])
 pmat = np.zeros([Nx, Nt])
@@ -269,7 +269,7 @@ for n in range(Nt-1):
 	
 	# Update progress bar
 	progress.update((t+dt)/T)
-		
+	
 
 X, Y = np.meshgrid(tt, xx)
 
