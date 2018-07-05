@@ -17,24 +17,6 @@ Variables: x and t:
 	where L is the length of the artery and T is the duration of one cardiac cycle (period).
 
 
-    t
-    ^
-    |
-    |
-  T +--------------------------------+
-    |                                .
-    |                                .
-    |                                .
-    |                                .
-    |                                .
-    |                                .
-    |                                .
-    |                                .
-    |                                .
-    |                                .
-  0 +––––––––––––––––––––––––––––––––+–––> x
-    0                                L
-
 
 dU/dt + dF/dx = S
 
@@ -117,7 +99,9 @@ qqq = data_q[:,1]
 
 L, T = 20.8, data_q[-1,0]
 #Nx, Nt = 100, len(data_q[:,0])
-Nx, Nt = 100, 300
+
+# Nx/Nt ratio should be 1/3 (based on experience)
+Nx, Nt = 50, 150
 
 xx = np.linspace(0,L,Nx)
 
@@ -151,15 +135,66 @@ elV = FiniteElement("CG", mesh.ufl_cell(), 1)
 V = FunctionSpace(mesh, elV)
 V2 = FunctionSpace(mesh, elV*elV)
 
+# Initial area
+A0 = Constant(pi*pow(r0,2))
+
+
+
+
+
+
+R1 = 25300
+R2 = 13900
+CT = 1.3384e-6
+
+def F_from_equation(U):
+	return np.array([U[1], U[1]**2 + f*np.sqrt(A0(0)*U[0])])
+
+def S_from_equation(U):
+	return np.array([0, -2*np.sqrt(np.pi)/db/Re*U[1]/np.sqrt(U[0])])
+
+# Computes the outlet pressure at time t_n+1 from the values of the solution at the three end points m-2, m-1 and m (m=Nx-1) at time t_n.
+# q_m-1^n+1 is computed using Richtmyer's two step Lax-Wendroff method.
+# q_m^n+1 is computed using the Windkessel model, based on an initial estimate of p_m^n+1 (starting at p_m^n).
+def outlet_area(Um2, Um1, Um0, k_max = 100, tol = 1.0e-7):
+
+	# Values at time step n
+	Fm2, Sm2 = F_from_equation(Um2), S_from_equation(Um2)
+	Fm1, Sm1 = F_from_equation(Um1), S_from_equation(Um1)
+	Fm0, Sm0 = F_from_equation(Um0), S_from_equation(Um0)
+	
+	# Values at time step n+1/2
+	U_half_21 = (Um1+Um2)/2 - dt/deltax*(Fm1-Fm2) + dt/4*(Sm1+Sm2)
+	U_half_10 = (Um0+Um1)/2 - dt/deltax*(Fm0-Fm1) + dt/4*(Sm0+Sm1)
+	F_half_21, S_half_21 = F_from_equation(U_half_21), S_from_equation(U_half_21)
+	F_half_10, S_half_10 = F_from_equation(U_half_10), S_from_equation(U_half_10)
+	
+	# Value at time step n+1
+	qm1 = Um1[1] - dt/deltax*(F_half_10[1]-F_half_21[1]) + dt/2*(S_half_10[1]+S_half_21[1])
+	
+	# Fixed point iteration
+	pn = p0 + f*(1-np.sqrt(A0(L)/Um0[0]))
+	p = pn
+	for k in range(k_max):
+		p_old = p
+		qm0 = Um0[1] + (p-pn)/R1 + dt/R1/R2/CT*pn - dt*(R1+R2)/R1/R2/CT*Um0[1]
+		Am0 = Um0[0] - dt/deltax*(qm0-qm1)
+		p = p0 + f*(1-np.sqrt(A0(L)/Am0))
+		if abs(p-p_old) < tol :
+			break
+	
+	return Am0
+
+
+
+
+
 # Definition of trial functions
 U = Function(V2)
 A, q = split(U)
 
 # Definition of test functions
 v1, v2 = TestFunctions(V2)
-
-# Initial area
-A0 = Constant(pi*pow(r0,2))
 
 # Inlet flow at a given time t_n (initially t_0)
 q_in = Function(V)
@@ -202,64 +237,15 @@ FF = A*v1*dx\
 """
 
 # Variational form: FF == 0
+# In order for FEniCS to handle the expression correctly, a small perturbation of A seems necessary. Since A > 0.4, this should not numerically change the solution.
 FF = A*v1*dx\
    + q*v2*dx\
    + dt*grad(q)[0]*v1*dx\
-   + dt*(pow(q,2)/(A+1.e-16)+f*sqrt(A0*(A+1.e-16)))*v2*ds\
-   - dt*(pow(q,2)/(A+1.e-16)+f*sqrt(A0*(A+1.e-16)))*grad(v2)[0]*dx\
-   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-16)*v2*dx\
+   + dt*(pow(q,2)/(A+DOLFIN_EPS)+f*sqrt(A0*(A+DOLFIN_EPS)))*v2*ds\
+   - dt*(pow(q,2)/(A+DOLFIN_EPS)+f*sqrt(A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx\
+   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+DOLFIN_EPS)*v2*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
-
-
-
-
-
-R1 = 25300
-R2 = 13900
-CT = 1.3384e-6
-
-def F_from_equation(U):
-	return np.array([U[1], U[1]**2 + f*np.sqrt(A0(0)*U[0])])
-
-def S_from_equation(U):
-	return np.array([0, -2*np.sqrt(np.pi)/db/Re*U[1]/np.sqrt(U[0])])
-
-# Computes the outlet pressure at time t_n+1 from the values of the solution at the three end points m-2, m-1 and m (m=Nx-1) at time t_n.
-# q_m-1^n+1 is computed using Richtmyer's two step Lax-Wendroff method.
-# q_m^n+1 is computed using the Windkessel model, based on an initial estimate of p_m^n+1 (starting at p_m^n).
-def outlet_area(Um2, Um1, Um0, k_max = 100, tol = 1.0e-7):
-
-	# Values at time step n
-	Fm2, Sm2 = F_from_equation(Um2), S_from_equation(Um2)
-	Fm1, Sm1 = F_from_equation(Um1), S_from_equation(Um1)
-	Fm0, Sm0 = F_from_equation(Um0), S_from_equation(Um0)
-	
-	# Values at time step n+1/2
-	U_half_21 = (Um1+Um2)/2 - dt/deltax*(Fm1-Fm2) + dt/4*(Sm1+Sm2)
-	U_half_10 = (Um0+Um1)/2 - dt/deltax*(Fm0-Fm1) + dt/4*(Sm0+Sm1)
-	F_half_21, S_half_21 = F_from_equation(U_half_21), S_from_equation(U_half_21)
-	F_half_10, S_half_10 = F_from_equation(U_half_10), S_from_equation(U_half_10)
-	
-	# Value at time step n+1
-	qm1 = Um1[1] - dt/deltax*(F_half_10[1]-F_half_21[1]) + dt/2*(S_half_10[1]+S_half_21[1])
-	
-	# Fixed point iteration
-	pn = p0 + f*(1-np.sqrt(A0(L)/Um0[0]))
-	p = pn
-	for k in range(k_max):
-		p_old = p
-		qm0 = Um0[1] + (p-pn)/R1 + dt/R1/R2/CT*pn - dt*(R1+R2)/R1/R2/CT*Um0[1]
-		Am0 = Um0[0] - dt/deltax*(qm0-qm1)
-		#print('k = %i, Am0 = %f, Um0[0] = %f, qm0 = %f, qm1 = %f, Um0[1] = %f, p = %f.' % (k, Am0, Um0[0], qm0, qm1, Um0[1], p))
-		p = p0 + f*(1-np.sqrt(A0(L)/Am0))
-		if abs(p-p_old) < tol :
-			break
-	
-	return Am0
-
-
-
 
 
 # Matrices for storing the solution
@@ -278,32 +264,43 @@ set_log_level(PROGRESS)
 
 t = 0
 
+N_cycles = 10
+
 # Time-stepping
-for n in range(0,Nt-1):
-	
-	print('Iteration '+str(n))
+for n_cycle in range(N_periods):
 
-	# Update inlet boundary condition
-	q_in.assign(Constant(qq[n+1]))
-	
-	# Update outlet boundary condition
-	A_out_value = outlet_area(U_n(L-2*deltax),U_n(L-deltax),U_n(L))
-	A_out.assign(Constant(A_out_value))
+	for n in range(0,Nt-1):
+		
+		print('Iteration '+str(n))
 
-	# U is solution of FF == 0
-	solve(FF == 0, U, bcs)
-	
-	# Update previous solution
+		# Update inlet boundary condition
+		q_in.assign(Constant(qq[n+1]))
+		
+		# Update outlet boundary condition
+		A_out_value = outlet_area(U_n(L-2*deltax),U_n(L-deltax),U_n(L))
+		A_out.assign(Constant(A_out_value))
+
+		# U is solution of FF == 0
+		solve(FF == 0, U, bcs)
+		
+		# Update previous solution
+		U_n.assign(U)
+		
+		#xdmffile_U.write(U, dt)
+		
+		# Store solution at time t_n+1
+		qmat[:,n+1] = [q([x]) for x in xx]
+		Amat[:,n+1] = [A([x]) for x in xx]
+		
+		# Update progress bar
+		progress.update((n_cycle+1)*(n+1)/Nt/N_periods*T)
+		
 	U_n.assign(U)
 	
-	#xdmffile_U.write(U, dt)
-	
-	# Store solution at time t_n+1
-	qmat[:,n+1] = [q([x]) for x in xx]
-	Amat[:,n+1] = [A([x]) for x in xx]
-	
-	# Update progress bar
-	progress.update((n+1)/Nt*T)
+	qmat[:,0] = [q([x]) for x in xx]
+	Amat[:,0] = [A([x]) for x in xx]
+
+
 
 
 X, Y = np.meshgrid(tt, xx)
