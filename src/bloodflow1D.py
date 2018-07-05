@@ -115,11 +115,11 @@ qq = qt(tt)
 #dt = ttt[1:]-ttt[:-1]
 #dt = min(ttt[1:]-ttt[:-1])
 dt = T/Nt
-deltax = 10*L/Nx
 
 nu = 0.046
 Re = 10.0/nu/1.0
 db = np.sqrt(nu*T/2/pi)
+#p0 = mmHg_to_unit(160)
 p0 = mmHg_to_unit(90) # Unit: g cm-1 s-2
 
 r0 = 0.37
@@ -148,7 +148,7 @@ R2 = 13900
 CT = 1.3384e-6
 
 def F_from_equation(U):
-	return np.array([U[1], U[1]**2 + f*np.sqrt(A0(0)*U[0])])
+	return np.array([U[1], U[1]**2 + f*np.sqrt(A0(L)*U[0])])
 
 def S_from_equation(U):
 	return np.array([0, -2*np.sqrt(np.pi)/db/Re*U[1]/np.sqrt(U[0])])
@@ -156,8 +156,13 @@ def S_from_equation(U):
 # Computes the outlet pressure at time t_n+1 from the values of the solution at the three end points m-2, m-1 and m (m=Nx-1) at time t_n.
 # q_m-1^n+1 is computed using Richtmyer's two step Lax-Wendroff method.
 # q_m^n+1 is computed using the Windkessel model, based on an initial estimate of p_m^n+1 (starting at p_m^n).
-def outlet_area(Um2, Um1, Um0, k_max = 100, tol = 1.0e-7):
-
+def outlet_area(U_n, k_max = 100, tol = 1.0e-7):
+	
+	# Spatial step, many times larger than the one used in the finite elements scheme (to ensure convergence).
+	deltax = 10*L/Nx
+	
+	Um2, Um1, Um0 = U_n(L-2*deltax), U_n(L-deltax), U_n(L)
+	
 	# Values at time step n
 	Fm2, Sm2 = F_from_equation(Um2), S_from_equation(Um2)
 	Fm1, Sm1 = F_from_equation(Um1), S_from_equation(Um1)
@@ -247,6 +252,10 @@ FF = A*v1*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
 
+
+
+
+# Number of cardiac cycles
 N_cycles = 4
 
 # Matrices for storing the solution
@@ -278,7 +287,7 @@ for n_cycle in range(N_cycles):
 		q_in.assign(Constant(qq[n+1]))
 		
 		# Update outlet boundary condition
-		A_out_value = outlet_area(U_n(L-2*deltax),U_n(L-deltax),U_n(L))
+		A_out_value = outlet_area(U_n)
 		A_out.assign(Constant(A_out_value))
 
 		# U is solution of FF == 0
@@ -294,7 +303,7 @@ for n_cycle in range(N_cycles):
 		Amat[:,n_cycle*Nt+n+1] = [A([x]) for x in xx]
 		
 		# Update progress bar
-		progress.update((n_cycle+1)*(n+1)/Nt/N_cycles*T)
+		progress.update((n_cycle*Nt+(n+1))/Nt/N_cycles*T)
 		
 	U_n.assign(U)
 	

@@ -240,7 +240,7 @@ R2 = 13900
 CT = 1.3384e-6
 
 def F_from_equation(U):
-	return np.array([U[1], U[1]**2 + f*np.sqrt(A0(0)*U[0])])
+	return np.array([U[1], U[1]**2 + f(L)*np.sqrt(A0(L)*U[0])])
 
 def S_from_equation(U):
 	return np.array([0, -2*np.sqrt(np.pi)/db/Re*U[1]/np.sqrt(U[0])])
@@ -249,7 +249,7 @@ def S_from_equation(U):
 # q_m-1^n+1 is computed using Richtmyer's two step Lax-Wendroff method.
 # q_m^n+1 is computed using the Windkessel model, based on an initial estimate of p_m^n+1 (starting at p_m^n).
 def outlet_area(Um2, Um1, Um0, k_max = 100, tol = 1.0e-7):
-
+	
 	# Values at time step n
 	Fm2, Sm2 = F_from_equation(Um2), S_from_equation(Um2)
 	Fm1, Sm1 = F_from_equation(Um1), S_from_equation(Um1)
@@ -271,8 +271,6 @@ def outlet_area(Um2, Um1, Um0, k_max = 100, tol = 1.0e-7):
 		p_old = p
 		qm0 = Um0[1] + (p-pn)/R1 + dt/R1/R2/CT*pn - dt*(R1+R2)/R1/R2/CT*Um0[1]
 		Am0 = Um0[0] - dt/deltax*(qm0-qm1)
-		print(type(Um0[0]), type(qm0), type(qm1))
-		import sys; sys.exit()
 		p = p0 + f(L)*(1-np.sqrt(A0(L)/Am0))
 		if abs(p-p_old) < tol :
 			break
