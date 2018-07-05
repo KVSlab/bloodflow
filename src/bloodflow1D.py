@@ -101,7 +101,7 @@ L, T = 20.8, data_q[-1,0]
 #Nx, Nt = 100, len(data_q[:,0])
 
 # Nx/Nt ratio should be 1/3 (based on experience)
-Nx, Nt = 50, 150
+Nx, Nt = 100, 300
 
 xx = np.linspace(0,L,Nx)
 
@@ -247,11 +247,12 @@ FF = A*v1*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
 
+N_cycles = 4
 
 # Matrices for storing the solution
-qmat = np.zeros([Nx, Nt])
-Amat = np.zeros([Nx, Nt])
-pmat = np.zeros([Nx, Nt])
+qmat = np.zeros([Nx, N_cycles*Nt])
+Amat = np.zeros([Nx, N_cycles*Nt])
+pmat = np.zeros([Nx, N_cycles*Nt])
 
 qmat[:,0] = qq[0]*np.ones(Nx)
 Amat[:,0] = A0(0)*np.ones(Nx)
@@ -264,10 +265,10 @@ set_log_level(PROGRESS)
 
 t = 0
 
-N_cycles = 10
+
 
 # Time-stepping
-for n_cycle in range(N_periods):
+for n_cycle in range(N_cycles):
 
 	for n in range(0,Nt-1):
 		
@@ -289,21 +290,23 @@ for n_cycle in range(N_periods):
 		#xdmffile_U.write(U, dt)
 		
 		# Store solution at time t_n+1
-		qmat[:,n+1] = [q([x]) for x in xx]
-		Amat[:,n+1] = [A([x]) for x in xx]
+		qmat[:,n_cycle*Nt+n+1] = [q([x]) for x in xx]
+		Amat[:,n_cycle*Nt+n+1] = [A([x]) for x in xx]
 		
 		# Update progress bar
-		progress.update((n_cycle+1)*(n+1)/Nt/N_periods*T)
+		progress.update((n_cycle+1)*(n+1)/Nt/N_cycles*T)
 		
 	U_n.assign(U)
 	
-	qmat[:,0] = [q([x]) for x in xx]
-	Amat[:,0] = [A([x]) for x in xx]
+	if n_cycle < N_cycles - 1:
+		qmat[:,(n_cycle+1)*Nt] = [q([x]) for x in xx]
+		Amat[:,(n_cycle+1)*Nt] = [A([x]) for x in xx]
 
 
 
+X = np.linspace(0, N_cycles*T, N_cycles*Nt)
 
-X, Y = np.meshgrid(tt, xx)
+X, Y = np.meshgrid(X, xx)
 
 # Assembly of the pressure matrix
 pmat = unit_to_mmHg(p0 + f*(1-np.sqrt(A0(0)/Amat)))
@@ -317,7 +320,7 @@ ax.set_xlabel('t')
 ax.set_ylabel('x')
 ax.set_zlabel('A')
 ax.set_ylim(min(xx), max(xx))
-ax.set_xlim(min(tt), max(tt))
+ax.set_xlim(min(tt), N_cycles*max(tt))
 plt.savefig('../output/constant_r0/area.png')
 
 
@@ -329,7 +332,7 @@ ax.set_xlabel('t')
 ax.set_ylabel('x')
 ax.set_zlabel('q')
 ax.set_ylim(min(xx), max(xx))
-ax.set_xlim(min(tt), max(tt))
+ax.set_xlim(min(tt), N_cycles*max(tt))
 #ax.set_zlim(-15,0.0)
 plt.savefig('../output/constant_r0/flow.png')
 
@@ -342,7 +345,7 @@ ax.set_xlabel('t')
 ax.set_ylabel('x')
 ax.set_zlabel('p')
 ax.set_ylim(min(xx), max(xx))
-ax.set_xlim(min(tt), max(tt))
+ax.set_xlim(min(tt), N_cycles*max(tt))
 plt.savefig('../output/constant_r0/pressure.png')
 
 
