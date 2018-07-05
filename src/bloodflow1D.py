@@ -98,12 +98,14 @@ import matplotlib.pyplot as plt
 import scipy.interpolate as ip
 from mpl_toolkits.mplot3d import Axes3D
 
+
 # Pressure unit converting functions ('unit' = g cm-1 s-2)
 def unit_to_mmHg(p):
 	return 76/101325*p
 	
 def mmHg_to_unit(p):
 	return 101325/76*p
+
 
 # Import the inlet flow data
 data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
@@ -115,7 +117,7 @@ qqq = data_q[:,1]
 
 L, T = 20.8, data_q[-1,0]
 #Nx, Nt = 100, len(data_q[:,0])
-Nx, Nt = 1000, 10
+Nx, Nt = 100, 300
 
 xx = np.linspace(0,L,Nx)
 
@@ -129,7 +131,7 @@ qq = qt(tt)
 #dt = ttt[1:]-ttt[:-1]
 #dt = min(ttt[1:]-ttt[:-1])
 dt = T/Nt
-deltax = L/Nx
+deltax = 10*L/Nx
 
 nu = 0.046
 Re = 10.0/nu/1.0
@@ -149,7 +151,7 @@ elV = FiniteElement("CG", mesh.ufl_cell(), 1)
 V = FunctionSpace(mesh, elV)
 V2 = FunctionSpace(mesh, elV*elV)
 
-# Definition of trial function
+# Definition of trial functions
 U = Function(V2)
 A, q = split(U)
 
@@ -209,6 +211,10 @@ FF = A*v1*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
 
+
+
+
+
 R1 = 25300
 R2 = 13900
 CT = 1.3384e-6
@@ -237,6 +243,7 @@ def outlet_area(Um2, Um1, Um0, k_max = 100, tol = 1.0e-7):
 	
 	# Value at time step n+1
 	qm1 = Um1[1] - dt/deltax*(F_half_10[1]-F_half_21[1]) + dt/2*(S_half_10[1]+S_half_21[1])
+	
 	# Fixed point iteration
 	pn = p0 + f*(1-np.sqrt(A0(L)/Um0[0]))
 	p = pn
@@ -244,13 +251,16 @@ def outlet_area(Um2, Um1, Um0, k_max = 100, tol = 1.0e-7):
 		p_old = p
 		qm0 = Um0[1] + (p-pn)/R1 + dt/R1/R2/CT*pn - dt*(R1+R2)/R1/R2/CT*Um0[1]
 		Am0 = Um0[0] - dt/deltax*(qm0-qm1)
-		print(Um0[0])
-		print('k = %i, Am0 = %d, Um0[0] = %d, qm0 = %d, qm1 = %d.' % (k, Am0, Um0[0], qm0, qm1))
-		p = f*(1-np.sqrt(A0(L)/Am0))
+		#print('k = %i, Am0 = %f, Um0[0] = %f, qm0 = %f, qm1 = %f, Um0[1] = %f, p = %f.' % (k, Am0, Um0[0], qm0, qm1, Um0[1], p))
+		p = p0 + f*(1-np.sqrt(A0(L)/Am0))
 		if abs(p-p_old) < tol :
 			break
 	
 	return Am0
+
+
+
+
 
 # Matrices for storing the solution
 qmat = np.zeros([Nx, Nt])
