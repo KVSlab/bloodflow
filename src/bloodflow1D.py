@@ -74,8 +74,10 @@ q=q_0|                                ' p=p_0 (A = A_0)
 """
 
 # Libraries
-from fenics import *
 import numpy as np
+
+from fenics import *
+
 import matplotlib.pyplot as plt
 import scipy.interpolate as ip
 from mpl_toolkits.mplot3d import Axes3D
@@ -90,23 +92,23 @@ def mmHg_to_unit(p):
 
 
 # Import the inlet flow data
-data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
+data_q = np.genfromtxt('../data/example_inlet.csv', delimiter=',')
 #plt.plot(data_q[:,0], data_q[:,1])
 #plt.savefig('../output/constant_r0/data.png')
 
-ttt = data_q[:,0]
-qqq = data_q[:,1]
+ttt = data_q[:, 0]
+qqq = data_q[:, 1]
 
-L, T = 20.8, data_q[-1,0]
+L, T = 20.8, data_q[-1, 0]
 #Nx, Nt = 100, len(data_q[:,0])
 
 # Nx/Nt ratio should be 1/3 (based on experience)
 Nx, Nt = 100, 300
 
-xx = np.linspace(0,L,Nx)
+xx = np.linspace(0, L, Nx)
 
-qt = ip.interp1d(ttt, qqq, kind = 'cubic')
-tt = np.linspace(0,T,Nt)
+qt = ip.interp1d(ttt, qqq, kind='cubic')
+tt = np.linspace(0, T, Nt)
 qq = qt(tt)
 
 #plt.plot(tt,qq)
@@ -120,7 +122,7 @@ nu = 0.046
 Re = 10.0/nu/1.0
 db = np.sqrt(nu*T/2/pi)
 #p0 = mmHg_to_unit(160)
-p0 = mmHg_to_unit(90) # Unit: g cm-1 s-2
+p0 = mmHg_to_unit(90)  # Unit: g cm-1 s-2
 
 r0 = 0.37
 
@@ -136,7 +138,7 @@ V = FunctionSpace(mesh, elV)
 V2 = FunctionSpace(mesh, elV*elV)
 
 # Initial area
-A0 = Constant(pi*pow(r0,2))
+A0 = Constant(pi*pow(r0, 2))
 
 
 
@@ -151,9 +153,9 @@ def S_from_equation(U):
 	return np.array([0, -2*np.sqrt(np.pi)/db/Re*U[1]/np.sqrt(U[0])])
 
 # Computes the outlet pressure at time t_n+1 from the values of the solution at the three end points m-2, m-1 and m (m=Nx-1) at time t_n.
-# q_m-1^n+1 is computed using Richtmyer's two step Lax-Wendroff method.
-# q_m^n+1 is computed using the Windkessel model, based on an initial estimate of p_m^n+1 (starting at p_m^n).
-def outlet_area(U_n, k_max = 100, tol = 1.0e-7):
+# q_(m-1)^(n+1) is computed using Richtmyer's two step Lax-Wendroff method.
+# q_m^(n+1) is computed using the Windkessel model, based on an initial estimate of p_m^(n+1) (starting at p_m^n).
+def outlet_area(U_n, k_max=100, tol=1.0e-7):
 	
 	# Spatial step, many times larger than the one used in the finite elements scheme (to ensure convergence).
 	deltax = 10*L/Nx
@@ -182,7 +184,7 @@ def outlet_area(U_n, k_max = 100, tol = 1.0e-7):
 		qm0 = Um0[1] + (p-pn)/R1 + dt/R1/R2/CT*pn - dt*(R1+R2)/R1/R2/CT*Um0[1]
 		Am0 = Um0[0] - dt/deltax*(qm0-qm1)
 		p = p0 + f*(1-np.sqrt(A0(L)/Am0))
-		if abs(p-p_old) < tol :
+		if abs(p-p_old) < tol:
 			break
 	
 	return Am0
@@ -206,16 +208,16 @@ A_out.assign(Constant(A0(L)))
 
 # The initial value of the trial function is deduced from the bottom boundary conditions
 U_n = Function(V2)
-U_n.assign(Constant((A0,q_in(0))))
+U_n.assign(Constant((A0, q_in(0))))
 
 # Spatial boundary conditions
 tol = 1.e-14
 
 def inlet_bdry(x, on_boundary):
-	return on_boundary and near(x[0],0,tol)
+	return on_boundary and near(x[0], 0, tol)
 	
 def outlet_bdry(x, on_boundary):
-	return on_boundary and near(x[0],L,tol)
+	return on_boundary and near(x[0], L, tol)
 
 bc_outlet = DirichletBC(V2.sub(0), A_out, outlet_bdry)
 bc_inlet = DirichletBC(V2.sub(1), q_in, inlet_bdry)
@@ -228,8 +230,8 @@ bcs = [bc_inlet, bc_outlet]
 FF = A*v1*dx\
    + q*v2*dx\
    + dt*grad(q)[0]*v1*dx\
-   + dt*(pow(q,2)/(A+DOLFIN_EPS)+f*sqrt(A0*(A+DOLFIN_EPS)))*v2*ds\
-   - dt*(pow(q,2)/(A+DOLFIN_EPS)+f*sqrt(A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx\
+   + dt*(pow(q, 2)/(A+DOLFIN_EPS)+f*sqrt(A0*(A+DOLFIN_EPS)))*v2*ds\
+   - dt*(pow(q, 2)/(A+DOLFIN_EPS)+f*sqrt(A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx\
    + dt*2*sqrt(pi)/db/Re*q/sqrt(A+DOLFIN_EPS)*v2*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
@@ -238,7 +240,7 @@ FF = A*v1*dx\
 
 
 # Number of cardiac cycles
-N_cycles = 1
+N_cycles = 4
 
 # File for storing the solution
 xdmffile_A = XDMFFile(mpi_comm_world(), '../output/constant_r0/area.xdmf')
@@ -250,14 +252,14 @@ xdmffile_q.write_checkpoint(U_n.split()[1], 'flow', 0)
 
 # Progress bar
 progress = Progress('Time-stepping')
-set_log_level(PROGRESS)
+set_log_level(ERROR)
 
 t = 0
 
 # Time-stepping
 for n_cycle in range(N_cycles):
 
-	for n in range(0,Nt-1):
+	for n in range(0, Nt-1):
 		
 		print('Iteration '+str(n))
 		
@@ -281,13 +283,13 @@ for n_cycle in range(N_cycles):
 		xdmffile_q.write_checkpoint(U.split()[1], 'flow', t)
 		
 		# Update progress bar
-		progress.update((n_cycle*Nt+(n+1))/Nt/N_cycles*T)
+		#progress.update((n_cycle*Nt+(n+1))/Nt/N_cycles*T)
 		
 	U_n.assign(U)
 
 xdmffile_A.close()
 xdmffile_q.close()
 
-
+########################## assert
 
 

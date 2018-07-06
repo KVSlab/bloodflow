@@ -104,26 +104,25 @@ def unit_to_mmHg(p):
 def mmHg_to_unit(p):
 	return 101325/76*p
 
-
 # Import the inlet flow data
 data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
-#plt.plot(data_q[:,0], data_q[:,1])
+#plt.plot(data_q[:, 0], data_q[:, 1])
 #plt.savefig('../output/r0/data.png')
 
-ttt = data_q[:,0]
-qqq = data_q[:,1]
+ttt = data_q[:, 0]
+qqq = data_q[:, 1]
 
-L, T = 20.8, data_q[-1,0]
-#Nx, Nt = 100, len(data_q[:,0])
+L, T = 20.8, data_q[-1, 0]
+#Nx, Nt = 100, len(data_q[:, 0])
 Nx, Nt = 100, 300
 
-xx = np.linspace(0,L,Nx)
+xx = np.linspace(0, L, Nx)
 
 qt = ip.interp1d(ttt, qqq)
-tt = np.linspace(0,T,Nt)
+tt = np.linspace(0, T, Nt)
 qq = qt(tt)
 
-#plt.plot(tt,qq)
+#plt.plot(tt, qq)
 #plt.savefig('../output/r0/interpolated_data.png')
 
 #dt = ttt[1:]-ttt[:-1]
@@ -161,11 +160,11 @@ A, q = split(U)
 v1, v2 = TestFunctions(V2)
 
 # Initial vessel-radius and deduced quantities, all functions of the spatial variable
-r0 = Expression('ru*pow(rd/ru, x[0]/L)', degree = 2, ru = ru, rd = rd, L = L)
-A0 = Expression('pi*pow(ru,2)*pow(rd/ru,2*x[0]/L)', degree = 2, ru = ru, rd = rd, L = L)
-f = Expression('4/3*Eh/ru*pow(ru/rd,x[0]/L)', degree = 2, ru = ru, rd = rd, L = L, Eh = Eh)
-dfdr = Expression('4/3*k1*k2*exp(k2*ru*pow(rd/ru,x[0]/L))', degree = 2, ru = ru, rd = rd, L = L, Eh = Eh, k1 = k1, k2 = k2)
-drdx = Expression('log(rd/ru)/L*ru*pow(rd/ru,x[0]/L)', degree = 2, ru = ru, rd = rd, L = L)
+r0 = Expression('ru*pow(rd/ru, x[0]/L)', degree=2, ru=ru, rd=rd, L=L)
+A0 = Expression('pi*pow(ru, 2)*pow(rd/ru, 2*x[0]/L)', degree=2, ru=ru, rd=rd, L=L)
+f = Expression('4/3*Eh/ru*pow(ru/rd, x[0]/L)', degree=2, ru=ru, rd=rd, L=L, Eh=Eh)
+dfdr = Expression('4/3*k1*k2*exp(k2*ru*pow(rd/ru, x[0]/L))', degree=2, ru=ru, rd=rd, L=L, Eh=Eh, k1=k1, k2=k2)
+drdx = Expression('log(rd/ru)/L*ru*pow(rd/ru, x[0]/L)', degree=2, ru=ru, rd=rd, L=L)
 
 # Inlet flow, defined at one single given time t_n (starting at t_0)
 q_in = Function(V)
@@ -179,55 +178,32 @@ A_out.assign(Constant(A0(L)))
 
 # The initial value of the trial function is deduced from the bottom boundary conditions
 U_n = Function(V2)
-U_n.assign(Expression(('pi*pow(ru,2)*pow(rd/ru,2*x[0]/L)', 'q00'), degree = 2, ru = ru, rd = rd, L = L, q00 = qq[0]))
+U_n.assign(Expression(('pi*pow(ru, 2)*pow(rd/ru, 2*x[0]/L)', 'q00'), degree=2, ru=ru, rd=rd, L=L, q00=qq[0]))
 
 
 # Spatial boundary conditions
 tol = 1.e-14
 
 def inlet_bdry(x, on_boundary):
-	return on_boundary and near(x[0],0,tol)
+	return on_boundary and near(x[0], 0, tol)
 	
 def outlet_bdry(x, on_boundary):
-	return on_boundary and near(x[0],L,tol)
+	return on_boundary and near(x[0], L, tol)
 
 bc_outlet = DirichletBC(V2.sub(0), A_out, outlet_bdry)
 bc_inlet = DirichletBC(V2.sub(1), q_in, inlet_bdry)
 
 bcs = [bc_inlet, bc_outlet]
 
-"""
-FF = A*v1*dx\
-   + q*v2*dx\
-   + dt*grad(q)[0]*v1*dx\
-   + dt*grad(pow(q,2)/(A+1.e-16)+4/3*Eh/ru*pow(ru/rd,x[0]/L)*sqrt(A0*(A+1.e-16)))[0]*v2*dx\
-   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-16)*v2*dx\
-   - (2*sqrt(A)*(sqrt(pi)*4/3*Eh/ru*pow(ru/rd,x[0]/L)\
-                +sqrt(A0)*4/3*k1*k2*exp(k2*ru*pow(rd/ru,x[0]/L)))\
-     -A*4/3*k1*k2*exp(k2*ru*pow(rd/ru,x[0]/L))\
-     )*ln(rd/ru)/L*ru*pow(rd/ru,x[0]/L)*v2*dx\
-   - U_n[0]*v1*dx\
-   - U_n[1]*v2*dx
 
 # Variational form: FF == 0
 FF = A*v1*dx\
    + q*v2*dx\
    + dt*grad(q)[0]*v1*dx\
-   + dt*grad(pow(q,2)/(A+1.e-16)+f*sqrt(A0*(A+1.e-16)))[0]*v2*dx\
-   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-16)*v2*dx\
-   - dt*(2*sqrt(A+1.e-16)*(sqrt(pi)*f+sqrt(A0)*dfdr)-(A+1.e-16)*dfdr)*drdx*v2*dx\
-   - U_n[0]*v1*dx\
-   - U_n[1]*v2*dx
-"""
-
-# Variational form: FF == 0
-FF = A*v1*dx\
-   + q*v2*dx\
-   + dt*grad(q)[0]*v1*dx\
-   + dt*(pow(q,2)/(A+1.e-16)+f*sqrt(A0*(A+1.e-16)))*v2*ds\
-   - dt*(pow(q,2)/(A+1.e-16)+f*sqrt(A0*(A+1.e-16)))*grad(v2)[0]*dx\
-   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+1.e-16)*v2*dx\
-   - dt*(2*sqrt(A+1.e-16)*(sqrt(pi)*f+sqrt(A0)*dfdr)-(A+1.e-16)*dfdr)*drdx*v2*dx\
+   + dt*(pow(q, 2)/(A+DOLFIN_EPS)+f*sqrt(A0*(A+DOLFIN_EPS)))*v2*ds\
+   - dt*(pow(q, 2)/(A+DOLFIN_EPS)+f*sqrt(A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx\
+   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+DOLFIN_EPS)*v2*dx\
+   - dt*(2*sqrt(A+DOLFIN_EPS)*(sqrt(pi)*f+sqrt(A0)*dfdr)-(A+DOLFIN_EPS)*dfdr)*drdx*v2*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
 
@@ -272,7 +248,7 @@ def outlet_area(Um2, Um1, Um0, k_max = 100, tol = 1.0e-7):
 		qm0 = Um0[1] + (p-pn)/R1 + dt/R1/R2/CT*pn - dt*(R1+R2)/R1/R2/CT*Um0[1]
 		Am0 = Um0[0] - dt/deltax*(qm0-qm1)
 		p = p0 + f(L)*(1-np.sqrt(A0(L)/Am0))
-		if abs(p-p_old) < tol :
+		if abs(p-p_old) < tol:
 			break
 	
 	return Am0
@@ -288,8 +264,8 @@ qmat = np.zeros([Nx, Nt])
 Amat = np.zeros([Nx, Nt])
 pmat = np.zeros([Nx, Nt])
 
-qmat[:,0] = qq[0]*np.ones(Nx)
-Amat[:,0] = [A0([x]) for x in xx]
+qmat[:, 0] = qq[0]*np.ones(Nx)
+Amat[:, 0] = [A0([x]) for x in xx]
 
 #xdmffile_U = XDMFFile('../output/r0/bloodflow1Dr.xdmf')
 
@@ -297,47 +273,54 @@ Amat[:,0] = [A0([x]) for x in xx]
 progress = Progress('Time-stepping')
 set_log_level(PROGRESS)
 
+N_cycles = 4
 t = 0
 
-# Time-stepping
-for n in range(Nt-1):
-	
-	print('Iteration '+str(n))
-	
-	t += dt
-	
-	# U_n+1 is solution of FF == 0
-	solve(FF == 0, U, bcs)
-	
-	# Update previous solution
-	U_n.assign(U)
-	
-	# Update inlet boundary condition
-	q_in.assign(Constant(qq[n]))
-	
-	A_out_value = outlet_area(U_n(L-2*deltax),U_n(L-deltax),U_n(L))
-	A_out.assign(Constant(A_out_value))
-	
-	#xdmffile_U.write(U, dt)
-	
-	# Store solution at time t_n+1
-	qmat[:,n+1] = [q([x]) for x in xx]
-	Amat[:,n+1] = [A([x]) for x in xx]
-	
-	# Update progress bar
-	progress.update((t+dt)/T)
-	
+for n_cycle in range(N_cycles):
+
+	# Time-stepping
+	for n in range(Nt-1):
+		
+		print('Iteration '+str(n))
+		
+		t += dt
+		
+		# U_n+1 is solution of FF == 0
+		solve(FF == 0, U, bcs)
+		
+		# Update previous solution
+		U_n.assign(U)
+		
+		# Update inlet boundary condition
+		q_in.assign(Constant(qq[n]))
+		
+		A_out_value = outlet_area(U_n(L-2*deltax), U_n(L-deltax), U_n(L))
+		A_out.assign(Constant(A_out_value))
+		
+		#xdmffile_U.write(U, dt)
+		
+		# Store solution at time t_n+1
+		qmat[:, n+1] = [q([x]) for x in xx]
+		Amat[:, n+1] = [A([x]) for x in xx]
+		
+		# Update progress bar
+		progress.update((t+dt)/T)
+		
+	if n_cycle < N_cycles - 1:
+		qmat[:, 0] = [q([x]) for x in xx]
+		Amat[:, 0] = [A([x]) for x in xx]
+
 
 X, Y = np.meshgrid(tt, xx)
 
 # Assembly of the pressure matrix
 for n in range(Nt):
 	for i in range(Nx):
-		pmat[i,n] = unit_to_mmHg(p0 + f(xx[i])*(1-np.sqrt(A0([xx[i]])/Amat[i,n])))
+		pmat[i, n] = unit_to_mmHg(p0 + f(xx[i])*(1-np.sqrt(A0([xx[i]])/Amat[i, n])))
 
 
 # Area plot
-fig = plt.figure(figsize=(8,6))
+fig = plt.figure(figsize=(8, 6))
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, Amat, rstride=1, cstride=1,  cmap='viridis', linewidth=0, antialiased=False)
 ax.set_xlabel('t')
@@ -349,7 +332,7 @@ plt.savefig('../output/r0/arear.png')
 
 
 # Flow plot
-fig = plt.figure(figsize=(8,6))
+fig = plt.figure(figsize=(8, 6))
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, qmat, rstride=1, cstride=1,  cmap='viridis', linewidth=0, antialiased=False)
 ax.set_xlabel('t')
@@ -362,7 +345,7 @@ plt.savefig('../output/r0/flowr.png')
 
 
 # Pressure plot
-fig = plt.figure(figsize=(8,6))
+fig = plt.figure(figsize=(8, 6))
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, pmat, rstride=1, cstride=1,  cmap='viridis', linewidth=0, antialiased=False)
 ax.set_xlabel('t')
