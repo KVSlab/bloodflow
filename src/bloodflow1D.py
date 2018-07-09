@@ -202,7 +202,6 @@ q_in = Function(V)
 q_in.assign(Constant(qq[0]))
 
 # Outlet area
-#A_out = Constant(A0(L)/pow(1+p0/f,2))
 A_out = Function(V)
 A_out.assign(Constant(A0(L)))
 
@@ -229,13 +228,13 @@ bcs = [bc_inlet, bc_outlet]
 # In order for FEniCS to handle the expression correctly, a small perturbation of A seems necessary. Since A > 0.4, this should not numerically change the solution.
 FF = A*v1*dx\
    + q*v2*dx\
-   + dt*grad(q)[0]*v1*dx\
+   + dt*q*v1*ds\
    + dt*(pow(q, 2)/(A+DOLFIN_EPS)+f*sqrt(A0*(A+DOLFIN_EPS)))*v2*ds\
+   - dt*q*grad(v1)[0]*dx\
    - dt*(pow(q, 2)/(A+DOLFIN_EPS)+f*sqrt(A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx\
    + dt*2*sqrt(pi)/db/Re*q/sqrt(A+DOLFIN_EPS)*v2*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
-
 
 
 
@@ -252,7 +251,7 @@ xdmffile_q.write_checkpoint(U_n.split()[1], 'flow', 0)
 
 # Progress bar
 progress = Progress('Time-stepping')
-set_log_level(ERROR)
+set_log_level(PROGRESS)
 
 t = 0
 
@@ -283,7 +282,7 @@ for n_cycle in range(N_cycles):
 		xdmffile_q.write_checkpoint(U.split()[1], 'flow', t)
 		
 		# Update progress bar
-		#progress.update((n_cycle*Nt+(n+1))/Nt/N_cycles*T)
+		progress.update((n_cycle*Nt+(n+1))/Nt/N_cycles*T)
 		
 	U_n.assign(U)
 

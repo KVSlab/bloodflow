@@ -171,8 +171,6 @@ q_in = Function(V)
 q_in.assign(Constant(qq[0]))
 
 # Outlet area
-#A_out = Constant(A0(L)/pow(1+p0/f(L),2))
-#A_out = Constant(A0(L))
 A_out = Function(V)
 A_out.assign(Constant(A0(L)))
 
