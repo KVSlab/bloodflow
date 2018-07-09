@@ -121,6 +121,8 @@ xx = np.linspace(0, L, Nx)
 qt = ip.interp1d(ttt, qqq)
 tt = np.linspace(0, T, Nt)
 qq = qt(tt)
+#qq = np.zeros(Nt)
+#qq = 5*np.ones(Nt)
 
 #plt.plot(tt, qq)
 #plt.savefig('../output/r0/interpolated_data.png')
@@ -128,7 +130,6 @@ qq = qt(tt)
 #dt = ttt[1:]-ttt[:-1]
 #dt = min(ttt[1:]-ttt[:-1])
 dt = T/Nt
-deltax = 10*L/Nx
 
 nu = 0.046
 Re = 10.0/nu/1.0
@@ -137,13 +138,10 @@ p0 = mmHg_to_unit(90) # Unit: g cm-1 s-2
 
 ru = 0.37
 rd = 0.37
-k = ln(rd/ru)/L
 
 k1 = 2.0e7
 k2 = -22.53
 k3 = 8.65e5
-
-Eh = ru*(k1*exp(k2*ru)+k3)
 
 # Definition of mesh and function spaces
 mesh = IntervalMesh(Nx, 0, L)
@@ -162,8 +160,8 @@ v1, v2 = TestFunctions(V2)
 # Initial vessel-radius and deduced quantities, all functions of the spatial variable
 r0 = Expression('ru*pow(rd/ru, x[0]/L)', degree=2, ru=ru, rd=rd, L=L)
 A0 = Expression('pi*pow(ru, 2)*pow(rd/ru, 2*x[0]/L)', degree=2, ru=ru, rd=rd, L=L)
-f = Expression('4/3*Eh/ru*pow(ru/rd, x[0]/L)', degree=2, ru=ru, rd=rd, L=L, Eh=Eh)
-dfdr = Expression('4/3*k1*k2*exp(k2*ru*pow(rd/ru, x[0]/L))', degree=2, ru=ru, rd=rd, L=L, Eh=Eh, k1=k1, k2=k2)
+f = Expression('4/3*(k1*exp(k2*ru*pow(ru/rd, x[0]/L)) + k3)', degree=2, ru=ru, rd=rd, L=L, k1=k1, k2=k2, k3=k3)
+dfdr = Expression('4/3*k1*k2*exp(k2*ru*pow(rd/ru, x[0]/L))', degree=2, ru=ru, rd=rd, L=L, k1=k1, k2=k2)
 drdx = Expression('log(rd/ru)/L*ru*pow(rd/ru, x[0]/L)', degree=2, ru=ru, rd=rd, L=L)
 
 # Inlet flow, defined at one single given time t_n (starting at t_0)
@@ -176,21 +174,17 @@ A_out.assign(Constant(A0(L)))
 
 # The initial value of the trial function is deduced from the bottom boundary conditions
 U_n = Function(V2)
-U_n.assign(Expression(('pi*pow(ru, 2)*pow(rd/ru, 2*x[0]/L)', 'q00'), degree=2, ru=ru, rd=rd, L=L, q00=qq[0]))
+U_n.assign(Expression(('pi*pow(ru, 2)*pow(rd/ru, 2*x[0]/L)', 'q00/pow(rd/ru, 2*x[0]/L)'), degree=2, ru=ru, rd=rd, L=L, q00=qq[0]))
 
 
 # Spatial boundary conditions
 tol = 1.e-14
-
 def inlet_bdry(x, on_boundary):
 	return on_boundary and near(x[0], 0, tol)
-	
 def outlet_bdry(x, on_boundary):
 	return on_boundary and near(x[0], L, tol)
-
 bc_outlet = DirichletBC(V2.sub(0), A_out, outlet_bdry)
 bc_inlet = DirichletBC(V2.sub(1), q_in, inlet_bdry)
-
 bcs = [bc_inlet, bc_outlet]
 
 
@@ -200,8 +194,8 @@ FF = A*v1*dx\
    + dt*grad(q)[0]*v1*dx\
    + dt*(pow(q, 2)/(A+DOLFIN_EPS)+f*sqrt(A0*(A+DOLFIN_EPS)))*v2*ds\
    - dt*(pow(q, 2)/(A+DOLFIN_EPS)+f*sqrt(A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx\
-   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+DOLFIN_EPS)*v2*dx\
-   - dt*(2*sqrt(A+DOLFIN_EPS)*(sqrt(pi)*f+sqrt(A0)*dfdr)-(A+DOLFIN_EPS)*dfdr)*drdx*v2*dx\
+   + dt*2*sqrt(pi)/db/Re*q/sqrt(A+DOLFIN_EPS)*v2*dx - dt*(2*sqrt(A+DOLFIN_EPS)\
+   		*(sqrt(pi)*f+sqrt(A0)*dfdr)-(A+DOLFIN_EPS)*dfdr)*drdx*v2*dx\
    - U_n[0]*v1*dx\
    - U_n[1]*v2*dx
 
@@ -213,27 +207,35 @@ R1 = 25300
 R2 = 13900
 CT = 1.3384e-6
 
-def F_from_equation(U):
-	return np.array([U[1], U[1]**2 + f(L)*np.sqrt(A0(L)*U[0])])
+def F_from_equation(U, x):
+	return np.array([U[1], U[1]**2 + f(x)*np.sqrt(A0(x)*U[0])])
 
-def S_from_equation(U):
-	return np.array([0, -2*np.sqrt(np.pi)/db/Re*U[1]/np.sqrt(U[0])])
+def S_from_equation(U, x):
+	return np.array([0, -2*np.sqrt(np.pi)/db/Re*U[1]/np.sqrt(U[0])\
+		+(2*np.sqrt(U[0])*(np.sqrt(np.pi)*f(x)+np.sqrt(A0(x))*dfdr(x))-U[0]*dfdr(x))*drdx(x)])
 
 # Computes the outlet pressure at time t_n+1 from the values of the solution at the three end points m-2, m-1 and m (m=Nx-1) at time t_n.
 # q_m-1^n+1 is computed using Richtmyer's two step Lax-Wendroff method.
 # q_m^n+1 is computed using the Windkessel model, based on an initial estimate of p_m^n+1 (starting at p_m^n).
-def outlet_area(Um2, Um1, Um0, k_max = 100, tol = 1.0e-7):
+def outlet_area(U_n, k_max=100, tol=1.0e-7):
+	
+	# Spatial step, many times larger than the one used in the finite elements scheme (to ensure convergence).
+	deltax = 10*L/Nx
+	x2, x1, x0 = L-2*deltax, L-deltax, L
+	x21, x10 = L-1.5*deltax, L-0.5*deltax
+	
+	Um2, Um1, Um0 = U_n(x2), U_n(x1), U_n(x0)
 	
 	# Values at time step n
-	Fm2, Sm2 = F_from_equation(Um2), S_from_equation(Um2)
-	Fm1, Sm1 = F_from_equation(Um1), S_from_equation(Um1)
-	Fm0, Sm0 = F_from_equation(Um0), S_from_equation(Um0)
+	Fm2, Sm2 = F_from_equation(Um2, x2), S_from_equation(Um2, x2)
+	Fm1, Sm1 = F_from_equation(Um1, x1), S_from_equation(Um1, x1)
+	Fm0, Sm0 = F_from_equation(Um0, x0), S_from_equation(Um0, x0)
 	
 	# Values at time step n+1/2
 	U_half_21 = (Um1+Um2)/2 - dt/deltax*(Fm1-Fm2) + dt/4*(Sm1+Sm2)
 	U_half_10 = (Um0+Um1)/2 - dt/deltax*(Fm0-Fm1) + dt/4*(Sm0+Sm1)
-	F_half_21, S_half_21 = F_from_equation(U_half_21), S_from_equation(U_half_21)
-	F_half_10, S_half_10 = F_from_equation(U_half_10), S_from_equation(U_half_10)
+	F_half_21, S_half_21 = F_from_equation(U_half_21, x21), S_from_equation(U_half_21, x21)
+	F_half_10, S_half_10 = F_from_equation(U_half_10, x10), S_from_equation(U_half_10, x10)
 	
 	# Value at time step n+1
 	qm1 = Um1[1] - dt/deltax*(F_half_10[1]-F_half_21[1]) + dt/2*(S_half_10[1]+S_half_21[1])
@@ -292,7 +294,7 @@ for n_cycle in range(N_cycles):
 		# Update inlet boundary condition
 		q_in.assign(Constant(qq[n]))
 		
-		A_out_value = outlet_area(U_n(L-2*deltax), U_n(L-deltax), U_n(L))
+		A_out_value = outlet_area(U_n)
 		A_out.assign(Constant(A_out_value))
 		
 		#xdmffile_U.write(U, dt)
@@ -302,12 +304,13 @@ for n_cycle in range(N_cycles):
 		Amat[:, n+1] = [A([x]) for x in xx]
 		
 		# Update progress bar
-		progress.update((t+dt)/T)
+		progress.update((t+dt)/N_cycles/T)
 		
 	if n_cycle < N_cycles - 1:
 		qmat[:, 0] = [q([x]) for x in xx]
 		Amat[:, 0] = [A([x]) for x in xx]
-
+		
+		
 
 X, Y = np.meshgrid(tt, xx)
 
@@ -326,7 +329,7 @@ ax.set_ylabel('x')
 ax.set_zlabel('A')
 ax.set_ylim(min(xx), max(xx))
 ax.set_xlim(min(tt), max(tt))
-plt.savefig('../output/r0/arear.png')
+plt.savefig('../output/r0/area.png')
 
 
 # Flow plot
@@ -339,7 +342,7 @@ ax.set_zlabel('q')
 ax.set_ylim(min(xx), max(xx))
 ax.set_xlim(min(tt), max(tt))
 #ax.set_zlim(-15,0.0)
-plt.savefig('../output/r0/flowr.png')
+plt.savefig('../output/r0/flow.png')
 
 
 # Pressure plot
@@ -351,6 +354,6 @@ ax.set_ylabel('x')
 ax.set_zlabel('p')
 ax.set_ylim(min(xx), max(xx))
 ax.set_xlim(min(tt), max(tt))
-plt.savefig('../output/r0/pressurer.png')
+plt.savefig('../output/r0/pressure.png')
 
 

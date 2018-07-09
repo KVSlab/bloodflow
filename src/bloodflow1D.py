@@ -121,7 +121,6 @@ dt = T/Nt
 nu = 0.046
 Re = 10.0/nu/1.0
 db = np.sqrt(nu*T/2/pi)
-#p0 = mmHg_to_unit(160)
 p0 = mmHg_to_unit(90)  # Unit: g cm-1 s-2
 
 r0 = 0.37
@@ -239,7 +238,7 @@ FF = A*v1*dx\
 
 
 # Number of cardiac cycles
-N_cycles = 4
+N_cycles = 1
 
 # File for storing the solution
 xdmffile_A = XDMFFile(mpi_comm_world(), '../output/constant_r0/area.xdmf')
@@ -282,7 +281,7 @@ for n_cycle in range(N_cycles):
 		xdmffile_q.write_checkpoint(U.split()[1], 'flow', t)
 		
 		# Update progress bar
-		progress.update((n_cycle*Nt+(n+1))/Nt/N_cycles*T)
+		progress.update((n_cycle*T+t+dt)/N_cycles/T)
 		
 	U_n.assign(U)
 
