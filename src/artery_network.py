@@ -83,6 +83,7 @@ class Artery(object):
 		:param artery a: Artery on which the solution is to be computed
 		:param q_ins: Vector containing inlet flow
 		"""
+		cs_object = cs.Conservation_Solver()
 		cs.solve(self, q_ins)
 
 	def pressure(self, f, A0, A):
