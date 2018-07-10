@@ -103,7 +103,7 @@ L, T = 20.8, data_q[-1, 0]
 #Nx, Nt = 100, len(data_q[:,0])
 
 # Nx/Nt ratio should be 1/3 (based on experience)
-Nx, Nt = 100, 300
+Nx, Nt = 20, 60
 
 xx = np.linspace(0, L, Nx)
 
@@ -134,7 +134,7 @@ mesh = IntervalMesh(Nx, 0, L)
 
 elV = FiniteElement("CG", mesh.ufl_cell(), 1)
 V = FunctionSpace(mesh, elV)
-V2 = FunctionSpace(mesh, elV*elV)
+V2 = FunctionSpace(mesh, MixedElement([elV, elV]))
 
 # Initial area
 A0 = Constant(pi*pow(r0, 2))
@@ -245,8 +245,9 @@ xdmffile_A = XDMFFile(mpi_comm_world(), '../output/constant_r0/area.xdmf')
 xdmffile_q = XDMFFile(mpi_comm_world(), '../output/constant_r0/flow.xdmf')
 
 # Initial values (t_0)
-xdmffile_A.write_checkpoint(U_n.split()[0], 'area', 0)
-xdmffile_q.write_checkpoint(U_n.split()[1], 'flow', 0)
+AA, Q = U_n.split()
+xdmffile_A.write_checkpoint(AA, 'area', 0)
+xdmffile_q.write_checkpoint(Q, 'flow', 0)
 
 # Progress bar
 progress = Progress('Time-stepping')
@@ -275,10 +276,10 @@ for n_cycle in range(N_cycles):
 		
 		# Update previous solution
 		U_n.assign(U)
-		
-		# Update XDMF-files
-		xdmffile_A.write_checkpoint(U.split()[0], 'area', t)
-		xdmffile_q.write_checkpoint(U.split()[1], 'flow', t)
+		AA, Q = U.split()
+		# Update XDMF-files'
+		xdmffile_A.write_checkpoint(AA, 'area', t)
+		xdmffile_q.write_checkpoint(Q, 'flow', t)
 		
 		# Update progress bar
 		progress.update((n_cycle*T+t+dt)/N_cycles/T)
