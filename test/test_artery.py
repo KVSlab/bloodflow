@@ -9,7 +9,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 sys.path.insert(0, '../src')
 from artery_network import Artery
-import utils
+from utils import *
 
 
 config = configparser.ConfigParser()
@@ -58,18 +58,18 @@ A0 = interpolate(a.A0, a.V).vector().array()[::-1]
 
 
 for n in range(Nt):
-	area[:,n] = (a.solution[n].vector().array()[::2])[::-1]
-	flow[:,n] = (a.solution[n].vector().array()[1::2])[::-1]
-	pressure[:, n] = utils.unit_to_mmHg(a.p0 + (f*(1-np.sqrt(A0)/area[:, n])))
+	area[:, n] = (a.solution[n].vector().array()[::2])[::-1]
+	flow[:, n] = (a.solution[n].vector().array()[1::2])[::-1]
+	pressure[:, n] = a.pressure(f, A0, area[:, n])
 
 x = np.linspace(0, a.L, a.Nx+1)
 
 # Area plot
-utils.plot_matrix(t, x, area, 'area', '../output/r0/area.png')
+plot_matrix(t, x, area, 'area', '../output/r0/area.png')
 
 # Flow plot
-utils.plot_matrix(t, x, flow, 'flow', '../output/r0/flow.png')
+plot_matrix(t, x, flow, 'flow', '../output/r0/flow.png')
 
 # Pressure plot
-utils.plot_matrix(t, x, pressure, 'pressure', '../output/r0/pressure.png')
+plot_matrix(t, x, unit_to_mmHg(pressure), 'pressure', '../output/r0/pressure.png')
 
