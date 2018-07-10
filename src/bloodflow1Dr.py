@@ -133,7 +133,7 @@ dt = T/Nt
 
 nu = 0.046
 Re = 10.0/nu/1.0
-db = np.sqrt(nu*T/2/pi)
+db = np.sqrt(nu*T/2/np.pi)
 p0 = mmHg_to_unit(90) # Unit: g cm-1 s-2
 
 ru = 0.37
