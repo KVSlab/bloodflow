@@ -114,7 +114,7 @@ qqq = data_q[:, 1]
 
 L, T = 20.8, data_q[-1, 0]
 #Nx, Nt = 100, len(data_q[:, 0])
-Nx, Nt = 100, 300
+Nx, Nt = 20, 60
 
 xx = np.linspace(0, L, Nx)
 
@@ -163,6 +163,7 @@ A0 = Expression('pi*pow(ru, 2)*pow(rd/ru, 2*x[0]/L)', degree=2, ru=ru, rd=rd, L=
 f = Expression('4/3*(k1*exp(k2*ru*pow(ru/rd, x[0]/L)) + k3)', degree=2, ru=ru, rd=rd, L=L, k1=k1, k2=k2, k3=k3)
 dfdr = Expression('4/3*k1*k2*exp(k2*ru*pow(rd/ru, x[0]/L))', degree=2, ru=ru, rd=rd, L=L, k1=k1, k2=k2)
 drdx = Expression('log(rd/ru)/L*ru*pow(rd/ru, x[0]/L)', degree=2, ru=ru, rd=rd, L=L)
+
 
 # Inlet flow, defined at one single given time t_n (starting at t_0)
 q_in = Function(V)
@@ -310,7 +311,7 @@ for n_cycle in range(N_cycles):
 		qmat[:, 0] = [q([x]) for x in xx]
 		Amat[:, 0] = [A([x]) for x in xx]
 		
-		
+tt += (N_cycles-1)*T
 
 X, Y = np.meshgrid(tt, xx)
 
