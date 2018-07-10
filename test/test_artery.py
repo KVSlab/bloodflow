@@ -9,6 +9,8 @@ from mpl_toolkits.mplot3d import Axes3D
 
 sys.path.insert(0, '../src')
 from artery_network import Artery
+import utils
+
 
 config = configparser.ConfigParser()
 config.read('config.cfg')
@@ -40,6 +42,7 @@ T = data_q[-1, 0]
 q = interp1d(tt, qq)
 t = np.linspace(0, T, Nt)
 q_ins = q(t)
+#q_ins = np.zeros(Nt)
 
 a.solve(config.getint('Solution', 'Nx'), Nt, T,
 		config.getint('Solution', 'N_cycles'), q_ins)
@@ -50,51 +53,23 @@ pressure = np.zeros([a.Nx+1, a.Nt])
 
 t += (a.N_cycles-1)*a.T
 
-f = interpolate(a.f, a.V)
-A0 = interpolate(a.A0, a.V)
+f = interpolate(a.f, a.V).vector().array()[::-1]
+A0 = interpolate(a.A0, a.V).vector().array()[::-1]
+
 
 for n in range(Nt):
-	area[:,n] = a.solution[n].vector().array()[::2]
-	flow[:,n] = a.solution[n].vector().array()[1::2]
-	pressure[:, n] = 76/101325*(a.p0 + f.vector().array()\
-					*(1-np.sqrt(A0.vector().array()/area[:, n])))
+	area[:,n] = (a.solution[n].vector().array()[::2])[::-1]
+	flow[:,n] = (a.solution[n].vector().array()[1::2])[::-1]
+	pressure[:, n] = utils.unit_to_mmHg(a.p0 + (f*(1-np.sqrt(A0)/area[:, n])))
 
 x = np.linspace(0, a.L, a.Nx+1)
 
-ttt, xxx = np.meshgrid(t, x)
-
 # Area plot
-fig = plt.figure(figsize=(8, 6))
-ax = fig.gca(projection='3d')
-surf = ax.plot_surface(ttt, xxx, area, rstride=1, cstride=1,  cmap='viridis', linewidth=0, antialiased=False)
-ax.set_xlabel('t')
-ax.set_ylabel('x')
-ax.set_zlabel('A')
-ax.set_ylim(min(x), max(x))
-ax.set_xlim(min(t), max(t))
-plt.savefig('../output/r0/area.png')
-
+utils.plot_matrix(t, x, area, 'area', '../output/r0/area.png')
 
 # Flow plot
-fig = plt.figure(figsize=(8, 6))
-ax = fig.gca(projection='3d')
-surf = ax.plot_surface(ttt, xxx, flow, rstride=1, cstride=1,  cmap='viridis', linewidth=0, antialiased=False)
-ax.set_xlabel('t')
-ax.set_ylabel('x')
-ax.set_zlabel('A')
-ax.set_ylim(min(x), max(x))
-ax.set_xlim(min(t), max(t))
-plt.savefig('../output/r0/flow.png')
-
+utils.plot_matrix(t, x, flow, 'flow', '../output/r0/flow.png')
 
 # Pressure plot
-fig = plt.figure(figsize=(8, 6))
-ax = fig.gca(projection='3d')
-surf = ax.plot_surface(ttt, xxx, pressure, rstride=1, cstride=1,  cmap='viridis', linewidth=0, antialiased=False)
-ax.set_xlabel('t')
-ax.set_ylabel('x')
-ax.set_zlabel('A')
-ax.set_ylim(min(x), max(x))
-ax.set_xlim(min(t), max(t))
-plt.savefig('../output/r0/pressure.png')
+utils.plot_matrix(t, x, pressure, 'pressure', '../output/r0/pressure.png')
 
