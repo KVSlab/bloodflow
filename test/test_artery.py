@@ -44,8 +44,10 @@ t = np.linspace(0, T, Nt)
 q_ins = q(t)
 #q_ins = np.zeros(Nt)
 
-a.solve(config.getint('Solution', 'Nx'), Nt, T,
-		config.getint('Solution', 'N_cycles'), q_ins)
+a.define_geometry(config.getint('Solution', 'Nx'), Nt, T,
+		config.getint('Solution', 'N_cycles'))
+
+
 
 area = np.zeros([a.Nx+1, a.Nt])
 flow = np.zeros([a.Nx+1, a.Nt])

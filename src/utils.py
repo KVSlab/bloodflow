@@ -19,7 +19,7 @@ def plot_matrix(t, x, M, label, output):
 	:param x: Vector containing space values
 	:param M: Matrix representing function to be plotted, with dimension = t*x
 	:param string label: Name of the function
-	:param string output: location (with filename) of output file
+	:param string output: Location (with filename) of output file
 	"""
 	
 	T, X = np.meshgrid(t, x)
