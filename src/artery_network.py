@@ -9,6 +9,7 @@ from scipy.interpolate import interp1d
 import conservation_solver as cs
 
 
+
 class Artery(object):
 	""" Represent an artery.
 	:param Ru: Upstream radius
@@ -86,7 +87,7 @@ class Artery(object):
 		A_out = Function(self.V)
 		A_out.assign(Constant(self.A0(self.L)))
 
-		# The initial value of the trial function is deduced from the bottom boundary conditions
+		# Initial value deduced from bottom boundary conditions
 		U_n = Function(self.V2)
 		U_n.assign(Expression(('pi*pow(Ru, 2)*pow(Rd/Ru, 2*x[0]/L)', 'q00'),
 			degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L, q00=q_ins[0]))
@@ -110,10 +111,13 @@ class Artery(object):
 		FF = A*v1*dx\
 		   + q*v2*dx\
 		   + dt*grad(q)[0]*v1*dx\
-		   + dt*(pow(q, 2)/(A+DOLFIN_EPS)+self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*v2*ds\
-		   - dt*(pow(q, 2)/(A+DOLFIN_EPS)+self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx\
-		   + dt*2*sqrt(pi)/self.db/self.Re*q/sqrt(A+DOLFIN_EPS)*v2*dx - dt*(2*sqrt(A+DOLFIN_EPS)\
-		   		*(sqrt(pi)*self.f+sqrt(self.A0)*self.dfdr)-(A+DOLFIN_EPS)*self.dfdr)*self.drdx*v2*dx\
+		   + dt*(pow(q, 2)/(A+DOLFIN_EPS)
+				+self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*v2*ds\
+		   - dt*(pow(q, 2)/(A+DOLFIN_EPS)
+				+self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx\
+		   + dt*2*sqrt(pi)/self.db/self.Re*q/sqrt(A+DOLFIN_EPS)*v2*dx
+		   - dt*(2*sqrt(A+DOLFIN_EPS)*(sqrt(pi)*self.f+sqrt(self.A0)*self.dfdr)
+				-(A+DOLFIN_EPS)*self.dfdr)*self.drdx*v2*dx\
 		   - U_n[0]*v1*dx\
 		   - U_n[1]*v2*dx
 
@@ -173,9 +177,12 @@ class Artery(object):
 		:return: S(x)
 		U should be the value of the solution at the point x.
 		"""
-		return np.array([0, -2*np.sqrt(np.pi)/self.db/self.Re*U[1]/np.sqrt(U[0])\
+		S1 = 0
+		S2 = -2*np.sqrt(np.pi)/self.db/self.Re*U[1]/np.sqrt(U[0])
 			+(2*np.sqrt(U[0])*(np.sqrt(np.pi)*self.f(x)\
-			+np.sqrt(self.A0(x))*self.dfdr(x))-U[0]*self.dfdr(x))*self.drdx(x)])
+							  +np.sqrt(self.A0(x))*self.dfdr(x))
+				-U[0]*self.dfdr(x))*self.drdx(x)
+		return np.array([S1, S2])
 
 	def compute_A_out(self, U_n, k_max=100, tol=1.0e-7):
 		"""Compute the outlet boundary condition.
@@ -201,18 +208,25 @@ class Artery(object):
 		# Values at time step n+1/2
 		U_half_21 = (Um1+Um2)/2 - dt/deltax*(Fm1-Fm2) + dt/4*(Sm1+Sm2)
 		U_half_10 = (Um0+Um1)/2 - dt/deltax*(Fm0-Fm1) + dt/4*(Sm0+Sm1)
-		F_half_21, S_half_21 = self.F_from_equation(U_half_21, x21), self.S_from_equation(U_half_21, x21)
-		F_half_10, S_half_10 = self.F_from_equation(U_half_10, x10), self.S_from_equation(U_half_10, x10)
+		F_half_21 = self.F_from_equation(U_half_21, x21)
+		S_half_21 = self.S_from_equation(U_half_21, x21)
+		F_half_10 = self.F_from_equation(U_half_10, x10)
+		S_half_10 = self.S_from_equation(U_half_10, x10)
 
 		# Value at time step n+1
-		qm1 = Um1[1] - dt/deltax*(F_half_10[1]-F_half_21[1]) + dt/2*(S_half_10[1]+S_half_21[1])
+		qm1 = Um1[1]
+			- dt/deltax*(F_half_10[1]-F_half_21[1])
+			+ dt/2*(S_half_10[1]+S_half_21[1])
 
 		# Fixed point iteration
 		pn = self.p0 + self.f(self.L)*(1-np.sqrt(self.A0(self.L)/Um0[0]))
 		p = pn
 		for k in range(k_max):
 			p_old = p
-			qm0 = Um0[1] + (p-pn)/self.R1 + dt/self.R1/self.R2/self.CT*pn - dt*(self.R1+self.R2)/self.R1/self.R2/self.CT*Um0[1]
+			qm0 = Um0[1]
+				+ (p-pn)/self.R1
+				+ dt/self.R1/self.R2/self.CT*pn
+				- dt*(self.R1+self.R2)/self.R1/self.R2/self.CT*Um0[1]
 			Am0 = Um0[0] - dt/deltax*(qm0-qm1)
 			p = self.p0 + self.f(self.L)*(1-np.sqrt(self.A0(self.L)/Am0))
 			if abs(p-p_old) < tol:
@@ -220,6 +234,15 @@ class Artery(object):
 
 		return Am0
 
+
+	def pressure(self, f, A0, A):
+		""" Compute the pressure at a given point x and time t.
+		:param f: Value of f(r0) in x
+		:param A0: Value of A0 in x
+		:param A: Area in x at a given time t
+		:return: Pressure in x at time t
+		"""
+		return self.p0 + f*(1-np.sqrt(A0/A))
 
 class Artery_Network(object):
 	"""Describe a network of arteries.
