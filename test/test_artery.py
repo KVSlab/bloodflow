@@ -61,8 +61,8 @@ A0 = interpolate(a.A0, a.V).vector().array()[::-1]
 
 
 for n in range(Nt):
-	area[:, n] = (a.solution[n].vector().array()[::2])[::-1]
-	flow[:, n] = (a.solution[n].vector().array()[1::2])[::-1]
+	area[:, n] = (a.solution[n].vector().array()[::2])[::-1]  # "U[0]"
+	flow[:, n] = (a.solution[n].vector().array()[1::2])[::-1]  # "U[1]"
 	pressure[:, n] = a.pressure(f, A0, area[:, n])
 
 x = np.linspace(0, a.L, a.Nx+1)
