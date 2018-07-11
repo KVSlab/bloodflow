@@ -114,9 +114,9 @@ qqq = data_q[:, 1]
 
 L, T = 20.8, data_q[-1, 0]
 #Nx, Nt = 100, len(data_q[:, 0])
-Nx, Nt = 20, 60
+Nx, Nt = 100, 300
 
-xx = np.linspace(0, L, Nx)
+xx = np.linspace(0, L, Nx+1)
 
 qt = ip.interp1d(ttt, qqq)
 tt = np.linspace(0, T, Nt)
@@ -170,12 +170,12 @@ q_in = Function(V)
 q_in.assign(Constant(qq[0]))
 
 # Outlet area
-A_out = Function(V)
-A_out.assign(Constant(A0(L)))
+U_out = Function(V2)
+U_out.assign(Constant((A0(L), qq[0])))
 
 # The initial value of the trial function is deduced from the bottom boundary conditions
 U_n = Function(V2)
-U_n.assign(Expression(('pi*pow(ru, 2)*pow(rd/ru, 2*x[0]/L)', 'q00/pow(rd/ru, 2*x[0]/L)'), degree=2, ru=ru, rd=rd, L=L, q00=qq[0]))
+U_n.assign(Expression(('pi*pow(ru, 2)*pow(rd/ru, 2*x[0]/L)', 'q00'), degree=2, ru=ru, rd=rd, L=L, q00=qq[0]))
 
 
 # Spatial boundary conditions
@@ -184,7 +184,7 @@ def inlet_bdry(x, on_boundary):
 	return on_boundary and near(x[0], 0, tol)
 def outlet_bdry(x, on_boundary):
 	return on_boundary and near(x[0], L, tol)
-bc_outlet = DirichletBC(V2.sub(0), A_out, outlet_bdry)
+bc_outlet = DirichletBC(V2, U_out, outlet_bdry)
 bc_inlet = DirichletBC(V2.sub(1), q_in, inlet_bdry)
 bcs = [bc_inlet, bc_outlet]
 
@@ -252,21 +252,23 @@ def outlet_area(U_n, k_max=100, tol=1.0e-7):
 		if abs(p-p_old) < tol:
 			break
 	
-	return Am0
+	return Am0, qm0
 
 
 
 
 
-
+f_vector = [f([x]) for x in xx]
+A0_vector = [A0([x]) for x in xx]
 
 # Matrices for storing the solution
-qmat = np.zeros([Nx, Nt])
-Amat = np.zeros([Nx, Nt])
-pmat = np.zeros([Nx, Nt])
+qmat = np.zeros([Nx+1, Nt])
+Amat = np.zeros([Nx+1, Nt])
+pmat = np.zeros([Nx+1, Nt])
 
-qmat[:, 0] = qq[0]*np.ones(Nx)
-Amat[:, 0] = [A0([x]) for x in xx]
+qmat[:, 0] = qq[0]*np.ones(Nx+1)
+Amat[:, 0] = A0_vector
+
 
 #xdmffile_U = XDMFFile('../output/r0/bloodflow1Dr.xdmf')
 
@@ -293,16 +295,16 @@ for n_cycle in range(N_cycles):
 		U_n.assign(U)
 		
 		# Update inlet boundary condition
-		q_in.assign(Constant(qq[n]))
+		q_in.assign(Constant(qq[n+1]))
 		
-		A_out_value = outlet_area(U_n)
-		A_out.assign(Constant(A_out_value))
+		A_out, q_out = outlet_area(U_n)
+		U_out.assign(Constant((A_out, q_out)))
 		
 		#xdmffile_U.write(U, dt)
 		
 		# Store solution at time t_n+1
-		qmat[:, n+1] = [q([x]) for x in xx]
-		Amat[:, n+1] = [A([x]) for x in xx]
+		Amat[:, n+1] = (U.vector().array()[::2])[::-1]
+		qmat[:, n+1] = (U.vector().array()[1::2])[::-1]
 		
 		# Update progress bar
 		progress.update((t+dt)/N_cycles/T)
@@ -317,8 +319,7 @@ X, Y = np.meshgrid(tt, xx)
 
 # Assembly of the pressure matrix
 for n in range(Nt):
-	for i in range(Nx):
-		pmat[i, n] = unit_to_mmHg(p0 + f(xx[i])*(1-np.sqrt(A0([xx[i]])/Amat[i, n])))
+	pmat[:, n] = unit_to_mmHg(p0 + f_vector*(1-np.sqrt(A0_vector/Amat[:, n])))
 
 
 # Area plot
