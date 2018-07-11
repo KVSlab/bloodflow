@@ -84,9 +84,10 @@ class Artery(object):
 		"""
 		return self.p0 + f*(1-np.sqrt(A0/A))
 
+
 	def outlet_pressure(self, A):
 		""" Compute the outlet pressure at a given time t.
-		:param A: Area at a given time t
+		:param A: Area in L at a given time t
 		:return: Pressure in L at time t
 		"""
 		return self.p0 + self.f(self.L)*(1-np.sqrt(self.A0(self.L)/A))

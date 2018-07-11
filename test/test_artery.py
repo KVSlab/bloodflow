@@ -55,6 +55,7 @@ pressure = np.zeros([a.Nx+1, a.Nt])
 
 t += (a.N_cycles-1)*a.T
 
+
 f = interpolate(a.f, a.V).vector().array()[::-1]
 A0 = interpolate(a.A0, a.V).vector().array()[::-1]
 

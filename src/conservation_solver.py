@@ -14,6 +14,7 @@ def F_from_equation(a, U, x):
 	"""
 	return np.array([U[1], U[1]**2 + a.f(x)*np.sqrt(a.A0(x)*U[0])])
 
+
 def S_from_equation(a, U, x):
 	"""Compute the source term.
 	:param U: Value of the solution
@@ -27,6 +28,7 @@ def S_from_equation(a, U, x):
 						  +np.sqrt(a.A0(x))*a.dfdr(x))\
 			-U[0]*a.dfdr(x))*a.drdx(x)
 	return np.array([S1, S2])
+
 
 def compute_A_out(a, U_n, k_max=100, tol=1.0e-7):
 	"""Compute the outlet boundary condition.
@@ -77,7 +79,7 @@ def compute_A_out(a, U_n, k_max=100, tol=1.0e-7):
 	return Am0
 
 
-def solve_artery(a, q_ins):
+def solve_artery(a, q_ins, Nt_store, Nx_store):
 	"""Compute and store the solution to dU/dt + dF/dx = S.
 	:param artery a: Artery on which the solution is to be computed
 	:param q_ins: Vector containing inlet flow
@@ -125,7 +127,17 @@ def solve_artery(a, q_ins):
 			  -(A+DOLFIN_EPS)*a.dfdr)*a.drdx*v2*dx\
 	   - U_n[0]*v1*dx\
 	   - U_n[1]*v2*dx
-
+	
+	mesh_store = IntervalMesh(Nx_store, 0, a.L)
+	elV_store = FiniteElement('CG', mesh_store.ufl_cell(), 1)
+	V_store = FunctionSpace(mesh_store, elV_store)
+	V2_store = FunctionSpace(mesh_store, elV_store*elV_store)
+	
+	# Array for storing the solution
+	a.solution = [0]*Nt_store
+	for n in range(Nt_store):
+		a.solution[n] = Function(V2_store)
+	
 	# Progress bar
 	progress = Progress('Time-stepping')
 	set_log_level(PROGRESS)
@@ -153,7 +165,7 @@ def solve_artery(a, q_ins):
 			U_n.assign(U)
 
 			# Update inlet boundary condition
-			q_in.assign(Constant(q_ins[n]))
+			q_in.assign(Constant(q_ins[n+1]))
 
 			# Update outlet boundary condition
 			A_out_value = compute_A_out(a, U_n)
