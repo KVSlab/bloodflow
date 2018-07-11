@@ -79,7 +79,7 @@ def compute_A_out(a, U_n, k_max=100, tol=1.0e-7):
 	return Am0
 
 
-def solve_artery(a, q_ins, Nt_store, Nx_store):
+def solve_artery(a, q_ins):#, Nt_store, Nx_store):
 	"""Compute and store the solution to dU/dt + dF/dx = S.
 	:param artery a: Artery on which the solution is to be computed
 	:param q_ins: Vector containing inlet flow
@@ -128,6 +128,7 @@ def solve_artery(a, q_ins, Nt_store, Nx_store):
 	   - U_n[0]*v1*dx\
 	   - U_n[1]*v2*dx
 	
+	"""
 	mesh_store = IntervalMesh(Nx_store, 0, a.L)
 	elV_store = FiniteElement('CG', mesh_store.ufl_cell(), 1)
 	V_store = FunctionSpace(mesh_store, elV_store)
@@ -137,6 +138,7 @@ def solve_artery(a, q_ins, Nt_store, Nx_store):
 	a.solution = [0]*Nt_store
 	for n in range(Nt_store):
 		a.solution[n] = Function(V2_store)
+	"""
 	
 	# Progress bar
 	progress = Progress('Time-stepping')
