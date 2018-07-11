@@ -8,28 +8,28 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 sys.path.insert(0, '../src')
-from artery_network import Artery
+
 from utils import *
+from artery import Artery
+import conservation_solver as cs
 
 
 config = configparser.ConfigParser()
 config.read('config.cfg')
-par = config['Parameter']
-sol = config['Solution']
 
-a = Artery(config.getfloat('Parameter', 'Ru'),
-		   config.getfloat('Parameter', 'Rd'),
-		   config.getfloat('Parameter', 'L'),
-		   config.getfloat('Parameter', 'k1'),
-		   config.getfloat('Parameter', 'k2'),
-		   config.getfloat('Parameter', 'k3'),
-		   config.getfloat('Parameter', 'nu'),
-		   config.getfloat('Parameter', 'p0'),
-		   config.getfloat('Parameter', 'R1'),
-		   config.getfloat('Parameter', 'R2'),
-		   config.getfloat('Parameter', 'CT'))
+a = Artery(config.getfloat('Parameters', 'Ru'),
+		   config.getfloat('Parameters', 'Rd'),
+		   config.getfloat('Parameters', 'L'),
+		   config.getfloat('Parameters', 'k1'),
+		   config.getfloat('Parameters', 'k2'),
+		   config.getfloat('Parameters', 'k3'),
+		   config.getfloat('Parameters', 'nu'),
+		   config.getfloat('Parameters', 'p0'),
+		   config.getfloat('Parameters', 'R1'),
+		   config.getfloat('Parameters', 'R2'),
+		   config.getfloat('Parameters', 'CT'))
 
-Nt = config.getint('Solution', 'Nt')
+Nt = config.getint('Geometry', 'Nt')
 
 # Import the inlet flow data
 data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
@@ -37,17 +37,17 @@ data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
 tt = data_q[:, 0]
 qq = data_q[:, 1]
 
-T = data_q[-1, 0]	
+T = data_q[-1, 0]
 
 q = interp1d(tt, qq)
 t = np.linspace(0, T, Nt)
 q_ins = q(t)
 #q_ins = np.zeros(Nt)
 
-a.define_geometry(config.getint('Solution', 'Nx'), Nt, T,
-		config.getint('Solution', 'N_cycles'))
+a.define_geometry(config.getint('Geometry', 'Nx'), Nt, T,
+		config.getint('Geometry', 'N_cycles'))
 
-
+cs.solve_artery(a, q_ins)
 
 area = np.zeros([a.Nx+1, a.Nt])
 flow = np.zeros([a.Nx+1, a.Nt])
