@@ -7,7 +7,7 @@ from artery import Artery
 
 def F_from_equation(a, U, x):
 	"""Compute the flux term.
-	:param U: Value of the solution
+	:param U: Value of solution
 	:param x: Point of evaluation
 	:return: F(x)
 	U should be the value of the solution at the point x.
@@ -17,7 +17,7 @@ def F_from_equation(a, U, x):
 
 def S_from_equation(a, U, x):
 	"""Compute the source term.
-	:param U: Value of the solution
+	:param U: Value of solution
 	:param x: Point
 	:return: S(x)
 	U should be the value of the solution at the point x.

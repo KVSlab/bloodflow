@@ -173,11 +173,13 @@ class Artery_Network(object):
 		:param d1: First daughter vessel
 		:param d2: Second daughter vessel
 		:param x: Current point, an 18-dimensional vector
+		:param k_max: Maximum number of iterations
+		:param tol: Tolerance for difference between two steps
 		:return: Solution to the system of equations
 		"""
 		x = np.zeros(18)
 		for k in range(k_max):
-			x_old = x
+			x_old = np.copy(x)
 			x -= npl.solve(jacobian(x), problem_function(x))
 			if npl.norm(x-x_old) < tol:
 				break
