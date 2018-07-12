@@ -48,6 +48,7 @@ class Artery(object):
 		self.N_cycles = N_cycles
 		
 		self.dt = self.T/self.Nt
+		self.dex = self.L/self.Nx
 		self.db = np.sqrt(self.nu*self.T/2/np.pi)
 		
 		self.mesh = IntervalMesh(self.Nx, 0, self.L)
