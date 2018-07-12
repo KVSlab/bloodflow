@@ -169,14 +169,28 @@ class Artery_Network(object):
 
 	def newton(p, d1, d2, k_max=1000, tol=1.e-14):
 		""" Compute the boundary conditions.
+		:param p: Parent artery
+		:param d1: First daughter vessel
+		:param d2: Second daughter vessel
+		:param x: Current point, an 18-dimensional vector
+		:return: Solution to the system of equations
 		"""
 		x = np.zeros(18)
 		for k in range(k_max):
 			x_old = x
-			x 
+			x -= npl.solve(jacobian(x), problem_function(x))
 			if npl.norm(x-x_old) < tol:
 				break
-		
+		return x
+	
+	def compute_inner_bc(p, d1, d2):
+		""" Compute the inter-arterial boundary conditions for one bifurcation.
+		:param p: Parent artery
+		:param d1: First daughter vessel
+		:param d2: Second daughter vessel
+		:return: Area and flow for the three vessels
+		"""
+		x = newton(p, d1, d2)
 		
 	def solve(self, Nx, Nt, T, N_cycles, q_in):
 		"""Solve the equation on the entire arterial network.
