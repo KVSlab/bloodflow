@@ -370,11 +370,15 @@ class Artery_Network(object):
 			q0 = arteries[i].A0(0)/(arteries[i].A0(0)+arteries[s].A0(0))
 			   * arteries[p].q0
 			arteries[i].define_solution(q0)
+		self.x = np.zeros([2**(self.order-1), 18]
+		for i in range(2**(self.order-1)):
+			#x[i] = <initial x>
+			None
 
 
 	def solve(self, q_ins):
 		"""Solve the equation on the entire arterial network.
-		:param q_in: Vector containing inlet flow for the first artery.
+		:param q_ins: Vector containing inlet flow for the first artery.
 		"""
 		
 		# Progress bar
@@ -392,23 +396,32 @@ class Artery_Network(object):
 
 				print('Iteration '+str(n))
 
-				t += self.dt
+
+				# Update current solution
+				for artery in arteries:
+					artery.U_n.assign(artery.U)
+
+				# Update inlet boundary conditions
+				arteries[0].q_in.assign(Constant(q_ins[n+1]))
+				
+				# Update bifurcation boundary conditions
+				for ip in range(2**(self.order-1):
+					i1, i2 = daughter_vessels(ip)
+					p = self.arteries[ip]
+					d1, d2 = self.arteries[d1], self.arteries[d2]
+					set_inner_bc(p, d1, d2)
+				
+				# Update outlet boundary condition
+				A_out_value = self.compute_A_out(U_n)
+				A_out.assign(Constant(A_out_value))
 				
 				# U_n+1 is solution of FF == 0
 				solve(variational_form == 0, U, bcs)
-
-				# Update previous solution
-				U_n.assign(U)
-
-				# Update inlet boundary conditions
-				q_in.assign(Constant(q_ins[n+1]))
-
-				# Update outlet boundary condition
-				A_out_value = compute_A_out(U_n)
-				A_out.assign(Constant(A_out_value))
 				
 				# Store solution at time t_(n+1)
 				None
-
+				
+				t += self.dt
+				
 				# Update progress bar
 				progress.update((t+self.dt)/self.N_cycles/self.T)

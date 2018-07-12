@@ -46,7 +46,6 @@ class Artery(object):
 		self.Nt = Nt
 		self.T = T
 		self.N_cycles = N_cycles
-		self.q0 = q0
 		
 		self.dt = self.T/self.Nt
 		self.dex = self.L/self.Nx
@@ -73,7 +72,10 @@ class Artery(object):
 
 
 	def define_solution(self, q0):
-	
+		
+		# Define initial flow
+		self.q0 = q0
+		
 		# Define trial function
 		self.U = Function(self.V2)
 		self.A, self.q = split(self.U)
