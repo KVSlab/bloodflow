@@ -34,18 +34,19 @@ class Artery(object):
 		self.CT = CT
 
 
-	def define_geometry(self, Nx, Nt, T, N_cycles, q0):
+	def define_geometry(self, Nx, Nt, T, N_cycles):
 		"""Define FEniCS parameters.
-		Compute the solution.
 		:param Nx: Number of spatial steps
 		:param Nt: Number of temporal steps
 		:param T: Duration of one cardiac cycle
 		:param N_cycles: Number of cardiac cycles
+		:param q0: Initial flow value.
 		"""
 		self.Nx = Nx
 		self.Nt = Nt
 		self.T = T
 		self.N_cycles = N_cycles
+		self.q0 = q0
 		
 		self.dt = self.T/self.Nt
 		self.dex = self.L/self.Nx
@@ -70,6 +71,9 @@ class Artery(object):
 		self.drdx = Expression('log(Rd/Ru)/L*Ru*pow(Rd/Ru, x[0]/L)',
 							   degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L)
 
+
+	def define_solution(self, q0):
+	
 		# Define trial function
 		self.U = Function(self.V2)
 		self.A, self.q = split(self.U)
@@ -79,7 +83,7 @@ class Artery(object):
  
 		# Inlet flow
 		self.q_in = Function(self.V)
-		self.q_in.assign(Constant(q0))
+		self.q_in.assign(Constant(self.q0))
 
 		# Outlet area
 		self.A_out = Function(self.V)
@@ -88,7 +92,7 @@ class Artery(object):
 		# Initial value deduced from bottom boundary conditions
 		self.U_n = Function(self.V2)
 		self.U_n.assign(Expression(('pi*pow(Ru, 2)*pow(Rd/Ru, 2*x[0]/L)', 'q0'),
-			degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L, q0=q0))
+			degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L, q0=self.q0))
 
 		# Spatial boundary conditions
 		tol = 1.e-14

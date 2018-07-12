@@ -33,9 +33,10 @@ class Artery_Network(object):
 		:param i: Index of parent vessel
 		:return: Indices of daughter vessels
 		"""
-		if i <= 0 or i >= 2**(self.order-1):
+		if i < 0 or i >= 2**(self.order-1):
 			raise Exception('Vessel index out of range')
-		return 2*i, 2*i+1
+			
+		return 2*i+1, 2*i+2
 
 
 	def parent_vessel(self, i):
@@ -43,10 +44,21 @@ class Artery_Network(object):
 		:param i: Index of daughter vessel
 		:return: Index of parent vessel
 		"""
-		if i <= 1 or i >= 2**self.order:
+		if i <= 0 or i >= 2**self.order:
 			raise Exception('Vessel index out of range')
-		# d1 is pair, d2=d1+1 is odd
-		return int(i/2)
+			
+		# d1 is odd, d2=d1+1 is pair
+		return int((i-1)/2)
+		
+	def sister_vessel(self, i):
+		"""Find sister vessel.
+		:param i: Index of vessel
+		:return: Index of sister vessel
+		"""
+		if i%2 == 0:
+			return i-1
+		else:
+			return i+1
 
 
 	def flux(self, a, U, x):
@@ -74,7 +86,22 @@ class Artery_Network(object):
 							  +np.sqrt(a.A0(x))*a.dfdr(x))\
 				-U[0]*a.dfdr(x))*a.drdx(x)
 		return np.array([S1, S2])
-
+	
+	def compute_U_half(self, a, U0, U1, x0, x1):
+		"""Compute a half step.
+		:param a: Current artery
+		:param U0: Left point
+		:param U1: Right point
+		:param x0: x-value at which U0 is the solution
+		:param x1: x-value at which U1 is the solution
+		:return: Middle point, half a time step later
+		"""
+		# Value of terms at time t_n
+		F0, S0 = self.flux(U0, x0), self.source(U0, x0)
+		F1, S1 = self.flux(U1, x1), self.source(U1, x1)
+		
+		return (Um1+Um0)/2 - a.dt/(x1-x0)*(F1-F0) + a.dt/4*(Sm1+Sm0) 
+		
 
 	def compute_A_out(self, a, k_max=100, tol=1.0e-7):
 		"""Compute the outlet boundary condition.
@@ -86,7 +113,6 @@ class Artery_Network(object):
 		deltax = 10*a.dex
 		x2, x1, x0 = a.L-2*deltax, a.L-deltax, a.L
 		x21, x10 = a.L-1.5*deltax, a.L-0.5*deltax
-
 		Um2, Um1, Um0 = U_n(x2), U_n(x1), U_n(x0)
 
 		# Values at time step n
@@ -95,8 +121,8 @@ class Artery_Network(object):
 		Fm0, Sm0 = self.flux(Um0, x0), self.source(Um0, x0)
 
 		# Values at time step n+1/2
-		U_half_21 = (Um1+Um2)/2 - a.dt/deltax*(Fm1-Fm2) + a.dt/4*(Sm1+Sm2)
-		U_half_10 = (Um0+Um1)/2 - a.dt/deltax*(Fm0-Fm1) + a.dt/4*(Sm0+Sm1)
+		U_half_21 = self.compute_U_half(a, Um2, Um1, x2, x1)
+		U_half_10 = self.compute_U_half(a, Um1, Um0, x1, x0)
 		F_half_21 = self.flux(U_half_21, x21)
 		S_half_21 = self.source(U_half_21, x21)
 		F_half_10 = self.flux(U_half_10, x10)
@@ -124,7 +150,7 @@ class Artery_Network(object):
 		return Am0
 
 
-	def problem_function(p, d1, d2, x):
+	def problem_function(self, p, d1, d2, x):
 		"""Compute the function representing the system of equations <system>.
 		If x is the solution to the problem, then function(x) = 0.
 		:param p: Parent artery
@@ -142,42 +168,70 @@ class Artery_Network(object):
 		drdxp, drdx1, drdx2 = p.drdx(p.L), d1.drdx(0), d2.drdx(0)
 		rpi = sqrt(np.pi)
 		
+		# Ghost half terms
+		Fp = self.flux(p, np.array([x[11], x[2]), p.L+p.dex/2)
+		F1 = self.flux(d1, np.array([x[14], x[5]), -d1.dex/2)
+		F2 = self.flux(d2, np.array([x[17], x[8]), -d2.dex/2)
+		Sp = self.source(p, np.array([x[11], x[2]), p.L+p.dex/2)
+		S1 = self.source(d1, np.array([x[14], x[5]), -d1.dex/2)
+		S2 = self.source(d2, np.array([x[17], x[8]), -d2.dex/2)
+		
+		# Compute half-time-step-values in M-1/2 for p and 1/2 for d1 and d2
+		Um1p, Um0p = p.U_n(p.L-p.dex), U_n(p.L)
+		U0d1, U1d1 = d1.U_n(0), d1.U_n(d1.dex)
+		U0d2, U1d2 = d2.U_n(0), d2.U_n(d2.dex)
+
+		U_half_p = compute_U_half(Um1p, Um0p, p.L-p.dex, p.L)
+		U_half_1 = compute_U_half(U0d1, U1d1, 0, d1.dex)
+		U_half_2 = compute_U_half(U0d2, U1d2, 0, d2.dex)
+		
+		F_half_p = self.flux(U_half_p, L-p.dex/2)
+		S_half_p = self.source(U_half_p, L-p.dex/2)
+		F_half_1 = self.flux(U_half_1, d1.dex/2)
+		S_half_1 = self.source(U_half_1, d1.dex/2)
+		F_half_2 = self.flux(U_half_1, d1.dex/2)
+		S_half_2 = self.source(U_half_1, d1.dex/2)
+		
+		# Function value
 		y = np.zeros(18)
 		
 		# Entries from equation (20)
-		y[0] = 2*x[1]
-		y[1] = 
-		y[2] = 
+		y[0] = 2*x[1] - U_half_p[1] - x[2]
+		y[1] = 2*x[4] - x[5] - U_half_1[1]
+		y[2] = 2*x[7] - x[8] - U_half_2[1]
 		
 		# Entries from equation (21)
-		y[3] = 
-		y[4] = 
-		y[5] = 
+		y[3] = 2*x[10] - U_half_p[0] - x[11]
+		y[4] = 2*x[13] - x[14] - U_half_1[0]
+		y[5] = 2*x[16] - x[17] - U_half_2[0]
 		
 		# Entries from equation (22)
-		y[6] = 
-		y[7] = 
+		y[6] = x[1] - x[4] - x[7]
+		y[7] = x[2] - x[5] - x[8]
 		
 		# Entries from equation (23)
-		y[8] = 
-		y[9] = 
-		y[10] = 
-		y[11] =
+		y[8] = fp*(1-np.sqrt(A0p/x[10])) - f1*(1-np.sqrt(A01/x[13]))
+		y[9] = fp*(1-np.sqrt(A0p/x[10])) - f2*(1-np.sqrt(A02/x[16]))
+		y[10] = fp*(1-np.sqrt(A0p/x[9])) - f1*(1-np.sqrt(A01/x[12]))
+		y[11] = fp*(1-np.sqrt(A0p/x[9])) - f2*(1-np.sqrt(A02/x[15]))
 		
 		# Entries from equation (26) 
-		y[12] = 
-		y[13] = 
-		y[14] = 
+		y[12] = x[0] - Um0p[1] + p.dt/p.dex(Fp[1] - F_half_p[1])\
+			  - p.dt/2*(Sp[1]+S_half_p[1])
+		y[13] = x[3] - U0d1[1] + d1.dt/d1.dex(F1[1] - F_half_1[1])\
+			  - d1.dt/2*(S2[1]+S_half_2[1])
+		y[14] = x[6] - U0d2[1] + d2.dt/d2.dex(F2[1] - F_half_2[1])\
+			  - d2.dt/2*(S2[1]+S_half_2[1])
 		
 		# Entries from equation (27)
-		y[15] = 
-		y[16] = 
-		y[17] = 
+		y[15] = x[9] - Um0p[0] + p.dt/p.dex(Fp[0] - F_half_p[0])
+		y[16] = x[12] - U0d1[0] + d1.dt/d1.dex(F1[0] - F_half_1[0])
+		y[17] = x[15] - U0d2[0] + d2.dt/d2.dex(F2[0] - F_half_2[0])
 		
 		return y
 
 
-	def jacobian(p, d1, d2, x):
+	def jacobian(self, p, d1, d2, x):
 		"""Compute the jacobian matrix for the system of equations <system>.
 		:param p: Parent artery
 		:param d1: First daughter vessel
@@ -234,21 +288,21 @@ class Artery_Network(object):
 		# Entries from equation (26)
 		J[0, 12] = 1
 		J[2, 12] = p.dt/p.dex*2*x[2]/x[11] + p.dt*rpi/dbp/Rep/np.sqrt(x[11])
-		J[11, 12] = p.dt/p.dex*(-pow(x[2]/x[11], 2) + fp/2*np.sqrt(A0p/x[11]))
-				  - p.dt/2*(rpi/dbp/Rep*x[2]/pow(x[11], 3/2)
-						   + (1/np.sqrt(x[11])*(rpi*fp+np.sqrt(A0p)*dfdrp)
+		J[11, 12] = p.dt/p.dex*(-pow(x[2]/x[11], 2) + fp/2*np.sqrt(A0p/x[11]))\
+				  - p.dt/2*(rpi/dbp/Rep*x[2]/pow(x[11], 3/2)\
+						   + (1/np.sqrt(x[11])*(rpi*fp+np.sqrt(A0p)*dfdrp)\
 											   - dfdrp)*drdxp)
 		J[3, 13] = 1
 		J[5, 13] = -d1.dt/d1.dex*2*x[5]/x[14] + d1.dt*rpi/db1/Re1/np.sqrt(x[14])
-		J[14, 13] = d1.dt/d1.dex*(pow(x[5]/x[14], 2) - f1/2*np.sqrt(A01/x[14]))
-				  - d1.dt/2*(rpi/db1/Re1*x[5]/pow(x[14], 3/2)
-							+ (1/np.sqrt(x[14])*(rpi*f1+np.sqrt(A01)*dfdr1)
+		J[14, 13] = d1.dt/d1.dex*(pow(x[5]/x[14], 2) - f1/2*np.sqrt(A01/x[14]))\
+				  - d1.dt/2*(rpi/db1/Re1*x[5]/pow(x[14], 3/2)\
+							+ (1/np.sqrt(x[14])*(rpi*f1+np.sqrt(A01)*dfdr1)\
 												- dfdr1)*drdx1)
 		J[6, 14] = 1
 		J[8, 14] = -d2.dt/d2.dex*2*x[8]/x[17] + d2.dt*rpi/db2/Re2/np.sqrt(x[17])
-		J[17, 14] = d2.dt/d2.dex*(pow(x[8]/x[17], 2) - f2/2*np.sqrt(A02/x[17]))
-				  - d2.dt/2*(rpi/db2/Re2*x[8]/pow(x[17], 3/2)
-							+ (1/np.sqrt(x[17])*(rpi*f2+np.sqrt(A02)*dfdr2)
+		J[17, 14] = d2.dt/d2.dex*(pow(x[8]/x[17], 2) - f2/2*np.sqrt(A02/x[17]))\
+				  - d2.dt/2*(rpi/db2/Re2*x[8]/pow(x[17], 3/2)\
+							+ (1/np.sqrt(x[17])*(rpi*f2+np.sqrt(A02)*dfdr2)\
 												- dfdr2)*drdx2)
 		
 		# Entries from equation (27)
@@ -262,7 +316,7 @@ class Artery_Network(object):
 		return J
 		
 
-	def newton(p, d1, d2, k_max=1000, tol=1.e-14):
+	def newton(self, p, d1, d2, x=np.zeros(18), k_max=1000, tol=1.e-10):
 		"""Compute solution to the system of equations.
 		:param p: Parent artery
 		:param d1: First daughter vessel
@@ -272,7 +326,6 @@ class Artery_Network(object):
 		:param tol: Tolerance for difference between two steps
 		:return: Solution to the system of equations
 		"""
-		x = np.zeros(18)
 		for k in range(k_max):
 			x_old = np.copy(x)
 			x -= npl.solve(jacobian(x), problem_function(x))
@@ -281,36 +334,48 @@ class Artery_Network(object):
 		return x
 
 
-	def compute_inner_bc(p, d1, d2):
+	def set_inner_bc(self, p, d1, d2):
 		""" Compute the inter-arterial boundary conditions for one bifurcation.
 		:param p: Parent artery
 		:param d1: First daughter vessel
 		:param d2: Second daughter vessel
 		:return: Area and flow for the three vessels
 		"""
-		x = newton(p, d1, d2)
+		self.x = newton(p, d1, d2, self.x)
+		p.U_out = Constant((self.x[9], self.x[0]))
+		d1.U_in = Constant((self.x[12], self.x[3]))
+		d2.U_in = Constant((self.x[15], self.x[6]))
 
 
-	def solve(self, Nx, Nt, T, N_cycles, q_in):
-		"""Solve the equation on the entire arterial network.
+	def define_geometry(self, Nx, Nt, T, N_cycles)
+		"""Calls define_geometry on each artery.
 		:param Nx: Number of spatial steps
 		:param Nt: Number of temporal steps
 		:param T: Period of one cardiac cycle
 		:param N_cycles: Number of cardiac cycles
-		:param q_in: Vector of inlet flow for the first artery.
 		"""
 		for i in range(len(arteries)):
 			arteries[i].define_geometry(Nx, Nt, T, N_cycles)
-			cs.solve(arteries[i], q_ins)
-	
-	def solve_artery(self, q_ins):#, Nt_store, Nx_store):
-		"""Compute and store the solution to dU/dt + dF/dx = S.
-		:param q_ins: Vector containing inlet flow
+
+
+	def define_solution(self, q0):
+		"""Computes q0 on each artery, befor calling define_solution.
+		The daughter vessel gets a flow proportional to its share of the area.
+		:param q0: Initial flow of the first vessel
 		"""
-		# Array for storing the solution
-		self.solution = [0]*Nt
-		for n in range(Nt):
-			self.solution[n] = Function(self.V2)
+		arteries[0].define_solution(q0)
+		for i in range(1, len(arteries)):
+			p = self.parent_vessel(i)
+			s = self.sister_vessel(i)
+			q0 = arteries[i].A0(0)/(arteries[i].A0(0)+arteries[s].A0(0))
+			   * arteries[p].q0
+			arteries[i].define_solution(q0)
+
+
+	def solve(self, q_ins):
+		"""Solve the equation on the entire arterial network.
+		:param q_in: Vector containing inlet flow for the first artery.
+		"""
 		
 		# Progress bar
 		progress = Progress('Time-stepping')
@@ -322,23 +387,20 @@ class Artery_Network(object):
 		# Cardiac cycle iteration
 		for n_cycle in range(self.N_cycles):
 			
-			# Store solution at multiples of time t_Nt (beginning of cycle)
-			self.solution[0].assign(U_n)
-			
 			# Time-stepping for one period
 			for n in range(self.Nt-1):
 
 				print('Iteration '+str(n))
 
 				t += self.dt
-
+				
 				# U_n+1 is solution of FF == 0
 				solve(variational_form == 0, U, bcs)
 
 				# Update previous solution
 				U_n.assign(U)
 
-				# Update inlet boundary condition
+				# Update inlet boundary conditions
 				q_in.assign(Constant(q_ins[n+1]))
 
 				# Update outlet boundary condition
@@ -346,7 +408,7 @@ class Artery_Network(object):
 				A_out.assign(Constant(A_out_value))
 				
 				# Store solution at time t_(n+1)
-				self.solution[n+1].assign(U)
+				None
 
 				# Update progress bar
 				progress.update((t+self.dt)/self.N_cycles/self.T)
