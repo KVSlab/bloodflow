@@ -34,7 +34,7 @@ class Artery(object):
 		self.CT = CT
 
 
-	def define_geometry(self, Nx, Nt, T, N_cycles):
+	def define_geometry(self, Nx, Nt, T, N_cycles, q0):
 		"""Define FEniCS parameters.
 		Compute the solution.
 		:param Nx: Number of spatial steps
@@ -69,11 +69,50 @@ class Artery(object):
 							   k1=self.k1, k2=self.k2)
 		self.drdx = Expression('log(Rd/Ru)/L*Ru*pow(Rd/Ru, x[0]/L)',
 							   degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L)
-		
-		# Array for storing the solution
-		self.solution = [0]*Nt
-		for n in range(Nt):
-			self.solution[n] = Function(self.V2)
+
+		# Define trial function
+		self.U = Function(self.V2)
+		self.A, self.q = split(self.U)
+
+		# Define test functions
+		self.v1, self.v2 = TestFunctions(self.V2)
+ 
+		# Inlet flow
+		self.q_in = Function(self.V)
+		self.q_in.assign(Constant(q0))
+
+		# Outlet area
+		self.A_out = Function(self.V)
+		self.A_out.assign(Constant(self.A0(self.L)))
+
+		# Initial value deduced from bottom boundary conditions
+		self.U_n = Function(self.V2)
+		self.U_n.assign(Expression(('pi*pow(Ru, 2)*pow(Rd/Ru, 2*x[0]/L)', 'q0'),
+			degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L, q0=q0))
+
+		# Spatial boundary conditions
+		tol = 1.e-14
+		def inlet_bdry(x, on_boundary):
+			return on_boundary and near(x[0], 0, tol)
+		def outlet_bdry(x, on_boundary):
+			return on_boundary and near(x[0], self.L, tol)
+		bc_outlet = DirichletBC(self.V2.sub(0), self.A_out, outlet_bdry)
+		bc_inlet = DirichletBC(self.V2.sub(1), self.q_in, inlet_bdry)
+		self.bcs = [bc_inlet, bc_outlet]
+
+		# Variational form
+		self.variatonal_form = A*self.v1*dx\
+			+ q*self.v2*dx\
+			+ self.dt*grad(q)[0]*self.v1*dx\
+			+ self.dt*(pow(q, 2)/(A+DOLFIN_EPS)\
+				  +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*self.v2*ds\
+			- self.dt*(pow(q, 2)/(A+DOLFIN_EPS)\
+				  +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*grad(self.v2)[0]*dx\
+			+ self.dt*2*sqrt(pi)/self.db/self.Re*q/sqrt(A+DOLFIN_EPS)*self.v2*dx\
+			- self.dt*(2*sqrt(A+DOLFIN_EPS)*(sqrt(pi)*self.f+sqrt(self.A0)*self.dfdr)\
+				  -(A+DOLFIN_EPS)*self.dfdr)*self.drdx*self.v2*dx\
+			- self.U_n[0]*self.v1*dx\
+			- self.U_n[1]*self.v2*dx
 
 
 	def pressure(self, f, A0, A):

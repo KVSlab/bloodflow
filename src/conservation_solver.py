@@ -38,7 +38,7 @@ def compute_A_out(a, U_n, k_max=100, tol=1.0e-7):
 	:return: Outlet boundary value of A at time step t_(n+1).
 	"""
 	# Spatial step, scaled to satisfy the CFL condition
-	deltax = 10*a.L/a.Nx
+	deltax = 10*a.dex
 	x2, x1, x0 = a.L-2*deltax, a.L-deltax, a.L
 	x21, x10 = a.L-1.5*deltax, a.L-0.5*deltax
 
@@ -115,18 +115,18 @@ def solve_artery(a, q_ins):#, Nt_store, Nx_store):
 	bcs = [bc_inlet, bc_outlet]
 
 	# Variational form
-	FF = A*v1*dx\
-	   + q*v2*dx\
-	   + a.dt*grad(q)[0]*v1*dx\
-	   + a.dt*(pow(q, 2)/(A+DOLFIN_EPS)\
+	variatonal_form = A*v1*dx\
+		+ q*v2*dx\
+		+ a.dt*grad(q)[0]*v1*dx\
+		+ a.dt*(pow(q, 2)/(A+DOLFIN_EPS)\
 			  +a.f*sqrt(a.A0*(A+DOLFIN_EPS)))*v2*ds\
-	   - a.dt*(pow(q, 2)/(A+DOLFIN_EPS)\
+		- a.dt*(pow(q, 2)/(A+DOLFIN_EPS)\
 			  +a.f*sqrt(a.A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx\
-	   + a.dt*2*sqrt(pi)/a.db/a.Re*q/sqrt(A+DOLFIN_EPS)*v2*dx\
-	   - a.dt*(2*sqrt(A+DOLFIN_EPS)*(sqrt(pi)*a.f+sqrt(a.A0)*a.dfdr)\
+		+ a.dt*2*sqrt(pi)/a.db/a.Re*q/sqrt(A+DOLFIN_EPS)*v2*dx\
+		- a.dt*(2*sqrt(A+DOLFIN_EPS)*(sqrt(pi)*a.f+sqrt(a.A0)*a.dfdr)\
 			  -(A+DOLFIN_EPS)*a.dfdr)*a.drdx*v2*dx\
-	   - U_n[0]*v1*dx\
-	   - U_n[1]*v2*dx
+		- U_n[0]*v1*dx\
+		- U_n[1]*v2*dx
 	
 	"""
 	mesh_store = IntervalMesh(Nx_store, 0, a.L)

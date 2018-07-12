@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
 from artery import Artery
-import conservation_solver as cs
 
 
 class Artery_Network(object):
@@ -18,7 +17,7 @@ class Artery_Network(object):
 	:param Rd: Downstream radii
 	:param L: Vessel lengths
 	:param k: Vectors containing k1, k2 and k3 from the relation Eh/R0
-	:param Re: Reynolds number
+	:param Re: Reynolds' number
 	:param p0: Diastolic pressure
 	"""
 	def __init__(self, order, Ru, Rd, L, k1, k2, k3, Re, p0):
@@ -27,8 +26,104 @@ class Artery_Network(object):
 		for i in range(len(arteries)):
 			arteries[i] = Artery(Ru[i], Rd[i], L[i], k1[i],
 								 k2[i], k3[i], Re, p0)
-	
-	
+
+
+	def daughter_vessels(self, i):
+		"""Find daughter vessels.
+		:param i: Index of parent vessel
+		:return: Indices of daughter vessels
+		"""
+		if i <= 0 or i >= 2**(self.order-1):
+			raise Exception('Vessel index out of range')
+		return 2*i, 2*i+1
+
+
+	def parent_vessel(self, i):
+		"""Find parent vessel.
+		:param i: Index of daughter vessel
+		:return: Index of parent vessel
+		"""
+		if i <= 1 or i >= 2**self.order:
+			raise Exception('Vessel index out of range')
+		# d1 is pair, d2=d1+1 is odd
+		return int(i/2)
+
+
+	def flux(self, a, U, x):
+		"""Compute the flux term.
+		:param a: Artery on which the flux term is computed
+		:param U: Value of solution
+		:param x: Point of evaluation
+		:return: F(x)
+		U should be the value of the solution at the point x.
+		"""
+		return np.array([U[1], U[1]**2 + a.f(x)*np.sqrt(a.A0(x)*U[0])])
+
+
+	def source(self, a, U, x):
+		"""Compute the source term.
+		:param a: Artery on which the source term is computed
+		:param U: Value of solution
+		:param x: Point
+		:return: S(x)
+		U should be the value of the solution at the point x.
+		"""
+		S1 = 0
+		S2 = -2*np.sqrt(np.pi)/a.db/a.Re*U[1]/np.sqrt(U[0])\
+			+(2*np.sqrt(U[0])*(np.sqrt(np.pi)*a.f(x)\
+							  +np.sqrt(a.A0(x))*a.dfdr(x))\
+				-U[0]*a.dfdr(x))*a.drdx(x)
+		return np.array([S1, S2])
+
+
+	def compute_A_out(self, a, k_max=100, tol=1.0e-7):
+		"""Compute the outlet boundary condition.
+		:param k_max: Maximum number of iterations in Piccards scheme
+		:param tol: Tolerance for Piccards fixed point iteration scheme
+		:return: Outlet boundary value of A at time step t_(n+1).
+		"""
+		# Spatial step, scaled to satisfy the CFL condition
+		deltax = 10*a.dex
+		x2, x1, x0 = a.L-2*deltax, a.L-deltax, a.L
+		x21, x10 = a.L-1.5*deltax, a.L-0.5*deltax
+
+		Um2, Um1, Um0 = U_n(x2), U_n(x1), U_n(x0)
+
+		# Values at time step n
+		Fm2, Sm2 = self.flux(Um2, x2), self.source(Um2, x2)
+		Fm1, Sm1 = self.flux(Um1, x1), self.source(Um1, x1)
+		Fm0, Sm0 = self.flux(Um0, x0), self.source(Um0, x0)
+
+		# Values at time step n+1/2
+		U_half_21 = (Um1+Um2)/2 - a.dt/deltax*(Fm1-Fm2) + a.dt/4*(Sm1+Sm2)
+		U_half_10 = (Um0+Um1)/2 - a.dt/deltax*(Fm0-Fm1) + a.dt/4*(Sm0+Sm1)
+		F_half_21 = self.flux(U_half_21, x21)
+		S_half_21 = self.source(U_half_21, x21)
+		F_half_10 = self.flux(U_half_10, x10)
+		S_half_10 = self.source(U_half_10, x10)
+
+		# Value at time step n+1
+		qm1 = Um1[1]\
+			- self.dt/deltax*(F_half_10[1]-F_half_21[1])\
+			+ self.dt/2*(S_half_10[1]+S_half_21[1])
+
+		# Fixed point iteration
+		pn = self.outlet_pressure(Um0[0])
+		p = pn
+		for k in range(k_max):
+			p_old = p
+			qm0 = Um0[1]\
+				+ (p-pn)/self.R1\
+				+ self.dt/self.R1/self.R2/self.CT*pn\
+				- self.dt*(self.R1+self.R2)/self.R1/self.R2/self.CT*Um0[1]
+			Am0 = Um0[0] - self.dt/deltax*(qm0-qm1)
+			p = self.outlet_pressure(Am0)
+			if abs(p-p_old) < tol:
+				break
+
+		return Am0
+
+
 	def problem_function(p, d1, d2, x):
 		"""Compute the function representing the system of equations <system>.
 		If x is the solution to the problem, then function(x) = 0.
@@ -168,11 +263,11 @@ class Artery_Network(object):
 		
 
 	def newton(p, d1, d2, k_max=1000, tol=1.e-14):
-		""" Compute the boundary conditions.
+		"""Compute solution to the system of equations.
 		:param p: Parent artery
 		:param d1: First daughter vessel
 		:param d2: Second daughter vessel
-		:param x: Current point, an 18-dimensional vector
+		:param x: Current solution, 18-dimensional vector
 		:param k_max: Maximum number of iterations
 		:param tol: Tolerance for difference between two steps
 		:return: Solution to the system of equations
@@ -184,7 +279,8 @@ class Artery_Network(object):
 			if npl.norm(x-x_old) < tol:
 				break
 		return x
-	
+
+
 	def compute_inner_bc(p, d1, d2):
 		""" Compute the inter-arterial boundary conditions for one bifurcation.
 		:param p: Parent artery
@@ -193,7 +289,8 @@ class Artery_Network(object):
 		:return: Area and flow for the three vessels
 		"""
 		x = newton(p, d1, d2)
-		
+
+
 	def solve(self, Nx, Nt, T, N_cycles, q_in):
 		"""Solve the equation on the entire arterial network.
 		:param Nx: Number of spatial steps
@@ -205,3 +302,51 @@ class Artery_Network(object):
 		for i in range(len(arteries)):
 			arteries[i].define_geometry(Nx, Nt, T, N_cycles)
 			cs.solve(arteries[i], q_ins)
+	
+	def solve_artery(self, q_ins):#, Nt_store, Nx_store):
+		"""Compute and store the solution to dU/dt + dF/dx = S.
+		:param q_ins: Vector containing inlet flow
+		"""
+		# Array for storing the solution
+		self.solution = [0]*Nt
+		for n in range(Nt):
+			self.solution[n] = Function(self.V2)
+		
+		# Progress bar
+		progress = Progress('Time-stepping')
+		set_log_level(PROGRESS)
+
+		# Initialise time
+		t = 0
+
+		# Cardiac cycle iteration
+		for n_cycle in range(self.N_cycles):
+			
+			# Store solution at multiples of time t_Nt (beginning of cycle)
+			self.solution[0].assign(U_n)
+			
+			# Time-stepping for one period
+			for n in range(self.Nt-1):
+
+				print('Iteration '+str(n))
+
+				t += self.dt
+
+				# U_n+1 is solution of FF == 0
+				solve(variational_form == 0, U, bcs)
+
+				# Update previous solution
+				U_n.assign(U)
+
+				# Update inlet boundary condition
+				q_in.assign(Constant(q_ins[n+1]))
+
+				# Update outlet boundary condition
+				A_out_value = compute_A_out(U_n)
+				A_out.assign(Constant(A_out_value))
+				
+				# Store solution at time t_(n+1)
+				self.solution[n+1].assign(U)
+
+				# Update progress bar
+				progress.update((t+self.dt)/self.N_cycles/self.T)
