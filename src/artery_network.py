@@ -2,6 +2,7 @@ __author__ = 'Syver Døving Agdestein'
 
 
 import numpy as np
+import numpy.linalg as npl
 from fenics import *
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
@@ -24,13 +25,69 @@ class Artery_Network(object):
 		self.order = order
 		self.arteries = [0] * (2**order-1)
 		for i in range(len(arteries)):
-			arteries[i] = Artery(Ru[i], Rd[i], L[i], k1[i], k2[i], k3[i], Re, p0)
+			arteries[i] = Artery(Ru[i], Rd[i], L[i], k1[i],
+								 k2[i], k3[i], Re, p0)
 	
-	def jacobian(p, d1, d2):
+	
+	def problem_function(p, d1, d2, x):
+		"""Compute the function representing the system of equations <system>.
+		If x is the solution to the problem, then function(x) = 0.
+		:param p: Parent artery
+		:param d1: First daughter vessel
+		:param d2: Second daughter vessel
+		:param x: Current point, an 18-dimensional vector
+		:return: Value of function in x
+		"""
+		# Abbreviations
+		A0p, A01, A02 = p.A0(p.L), d1.A0(0), d2.A0(0)
+		fp, f1, f2 = p.f(p.l),  d1.f(0), d2.f(0)
+		dbp, db1, db2 = p.db, d1.db, d2.db
+		Rep, Re1, Re2 = p.Re, d1.Re, d2.Re
+		dfdrp, dfdr1, dfdr2 = p.dfdr(p.L), d1.dfdr(0), d2.dfdr(0)
+		drdxp, drdx1, drdx2 = p.drdx(p.L), d1.drdx(0), d2.drdx(0)
+		rpi = sqrt(np.pi)
+		
+		y = np.zeros(18)
+		
+		# Entries from equation (20)
+		y[0] = 2*x[1]
+		y[1] = 
+		y[2] = 
+		
+		# Entries from equation (21)
+		y[3] = 
+		y[4] = 
+		y[5] = 
+		
+		# Entries from equation (22)
+		y[6] = 
+		y[7] = 
+		
+		# Entries from equation (23)
+		y[8] = 
+		y[9] = 
+		y[10] = 
+		y[11] =
+		
+		# Entries from equation (26) 
+		y[12] = 
+		y[13] = 
+		y[14] = 
+		
+		# Entries from equation (27)
+		y[15] = 
+		y[16] = 
+		y[17] = 
+		
+		return y
+
+
+	def jacobian(p, d1, d2, x):
 		"""Compute the jacobian matrix for the system of equations <system>.
 		:param p: Parent artery
 		:param d1: First daughter vessel
 		:param d2: Second daughter vessel
+		:param x: Current point, an 18-dimensional vector
 		:return: Jacobian matrix
 		"""
 		# Abbreviations
@@ -108,7 +165,19 @@ class Artery_Network(object):
 		J[17, 17] = 1
 		
 		return J
+		
 
+	def newton(p, d1, d2, k_max=1000, tol=1.e-14):
+		""" Compute the boundary conditions.
+		"""
+		x = np.zeros(18)
+		for k in range(k_max):
+			x_old = x
+			x 
+			if npl.norm(x-x_old) < tol:
+				break
+		
+		
 	def solve(self, Nx, Nt, T, N_cycles, q_in):
 		"""Solve the equation on the entire arterial network.
 		:param Nx: Number of spatial steps
