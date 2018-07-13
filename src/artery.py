@@ -120,6 +120,10 @@ class Artery(object):
 			- self.U_n[0]*self.v1*dx\
 			- self.U_n[1]*self.v2*dx
 
+	def update_solution(self):
+		"""Assign new values to U_n.
+		"""
+		self.U_n.assign(self.U)
 
 	def pressure(self, f, A0, A):
 		""" Compute the pressure at a given point x and time t.
