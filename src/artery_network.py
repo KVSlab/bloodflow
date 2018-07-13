@@ -277,65 +277,65 @@ class Artery_Network(object):
 		J = np.zeros([18, 18])
 		
 		# Entries from equation (20)
-		J[1, 0] = 2
-		J[2, 0] = -1
-		J[4, 1] = 2
-		J[5, 1] = -1
-		J[7, 2] = 2
-		J[8, 2] = -1
+		J[0, 1] = 2
+		J[0, 2] = -1
+		J[1, 4] = 2
+		J[1, 5] = -1
+		J[2, 7] = 2
+		J[2, 8] = -1
 		
 		# Entries from equation (21)
-		J[10, 3] = 2
-		J[11, 3] = -1
-		J[13, 4] = 2
-		J[14, 4] = -1
-		J[16, 5] = 2
-		J[17, 5] = -1
+		J[3, 10] = 2
+		J[3, 11] = -1
+		J[4, 13] = 2
+		J[4, 14] = -1
+		J[5, 16] = 2
+		J[5, 17] = -1
 		
 		# Entries from equation (22)
-		J[1, 6] = 1
-		J[4, 6] = -1
-		J[7, 6] = -1
-		J[2, 7] = 1
-		J[5, 7] = -1
-		J[8, 7] = -1
+		J[6, 1] = 1
+		J[6, 4] = -1
+		J[6, 7] = -1
+		J[7, 2] = 1
+		J[7, 5] = -1
+		J[7, 8] = -1
 		
 		# Entries from equation (23)
-		J[10, 8] = fp*np.sqrt(A0p)/2/x[10]**(3/2)
-		J[13, 8] = -f1*np.sqrt(A01)/2/x[13]**(3/2)
-		J[10, 9] = fp*np.sqrt(A0p)/2/x[10]**(3/2)
-		J[16, 9] = -f2*np.sqrt(A02)/2/x[16]**(3/2)
-		J[9, 10] = fp*np.sqrt(A0p)/2/x[9]**(3/2)
-		J[12, 10] = -f2*np.sqrt(A01)/2/x[12]**(3/2)
-		J[9, 11] = fp*np.sqrt(A0p)/2/x[9]**(3/2)
-		J[15, 11] = -f2*np.sqrt(A02)/2/x[15]**(3/2)
+		J[8, 10] = fp*np.sqrt(A0p)/2/x[10]**(3/2)
+		J[8, 13] = -f1*np.sqrt(A01)/2/x[13]**(3/2)
+		J[9, 10] = fp*np.sqrt(A0p)/2/x[10]**(3/2)
+		J[9, 16] = -f2*np.sqrt(A02)/2/x[16]**(3/2)
+		J[10, 9] = fp*np.sqrt(A0p)/2/x[9]**(3/2)
+		J[10, 12] = -f2*np.sqrt(A01)/2/x[12]**(3/2)
+		J[11, 9] = fp*np.sqrt(A0p)/2/x[9]**(3/2)
+		J[11, 15] = -f2*np.sqrt(A02)/2/x[15]**(3/2)
 		
 		# Entries from equation (26)
-		J[0, 12] = 1
-		J[2, 12] = p.dt/p.dex*2*x[2]/x[11] + p.dt*rpi/dbp/Rep/np.sqrt(x[11])
-		J[11, 12] = p.dt/p.dex*(-(x[2]/x[11])**2 + fp/2*np.sqrt(A0p/x[11]))\
+		J[12, 0] = 1
+		J[12, 2] = p.dt/p.dex*2*x[2]/x[11] + p.dt*rpi/dbp/Rep/np.sqrt(x[11])
+		J[12, 11] = p.dt/p.dex*(-(x[2]/x[11])**2 + fp/2*np.sqrt(A0p/x[11]))\
 				  - p.dt/2*(rpi/dbp/Rep*x[2]/x[11]**(3/2)\
 						   + (1/np.sqrt(x[11])*(rpi*fp+np.sqrt(A0p)*dfdrp)\
 											   - dfdrp)*drdxp)
-		J[3, 13] = 1
-		J[5, 13] = -d1.dt/d1.dex*2*x[5]/x[14] + d1.dt*rpi/db1/Re1/np.sqrt(x[14])
-		J[14, 13] = d1.dt/d1.dex*((x[5]/x[14])**2 - f1/2*np.sqrt(A01/x[14]))\
+		J[13, 3] = 1
+		J[13, 5] = -d1.dt/d1.dex*2*x[5]/x[14] + d1.dt*rpi/db1/Re1/np.sqrt(x[14])
+		J[13, 14] = d1.dt/d1.dex*((x[5]/x[14])**2 - f1/2*np.sqrt(A01/x[14]))\
 				  - d1.dt/2*(rpi/db1/Re1*x[5]/x[14]**(3/2)\
 							+ (1/np.sqrt(x[14])*(rpi*f1+np.sqrt(A01)*dfdr1)\
 												- dfdr1)*drdx1)
-		J[6, 14] = 1
-		J[8, 14] = -d2.dt/d2.dex*2*x[8]/x[17] + d2.dt*rpi/db2/Re2/np.sqrt(x[17])
-		J[17, 14] = d2.dt/d2.dex*((x[8]/x[17])**2 - f2/2*np.sqrt(A02/x[17]))\
+		J[14, 6] = 1
+		J[14, 8] = -d2.dt/d2.dex*2*x[8]/x[17] + d2.dt*rpi/db2/Re2/np.sqrt(x[17])
+		J[14, 17] = d2.dt/d2.dex*((x[8]/x[17])**2 - f2/2*np.sqrt(A02/x[17]))\
 				  - d2.dt/2*(rpi/db2/Re2*x[8]/x[17]**(3/2)\
 							+ (1/np.sqrt(x[17])*(rpi*f2+np.sqrt(A02)*dfdr2)\
 												- dfdr2)*drdx2)
 		
 		# Entries from equation (27)
-		J[2, 15] = p.dt/p.dex
-		J[11, 15] = 1
-		J[5, 16] = d1.dt/d1.dex
-		J[14, 16] = 1
-		J[8, 17] = d1.dt/d1.dex
+		J[15, 2] = p.dt/p.dex
+		J[15, 11] = 1
+		J[15, 5] = d1.dt/d1.dex
+		J[16, 14] = 1
+		J[17, 8] = d1.dt/d1.dex
 		J[17, 17] = 1
 		
 		return J
@@ -351,10 +351,16 @@ class Artery_Network(object):
 		:param tol: Tolerance for difference between two steps
 		:return: Solution to the system of equations
 		"""
+		eps = 1.e-8
 		for k in range(k_max):
 			x_old = np.copy(x)
-			x -= npl.solve(self.jacobian(p, d1, d2, x),
-						   self.problem_function(p, d1, d2, x))
+			J = self.jacobian(p, d1, d2, x)
+			func = self.problem_function(p, d1, d2, x)
+			try:
+				x -= npl.solve(J, func)
+			except npl.LinAlgError:
+				J += eps*np.eye(18)
+				x -= npl.solve(J, func)
 			if npl.norm(x-x_old) < tol:
 				break
 		return x
