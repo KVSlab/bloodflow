@@ -16,7 +16,7 @@ class Artery(object):
 	:param Re: Reynolds number
 	:param p0: Diastolic pressure
 	"""
-	def __init__(self, Ru, Rd, L, k1, k2, k3, nu, p0, R1, R2, CT):
+	def __init__(self, Ru, Rd, L, k1, k2, k3, nu, p0):
 		""" Construct artery.
 		Add its intrinsic characteristics, not its numerical solution.
 		"""
@@ -29,9 +29,6 @@ class Artery(object):
 		self.nu = nu
 		self.Re = 10.0/nu/1.0
 		self.p0 = p0
-		self.R1 = R1
-		self.R2 = R2
-		self.CT = CT
 
 
 	def define_geometry(self, Nx, Nt, T, N_cycles):
@@ -78,7 +75,7 @@ class Artery(object):
 		
 		# Define trial function
 		self.U = Function(self.V2)
-		self.A, self.q = split(self.U)
+		A, q = split(self.U)
 
 		# Define test functions
 		self.v1, self.v2 = TestFunctions(self.V2)
@@ -107,7 +104,7 @@ class Artery(object):
 		self.bcs = [bc_inlet, bc_outlet]
 
 		# Variational form
-		self.variatonal_form = A*self.v1*dx\
+		self.variational_form = A*self.v1*dx\
 			+ q*self.v2*dx\
 			+ self.dt*grad(q)[0]*self.v1*dx\
 			+ self.dt*(pow(q, 2)/(A+DOLFIN_EPS)\
@@ -120,10 +117,12 @@ class Artery(object):
 			- self.U_n[0]*self.v1*dx\
 			- self.U_n[1]*self.v2*dx
 
+
 	def update_solution(self):
 		"""Assign new values to U_n.
 		"""
 		self.U_n.assign(self.U)
+
 
 	def pressure(self, f, A0, A):
 		""" Compute the pressure at a given point x and time t.

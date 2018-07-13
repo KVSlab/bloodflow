@@ -10,44 +10,45 @@ from mpl_toolkits.mplot3d import Axes3D
 sys.path.insert(0, '../src')
 
 from utils import *
-from artery import Artery
-import conservation_solver as cs
-
+from artery_network import Artery_Network
 
 config = configparser.ConfigParser()
 config.read('config.cfg')
 
-a = Artery(config.getfloat('Parameters', 'Ru'),
-		   config.getfloat('Parameters', 'Rd'),
-		   config.getfloat('Parameters', 'L'),
-		   config.getfloat('Parameters', 'k1'),
-		   config.getfloat('Parameters', 'k2'),
-		   config.getfloat('Parameters', 'k3'),
-		   config.getfloat('Parameters', 'nu'),
-		   config.getfloat('Parameters', 'p0'),
-		   config.getfloat('Parameters', 'R1'),
-		   config.getfloat('Parameters', 'R2'),
-		   config.getfloat('Parameters', 'CT'))
+order = config.getint('Parameters', 'order')
+Ru = [config.getfloat('Parameters', 'Ru')]
+Rd = [config.getfloat('Parameters', 'Rd')]
+L = [config.getfloat('Parameters', 'L')]
+k1 = [config.getfloat('Parameters', 'k1')]
+k2 = [config.getfloat('Parameters', 'k2')]
+k3 = [config.getfloat('Parameters', 'k3')]
+nu = config.getfloat('Parameters', 'nu')
+p0 = config.getfloat('Parameters', 'p0')
+R1 = config.getfloat('Parameters', 'R1')
+R2 = config.getfloat('Parameters', 'R2')
+CT = config.getfloat('Parameters', 'CT')
 
 Nt = config.getint('Geometry', 'Nt')
+Nx = config.getint('Geometry', 'Nx')
+N_cycles = config.getint('Geometry', 'N_cycles')
 
 # Import the inlet flow data
 data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
-
 tt = data_q[:, 0]
 qq = data_q[:, 1]
-
 T = data_q[-1, 0]
-
 q = interp1d(tt, qq)
 t = np.linspace(0, T, Nt)
 q_ins = q(t)
 #q_ins = np.zeros(Nt)
 
-a.define_geometry(config.getint('Geometry', 'Nx'), Nt, T,
-		config.getint('Geometry', 'N_cycles'))
-
-cs.solve_artery(a, q_ins)
+# Create artery network
+an = Artery_Network(order, Ru, Rd, L, k1, k2, k3, nu, p0, R1, R2, CT)
+an.define_geometry(Nx, Nt, T, N_cycles)
+an.define_solution(q_ins[0])
+an.solve(q_ins)
+"""
+a = an.arteries[0]
 
 area = np.zeros([a.Nx+1, a.Nt])
 flow = np.zeros([a.Nx+1, a.Nt])
@@ -75,4 +76,4 @@ plot_matrix(t, x, flow, 'flow', '../output/r0/flow.png')
 
 # Pressure plot
 plot_matrix(t, x, unit_to_mmHg(pressure), 'pressure', '../output/r0/pressure.png')
-
+"""
