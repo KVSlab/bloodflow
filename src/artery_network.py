@@ -6,6 +6,7 @@ import numpy.linalg as npl
 from fenics import *
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
+import csv
 
 from artery import Artery
 
@@ -28,8 +29,8 @@ class Artery_Network(object):
 		self.range_daughter_arteries = range(1, 2**self.order-1)
 		self.range_end_arteries = range(2**(self.order-1)-1, 2**self.order-1)
 		for i in self.range_arteries:
-			self.arteries[i] = Artery(Ru[i], Rd[i], L[i], k1[i],
-								 k2[i], k3[i], nu, p0)
+			self.arteries[i] = Artery(Ru[i], Rd[i], L[i], k1,
+								 k2, k3, nu, p0)
 		self.R1, self.R2, self.CT = R1, R2, CT
 
 
@@ -185,7 +186,7 @@ class Artery_Network(object):
 		"""
 		# Abbreviations
 		A0p, A01, A02 = p.A0(p.L), d1.A0(0), d2.A0(0)
-		fp, f1, f2 = p.f(p.l),  d1.f(0), d2.f(0)
+		fp, f1, f2 = p.f(p.L),  d1.f(0), d2.f(0)
 		dbp, db1, db2 = p.db, d1.db, d2.db
 		Rep, Re1, Re2 = p.Re, d1.Re, d2.Re
 		dfdrp, dfdr1, dfdr2 = p.dfdr(p.L), d1.dfdr(0), d2.dfdr(0)
@@ -201,16 +202,16 @@ class Artery_Network(object):
 		S2 = self.source(d2, np.array([x[17], x[8]]), -d2.dex/2)
 		
 		# Compute half-time-step-values in M-1/2 for p and 1/2 for d1 and d2
-		Um1p, Um0p = p.U_n(p.L-p.dex), U_n(p.L)
+		Um1p, Um0p = p.U_n(p.L-p.dex), p.U_n(p.L)
 		U0d1, U1d1 = d1.U_n(0), d1.U_n(d1.dex)
 		U0d2, U1d2 = d2.U_n(0), d2.U_n(d2.dex)
 
-		U_half_p = compute_U_half(Um1p, Um0p, p.L-p.dex, p.L)
-		U_half_1 = compute_U_half(U0d1, U1d1, 0, d1.dex)
-		U_half_2 = compute_U_half(U0d2, U1d2, 0, d2.dex)
+		U_half_p = self.compute_U_half(p, Um1p, Um0p, p.L-p.dex, p.L)
+		U_half_1 = self.compute_U_half(d1, U0d1, U1d1, 0, d1.dex)
+		U_half_2 = self.compute_U_half(d2, U0d2, U1d2, 0, d2.dex)
 		
-		F_half_p = self.flux(p, U_half_p, L-p.dex/2)
-		S_half_p = self.source(p, U_half_p, L-p.dex/2)
+		F_half_p = self.flux(p, U_half_p, p.L-p.dex/2)
+		S_half_p = self.source(p, U_half_p, p.L-p.dex/2)
 		F_half_1 = self.flux(d1, U_half_1, d1.dex/2)
 		S_half_1 = self.source(d1, U_half_1, d1.dex/2)
 		F_half_2 = self.flux(d2, U_half_2, d2.dex/2)
@@ -238,19 +239,19 @@ class Artery_Network(object):
 		y[9] = fp*(1-np.sqrt(A0p/x[10])) - f2*(1-np.sqrt(A02/x[16]))
 		y[10] = fp*(1-np.sqrt(A0p/x[9])) - f1*(1-np.sqrt(A01/x[12]))
 		y[11] = fp*(1-np.sqrt(A0p/x[9])) - f2*(1-np.sqrt(A02/x[15]))
-		
+
 		# Entries from equation (26) 
-		y[12] = x[0] - Um0p[1] + p.dt/p.dex(Fp[1] - F_half_p[1])\
-			  - p.dt/2*(Sp[1]+S_half_p[1])
-		y[13] = x[3] - U0d1[1] + d1.dt/d1.dex(F1[1] - F_half_1[1])\
-			  - d1.dt/2*(S2[1]+S_half_2[1])
-		y[14] = x[6] - U0d2[1] + d2.dt/d2.dex(F2[1] - F_half_2[1])\
-			  - d2.dt/2*(S2[1]+S_half_2[1])
+		y[12] = x[0] - Um0p[1] + p.dt/p.dex*(Fp[1] - F_half_p[1])\
+			  - p.dt/2*(Sp[1] + S_half_p[1])
+		y[13] = x[3] - U0d1[1] + d1.dt/d1.dex*(F1[1] - F_half_1[1])\
+			  - d1.dt/2*(S1[1] + S_half_1[1])
+		y[14] = x[6] - U0d2[1] + d2.dt/d2.dex*(F2[1] - F_half_2[1])\
+			  - d2.dt/2*(S2[1] + S_half_2[1])
 		
 		# Entries from equation (27)
-		y[15] = x[9] - Um0p[0] + p.dt/p.dex(Fp[0] - F_half_p[0])
-		y[16] = x[12] - U0d1[0] + d1.dt/d1.dex(F1[0] - F_half_1[0])
-		y[17] = x[15] - U0d2[0] + d2.dt/d2.dex(F2[0] - F_half_2[0])
+		y[15] = x[9] - Um0p[0] + p.dt/p.dex*(Fp[0] - F_half_p[0])
+		y[16] = x[12] - U0d1[0] + d1.dt/d1.dex*(F1[0] - F_half_1[0])
+		y[17] = x[15] - U0d2[0] + d2.dt/d2.dex*(F2[0] - F_half_2[0])
 		
 		return y
 
@@ -265,7 +266,7 @@ class Artery_Network(object):
 		"""
 		# Abbreviations
 		A0p, A01, A02 = p.A0(p.L), d1.A0(0), d2.A0(0)
-		fp, f1, f2 = p.f(p.l),  d1.f(0), d2.f(0)
+		fp, f1, f2 = p.f(p.L),  d1.f(0), d2.f(0)
 		dbp, db1, db2 = p.db, d1.db, d2.db
 		Rep, Re1, Re2 = p.Re, d1.Re, d2.Re
 		dfdrp, dfdr1, dfdr2 = p.dfdr(p.L), d1.dfdr(0), d2.dfdr(0)
@@ -303,7 +304,7 @@ class Artery_Network(object):
 		J[10, 8] = fp*np.sqrt(A0p)/2/x[10]**(3/2)
 		J[13, 8] = -f1*np.sqrt(A01)/2/x[13]**(3/2)
 		J[10, 9] = fp*np.sqrt(A0p)/2/x[10]**(3/2)
-		J[16, 9] = -f2*np.sqrt(AO2)/2/x[16]**(3/2)
+		J[16, 9] = -f2*np.sqrt(A02)/2/x[16]**(3/2)
 		J[9, 10] = fp*np.sqrt(A0p)/2/x[9]**(3/2)
 		J[12, 10] = -f2*np.sqrt(A01)/2/x[12]**(3/2)
 		J[9, 11] = fp*np.sqrt(A0p)/2/x[9]**(3/2)
@@ -352,7 +353,8 @@ class Artery_Network(object):
 		"""
 		for k in range(k_max):
 			x_old = np.copy(x)
-			x -= npl.solve(jacobian(x), problem_function(x))
+			x -= npl.solve(self.jacobian(p, d1, d2, x),
+						   self.problem_function(p, d1, d2, x))
 			if npl.norm(x-x_old) < tol:
 				break
 		return x
@@ -365,7 +367,7 @@ class Artery_Network(object):
 		:param i2: Second daughter vessel index
 		"""
 		p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
-		self.x[ip] = newton(p, d1, d2, self.x[ip])
+		self.x[ip] = self.newton(p, d1, d2, self.x[ip])
 		#p.U_out.assign(Constant((self.x[9], self.x[0])))
 		#d1.U_in.assign(Constant((self.x[12], self.x[3])))
 		#d2.U_in.assign(Constant((self.x[15], self.x[6])))
@@ -383,10 +385,8 @@ class Artery_Network(object):
 		
 		# Update bifurcation boundary conditions
 		for ip in self.range_parent_arteries:
-			i1, i2 = daughter_vessels(ip)
-			p = self.arteries[ip]
-			d1, d2 = self.arteries[d1], self.arteries[d2]
-			set_inner_bc(p, d1, d2)
+			i1, i2 = self.daughter_vessels(ip)
+			self.set_inner_bc(ip, i1, i2)
 		
 		# Update outlet boundary condition
 		for i in self.range_end_arteries:
@@ -426,44 +426,53 @@ class Artery_Network(object):
 			
 		# Make an initial guess for x
 		self.x = np.zeros([len(self.range_parent_arteries), 18])
-		for i in self.range_parent_arteries:
-			self.x[i] = self.initial_x(i, self.daughter_vessels(i))
+		for ip in self.range_parent_arteries:
+			i1, i2 = self.daughter_vessels(ip)
+			p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
+			self.x[ip] = self.initial_x(p, d1, d2)
 
 
 	def solve(self, q_ins):
 		"""Solve the equation on the entire arterial network.
 		:param q_ins: Vector containing inlet flow for the first artery.
 		"""
-		# Progress bar
-		progress = Progress('Time-stepping')
-		set_log_level(PROGRESS)
+		with open('../output/flow.csv', 'w', newline='') as csvfile:
+			fieldnames = [str(i) for i in self.range_arteries]
+			writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+			writer.writeheader()
+		
+			# Progress bar
+			progress = Progress('Time-stepping')
+			set_log_level(PROGRESS)
 
-		# Initialise time
-		t = 0
+			# Initialise time
+			t = 0
 
-		# Cardiac cycle iteration
-		for n_cycle in range(self.N_cycles):
-			
-			# Time-stepping for one period
-			for n in range(self.Nt-1):
-
-				print('Iteration '+str(n))
-
-				self.set_bcs(q_ins[n+1])
+			# Cardiac cycle iteration
+			for n_cycle in range(self.N_cycles):
 				
-				# Solve equation on each artery
-				for artery in self.arteries:
+				# Time-stepping for one period
+				for n in range(self.Nt-1):
 
-					# U_n+1 is solution of FF == 0
-					solve(artery.variational_form == 0, artery.U, artery.bcs)
+					print('Iteration '+str(n))
 
-					# Update current solution
-					artery.update_solution()
+					self.set_bcs(q_ins[n+1])
+					
+					# Solve equation on each artery
+					for i, artery in enumerate(self.arteries):
 
-					# Store solution at time t_(n+1)
-					None
+						# U_n+1 is solution of FF == 0
+						solve(artery.variational_form == 0, artery.U, artery.bcs)
 
-				t += self.dt
+						# Update current solution
+						artery.update_solution()
 
-				# Update progress bar
-				progress.update((t+self.dt)/self.N_cycles/self.T)
+						# Store solution at time t_(n+1)
+						writer.writerow({fieldnames[i]: np.array2string(\
+							artery.U.vector().array()[1::2][::-1],
+							separator=',')})
+
+					t += self.dt
+
+					# Update progress bar
+					progress.update((t+self.dt)/self.N_cycles/self.T)

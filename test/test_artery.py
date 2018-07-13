@@ -16,12 +16,14 @@ config = configparser.ConfigParser()
 config.read('config.cfg')
 
 order = config.getint('Parameters', 'order')
-Ru = [config.getfloat('Parameters', 'Ru')]
-Rd = [config.getfloat('Parameters', 'Rd')]
-L = [config.getfloat('Parameters', 'L')]
-k1 = [config.getfloat('Parameters', 'k1')]
-k2 = [config.getfloat('Parameters', 'k2')]
-k3 = [config.getfloat('Parameters', 'k3')]
+Ru = [float(f) for f in config.get('Parameters', 'Ru').split(',')]
+Rd = [float(f) for f in config.get('Parameters', 'Rd').split(',')]
+L = [float(f) for f in config.get('Parameters', 'L').split(',')]
+
+
+k1 = config.getfloat('Parameters', 'k1')
+k2 = config.getfloat('Parameters', 'k2')
+k3 = config.getfloat('Parameters', 'k3')
 nu = config.getfloat('Parameters', 'nu')
 p0 = config.getfloat('Parameters', 'p0')
 R1 = config.getfloat('Parameters', 'R1')
