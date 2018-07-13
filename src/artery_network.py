@@ -22,8 +22,12 @@ class Artery_Network(object):
 	"""
 	def __init__(self, order, Ru, Rd, L, k1, k2, k3, Re, p0):
 		self.order = order
-		self.arteries = [0] * (2**order-1)
-		for i in range(len(arteries)):
+		self.arteries = [0] * (2**self.order-1)
+		self.range_arteries = range(2**self.order-1)
+		self.range_parent_arteries = range(2**(self.order-1)-1)
+		self.range_daughter_arteries = range(1, 2**self.order-1)
+		self.range_end_arteries = range(2**(self.order-1)-1, 2**self.order-1)
+		for i in self.range_arteries:
 			arteries[i] = Artery(Ru[i], Rd[i], L[i], k1[i],
 								 k2[i], k3[i], Re, p0)
 
@@ -82,7 +86,7 @@ class Artery_Network(object):
 		"""
 		S1 = 0
 		S2 = -2*np.sqrt(np.pi)/a.db/a.Re*U[1]/np.sqrt(U[0])\
-			+(2*np.sqrt(U[0])*(np.sqrt(np.pi)*a.f(x)\
+		   + (2*np.sqrt(U[0])*(np.sqrt(np.pi)*a.f(x)\
 							  +np.sqrt(a.A0(x))*a.dfdr(x))\
 				-U[0]*a.dfdr(x))*a.drdx(x)
 		return np.array([S1, S2])
@@ -113,7 +117,7 @@ class Artery_Network(object):
 		deltax = 10*a.dex
 		x2, x1, x0 = a.L-2*deltax, a.L-deltax, a.L
 		x21, x10 = a.L-1.5*deltax, a.L-0.5*deltax
-		Um2, Um1, Um0 = U_n(x2), U_n(x1), U_n(x0)
+		Um2, Um1, Um0 = a.U_n(x2), a.U_n(x1), a.U_n(x0)
 
 		# Values at time step n
 		Fm2, Sm2 = self.flux(Um2, x2), self.source(Um2, x2)
@@ -130,11 +134,11 @@ class Artery_Network(object):
 
 		# Value at time step n+1
 		qm1 = Um1[1]\
-			- self.dt/deltax*(F_half_10[1]-F_half_21[1])\
-			+ self.dt/2*(S_half_10[1]+S_half_21[1])
+			- a.dt/deltax*(F_half_10[1]-F_half_21[1])\
+			+ a.dt/2*(S_half_10[1]+S_half_21[1])
 
 		# Fixed point iteration
-		pn = self.outlet_pressure(Um0[0])
+		pn = a.outlet_pressure(Um0[0])
 		p = pn
 		for k in range(k_max):
 			p_old = p
@@ -143,11 +147,30 @@ class Artery_Network(object):
 				+ self.dt/self.R1/self.R2/self.CT*pn\
 				- self.dt*(self.R1+self.R2)/self.R1/self.R2/self.CT*Um0[1]
 			Am0 = Um0[0] - self.dt/deltax*(qm0-qm1)
-			p = self.outlet_pressure(Am0)
+			p = a.outlet_pressure(Am0)
 			if abs(p-p_old) < tol:
 				break
 
 		return Am0
+
+
+	def initial_x(self, p, d1, d2):
+		""" Make an initial guess for x at a bifurcation point.
+		At time t_(n+1) and t_(n+1/2), set same value as time t_n.
+		At point M+-1/2, set same value as in point M.
+		:param p: Parent artery
+		:param d1: First daughter artery
+		:param d2: Second daughter artery
+		:return: x, an 18-dimensional vector containing guess values
+		"""
+		x = np.zeros(18)
+		x[:3] = p.q0*np.ones(3)
+		x[3:6] = d1.q0*np.ones(3)
+		x[6:9] = d2.q0*np.ones(3)
+		x[9:12] = p.A0(p.L)*np.ones(3)
+		x[12:15] = d1.A0(0)*np.ones(3)
+		x[15:] = d2.A0(0)*np.ones(3)
+		return x
 
 
 	def problem_function(self, p, d1, d2, x):
@@ -276,32 +299,32 @@ class Artery_Network(object):
 		J[8, 7] = -1
 		
 		# Entries from equation (23)
-		J[10, 8] = fp*np.sqrt(A0p)/2/pow(x[10], 3/2)
-		J[13, 8] = -f1*np.sqrt(A01)/2/pow(x[13], 3/2)
-		J[10, 9] = fp*np.sqrt(A0p)/2/pow(x[10], 3/2)
-		J[16, 9] = -f2*np.sqrt(AO2)/2/pow(x[16], 3/2)
-		J[9, 10] = fp*np.sqrt(A0p)/2/pow(x[9], 3/2)
-		J[12, 10] = -f2*np.sqrt(A01)/2/pow(x[12], 3/2)
-		J[9, 11] = fp*np.sqrt(A0p)/2/pow(x[9], 3/2)
-		J[15, 11] = -f2*np.sqrt(A02)/2/pow(x[15], 3/2)
+		J[10, 8] = fp*np.sqrt(A0p)/2/x[10]**(3/2)
+		J[13, 8] = -f1*np.sqrt(A01)/2/x[13]**(3/2)
+		J[10, 9] = fp*np.sqrt(A0p)/2/x[10]**(3/2)
+		J[16, 9] = -f2*np.sqrt(AO2)/2/x[16]**(3/2)
+		J[9, 10] = fp*np.sqrt(A0p)/2/x[9]**(3/2)
+		J[12, 10] = -f2*np.sqrt(A01)/2/x[12]**(3/2)
+		J[9, 11] = fp*np.sqrt(A0p)/2/x[9]**(3/2)
+		J[15, 11] = -f2*np.sqrt(A02)/2/x[15]**(3/2)
 		
 		# Entries from equation (26)
 		J[0, 12] = 1
 		J[2, 12] = p.dt/p.dex*2*x[2]/x[11] + p.dt*rpi/dbp/Rep/np.sqrt(x[11])
-		J[11, 12] = p.dt/p.dex*(-pow(x[2]/x[11], 2) + fp/2*np.sqrt(A0p/x[11]))\
-				  - p.dt/2*(rpi/dbp/Rep*x[2]/pow(x[11], 3/2)\
+		J[11, 12] = p.dt/p.dex*(-(x[2]/x[11])**2 + fp/2*np.sqrt(A0p/x[11]))\
+				  - p.dt/2*(rpi/dbp/Rep*x[2]/x[11]**(3/2)\
 						   + (1/np.sqrt(x[11])*(rpi*fp+np.sqrt(A0p)*dfdrp)\
 											   - dfdrp)*drdxp)
 		J[3, 13] = 1
 		J[5, 13] = -d1.dt/d1.dex*2*x[5]/x[14] + d1.dt*rpi/db1/Re1/np.sqrt(x[14])
-		J[14, 13] = d1.dt/d1.dex*(pow(x[5]/x[14], 2) - f1/2*np.sqrt(A01/x[14]))\
-				  - d1.dt/2*(rpi/db1/Re1*x[5]/pow(x[14], 3/2)\
+		J[14, 13] = d1.dt/d1.dex*((x[5]/x[14])**2 - f1/2*np.sqrt(A01/x[14]))\
+				  - d1.dt/2*(rpi/db1/Re1*x[5]/x[14]**(3/2)\
 							+ (1/np.sqrt(x[14])*(rpi*f1+np.sqrt(A01)*dfdr1)\
 												- dfdr1)*drdx1)
 		J[6, 14] = 1
 		J[8, 14] = -d2.dt/d2.dex*2*x[8]/x[17] + d2.dt*rpi/db2/Re2/np.sqrt(x[17])
-		J[17, 14] = d2.dt/d2.dex*(pow(x[8]/x[17], 2) - f2/2*np.sqrt(A02/x[17]))\
-				  - d2.dt/2*(rpi/db2/Re2*x[8]/pow(x[17], 3/2)\
+		J[17, 14] = d2.dt/d2.dex*((x[8]/x[17])**2 - f2/2*np.sqrt(A02/x[17]))\
+				  - d2.dt/2*(rpi/db2/Re2*x[8]/x[17]**(3/2)\
 							+ (1/np.sqrt(x[17])*(rpi*f2+np.sqrt(A02)*dfdr2)\
 												- dfdr2)*drdx2)
 		
@@ -334,17 +357,40 @@ class Artery_Network(object):
 		return x
 
 
-	def set_inner_bc(self, p, d1, d2):
+	def set_inner_bc(self, ip, i1, i2):
 		""" Compute the inter-arterial boundary conditions for one bifurcation.
-		:param p: Parent artery
-		:param d1: First daughter vessel
-		:param d2: Second daughter vessel
-		:return: Area and flow for the three vessels
+		:param ip: Parent artery index
+		:param i1: First daughter vessel index
+		:param i2: Second daughter vessel index
 		"""
-		self.x = newton(p, d1, d2, self.x)
-		p.U_out = Constant((self.x[9], self.x[0]))
-		d1.U_in = Constant((self.x[12], self.x[3]))
-		d2.U_in = Constant((self.x[15], self.x[6]))
+		p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
+		self.x[ip] = newton(p, d1, d2, self.x[ip])
+		#p.U_out.assign(Constant((self.x[9], self.x[0])))
+		#d1.U_in.assign(Constant((self.x[12], self.x[3])))
+		#d2.U_in.assign(Constant((self.x[15], self.x[6])))
+		p.A_out.assign(Constant(self.x[ip, 9]))
+		d1.q_in.assign(Constant(self.x[ip, x[3]]))
+		d2.q_in.assign(Constant(self.x[ip, x[6]]))
+	
+	
+	def set_bcs(self, q_in):
+		""" Update boundary conditions for time t_(n+1) at all boundaries.
+		:param q_in: Value of first artery inflow at time t_(n+1)
+		"""
+		# Update inlet boundary conditions
+		self.arteries[0].q_in.assign(Constant(q_in))
+		
+		# Update bifurcation boundary conditions
+		for ip in self.range_parent_arteries:
+			i1, i2 = daughter_vessels(ip)
+			p = self.arteries[ip]
+			d1, d2 = self.arteries[d1], self.arteries[d2]
+			set_inner_bc(p, d1, d2)
+		
+		# Update outlet boundary condition
+		for i in self.range_end_arteries:
+			A_out_value = self.compute_A_out(arteries[i])
+			artery.A_out.assign(Constant(A_out_value))
 
 
 	def define_geometry(self, Nx, Nt, T, N_cycles)
@@ -354,9 +400,9 @@ class Artery_Network(object):
 		:param T: Period of one cardiac cycle
 		:param N_cycles: Number of cardiac cycles
 		"""
-		for i in range(len(arteries)):
+		for i in self.range_arteries:
 			arteries[i].define_geometry(Nx, Nt, T, N_cycles)
-
+	
 
 	def define_solution(self, q0):
 		"""Computes q0 on each artery, befor calling define_solution.
@@ -364,23 +410,23 @@ class Artery_Network(object):
 		:param q0: Initial flow of the first vessel
 		"""
 		arteries[0].define_solution(q0)
-		for i in range(1, len(arteries)):
+		for i in self.range_daughter_arteries:
 			p = self.parent_vessel(i)
 			s = self.sister_vessel(i)
 			q0 = arteries[i].A0(0)/(arteries[i].A0(0)+arteries[s].A0(0))
 			   * arteries[p].q0
 			arteries[i].define_solution(q0)
+			
+		# Make an initial guess for x
 		self.x = np.zeros([2**(self.order-1), 18]
-		for i in range(2**(self.order-1)):
-			#x[i] = <initial x>
-			None
+		for i in self.range_parent_arteries:
+			self.x[i] = self.initial_x(i, self.daughter_vessels(i))
 
 
 	def solve(self, q_ins):
 		"""Solve the equation on the entire arterial network.
 		:param q_ins: Vector containing inlet flow for the first artery.
 		"""
-		
 		# Progress bar
 		progress = Progress('Time-stepping')
 		set_log_level(PROGRESS)
@@ -396,30 +442,31 @@ class Artery_Network(object):
 
 				print('Iteration '+str(n))
 
-
-				# Update current solution
-				for artery in arteries:
-					artery.U_n.assign(artery.U)
-
 				# Update inlet boundary conditions
 				arteries[0].q_in.assign(Constant(q_ins[n+1]))
 				
 				# Update bifurcation boundary conditions
-				for ip in range(2**(self.order-1):
+				for ip in self.range_parent_arteries:
 					i1, i2 = daughter_vessels(ip)
 					p = self.arteries[ip]
 					d1, d2 = self.arteries[d1], self.arteries[d2]
 					set_inner_bc(p, d1, d2)
 				
 				# Update outlet boundary condition
-				A_out_value = self.compute_A_out(U_n)
-				A_out.assign(Constant(A_out_value))
+				artery.A_out_value = self.compute_A_out(artery)
+				artery.A_out.assign(Constant(A_out_value))
 				
-				# U_n+1 is solution of FF == 0
-				solve(variational_form == 0, U, bcs)
+				# Solve equation on each artery
+				for artery in arteries:
 				
-				# Store solution at time t_(n+1)
-				None
+					# U_n+1 is solution of FF == 0
+					solve(arteries.variational_form == 0, artery.U, artery.bcs)
+					
+					# Update current solution
+					artery.update_solution()
+					
+					# Store solution at time t_(n+1)
+					None
 				
 				t += self.dt
 				
