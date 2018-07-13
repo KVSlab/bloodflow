@@ -217,7 +217,7 @@ class Artery_Network(object):
 		F_half_2 = self.flux(d2, U_half_2, d2.dex/2)
 		S_half_2 = self.source(d2, U_half_2, d2.dex/2)
 		
-		# Function value
+		# Function return variable
 		y = np.zeros(18)
 		
 		# Entries from equation (20)
