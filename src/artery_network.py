@@ -6,7 +6,8 @@ import numpy.linalg as npl
 from fenics import *
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
-import csv
+import configparser
+from mshr import *
 
 from artery import Artery
 
@@ -457,6 +458,31 @@ class Artery_Network(object):
 			self.arteries[i].A_out.assign(Constant(A_out_value))
 
 
+	def dump_metadata(self):
+		"""Dump metadata necessary for interpretation of xdmf-files.
+		"""
+		# Save mesh
+		File('output/mesh.xml.gz') << self.arteries[0].mesh
+		
+		# Save metadata
+		L = ''
+		for i in self.range_arteries[:-1]:
+			L += str(self.arteries[i].L)+','
+		L += str(self.arteries[-1].L)
+		config = configparser.RawConfigParser()
+		config.add_section('data')
+		config.set('data', 'order', str(self.order))
+		config.set('data', 'Nx', str(self.Nx))
+		config.set('data', 'Nt', '100')
+		config.set('data', 'T', str(self.T))
+		config.set('data', 'L', L)
+		config.set('data', 'mesh_location', 'output/mesh.xml.gz')
+		config.set('data', 'locations', 'output/area,output/flow')
+		config.set('data', 'names', 'area,flow')
+		with open('output/data.cfg', 'w') as configfile:
+			config.write(configfile)
+
+
 	def solve(self, q_ins):
 		"""Solve the equation on the entire arterial network.
 		:param q_ins: Vector containing inlet flow for the first artery.
@@ -465,8 +491,8 @@ class Artery_Network(object):
 		xdmffile_area = [0] * len(self.range_arteries)
 		xdmffile_flow = [0] * len(self.range_arteries)
 		for i in self.range_arteries:
-			xdmffile_area[i] = XDMFFile('output/area/area_%i' % (i))
-			xdmffile_flow[i] = XDMFFile('output/flow/flow_%i' % (i))
+			xdmffile_area[i] = XDMFFile('output/area/area_%i.xdmf' % (i))
+			xdmffile_flow[i] = XDMFFile('output/flow/flow_%i.xdmf' % (i))
 
 		# Progress bar
 		progress = Progress('Time-stepping')
@@ -487,13 +513,13 @@ class Artery_Network(object):
 
 				# Solve equation on each artery
 				for i, artery in enumerate(self.arteries):
-					
+
 					# Store solution at time t_n
-					if n_cycles == N_cycles-1 and n % self.Nt/100 == 0:
+					if n_cycle == self.N_cycles-1 and n % self.Nt/100 == 0:
 						area, flow = artery.U.split()
-						xdmffile_area[i].write_checkpoint(area, 'Area', t)
-						xdmffile_flow[i].write_checkpoint(flow, 'Flow', t)
-					
+						xdmffile_area[i].write_checkpoint(area, 'area', t)
+						xdmffile_flow[i].write_checkpoint(flow, 'flow', t)
+
 					# U_n+1 is solution of FF == 0
 					solve(artery.variational_form == 0, artery.U, artery.bcs)
 
@@ -504,13 +530,7 @@ class Artery_Network(object):
 
 				# Update progress bar
 				progress.update((t+self.dt)/self.N_cycles/self.T)
-
-		data = {'order': self.order, 'Nx': self.Nx, 'Nt': 100,
-				'location': ['output/area/', 'output/flow/'],
-				'name'=['area', 'flow']}
-		with open('output/data.csv') as csvfile
-			fieldnames = ['order', 'Nx', 'Nt', 'location', 'name']
-			writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-			writer.writeheader()
-			writer.writerow(data)
-
+		
+		self.dump_metadata()
+		
+		

@@ -1,5 +1,7 @@
 import numpy as np
 
+from fenics import *
+from mshr import *
 import matplotlib.pyplot as plt
 from configparser import ConfigParser
 
@@ -12,14 +14,30 @@ def mmHg_to_unit(p):
 	return 101325/76*p
 
 
-def read_output(datafile):
+def read_output(filename):
+	config = ConfigParser()
+	config.read(filename)
 	
+	order = config.getint('data', 'order')
+	Nx = config.getint('data', 'Nx')
+	Nt = config.getint('data', 'Nt')
+	T = config.getfloat('data', 'T')
+	L = [float(f) for f in config.get('data', 'L').split(',')]
+	mesh_location = config.get('data', 'mesh_location')
+	locations = config.get('data', 'locations').split(',')
+	names = config.get('data', 'names').split(',')
+	
+	return order, Nx, Nt, T, L, mesh_location, locations, names
 
-def XDMF_to_matrix(Nx, Ntm, location, name)
-	M = np.zeros([Nx, Nt])
+
+def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
+	M = np.zeros([Nx+1, Nt])
 	f = XDMFFile(location)
+	mesh = Mesh(mesh_location)
+	V = FunctionSpace(mesh, 'CG', 1)
+	u = Function(V)
 	for n in range(Nt):
-		XDMFFile.read_checkpoint(u, name, n)
+		f.read_checkpoint(u, name, n)
 		M[:, n] = u.vector().array()[::-1]
 	return M	
 
