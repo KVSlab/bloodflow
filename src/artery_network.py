@@ -116,9 +116,8 @@ class Artery_Network(object):
 		:return: Outlet boundary value of A at time step t_(n+1).
 		"""
 		# Spatial step, scaled to satisfy the CFL condition
-		deltax = 10*a.dex
-		x2, x1, x0 = a.L-2*deltax, a.L-deltax, a.L
-		x21, x10 = a.L-1.5*deltax, a.L-0.5*deltax
+		x2, x1, x0 = a.L-2*a.dex, a.L-a.dex, a.L
+		x21, x10 = a.L-1.5*a.dex, a.L-0.5*a.dex
 		Um2, Um1, Um0 = a.U_n(x2), a.U_n(x1), a.U_n(x0)
 
 		# Values at time step n
@@ -136,7 +135,7 @@ class Artery_Network(object):
 
 		# Value at time step n+1
 		qm1 = Um1[1]\
-			- a.dt/deltax*(F_half_10[1]-F_half_21[1])\
+			- a.dt/a.dex*(F_half_10[1]-F_half_21[1])\
 			+ a.dt/2*(S_half_10[1]+S_half_21[1])
 
 		# Fixed point iteration
@@ -148,7 +147,7 @@ class Artery_Network(object):
 				+ (p-pn)/self.R1\
 				+ self.dt/self.R1/self.R2/self.CT*pn\
 				- self.dt*(self.R1+self.R2)/self.R1/self.R2/self.CT*Um0[1]
-			Am0 = Um0[0] - self.dt/deltax*(qm0-qm1)
+			Am0 = Um0[0] - self.dt/a.dex*(qm0-qm1)
 			p = a.outlet_pressure(Am0)
 			if abs(p-p_old) < tol:
 				break
@@ -166,14 +165,56 @@ class Artery_Network(object):
 		:return: x, an 18-dimensional vector containing guess values
 		"""
 		x = np.zeros(18)
-		x[:3] = p.q0*np.ones(3)
-		x[3:6] = d1.q0*np.ones(3)
-		x[6:9] = d2.q0*np.ones(3)
-		x[9:12] = p.A0(p.L)*np.ones(3)
-		x[12:15] = d1.A0(0)*np.ones(3)
-		x[15:] = d2.A0(0)*np.ones(3)
+		x[:3] = p.q_in(p.L)*np.ones(3)
+		x[3:6] = d1.q_in(0)*np.ones(3)
+		x[6:9] = d2.q_in(0)*np.ones(3)
+		x[9:12] = p.A_out(p.L)*np.ones(3)
+		x[12:15] = d1.A_out(0)*np.ones(3)
+		x[15:] = d2.A_out(0)*np.ones(3)
 		return x
 
+
+	def set_x(self):
+		for ip in self.range_parent_arteries:
+			i1, i2 = self.daughter_vessels(ip)
+			p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
+			self.x[ip] = self.initial_x(p, d1, d2)
+
+
+	def define_geometry(self, Nx, Nt, T, N_cycles):
+		"""Calls define_geometry on each artery.
+		:param Nx: Number of spatial steps
+		:param Nt: Number of temporal steps
+		:param T: Period of one cardiac cycle
+		:param N_cycles: Number of cardiac cycles
+		"""
+		self.Nx = Nx
+		self.Nt = Nt
+		self.T = T
+		self.N_cycles = N_cycles
+		self.dt = T/Nt
+		for i in self.range_arteries:
+			self.arteries[i].define_geometry(Nx, Nt, T, N_cycles)
+	
+
+	def define_solution(self, q0):
+		"""Computes q0 on each artery, befor calling define_solution.
+		The daughter vessel gets a flow proportional to its share of the area.
+		:param q0: Initial flow of the first vessel
+		"""
+		self.arteries[0].define_solution(q0)
+		for i in self.range_daughter_arteries:
+			p = self.parent_vessel(i)
+			s = self.sister_vessel(i)
+			q0 = self.arteries[i].A0(0)/(self.arteries[i].A0(0)
+										+self.arteries[s].A0(0))\
+			   * self.arteries[p].q0
+			self.arteries[i].define_solution(q0)
+			
+		self.x = np.zeros([len(self.range_parent_arteries), 18])
+		########################################################################################
+		self.set_x()
+		########################################################################################
 
 	def problem_function(self, p, d1, d2, x):
 		"""Compute the function representing the system of equations <system>.
@@ -373,6 +414,7 @@ class Artery_Network(object):
 				func[0] += eps
 				x -= npl.solve(J, func)
 			if npl.norm(x-x_old) < tol:
+				print('Finishing NewtonSolver at iteration '+str(k))
 				break
 		return x
 
@@ -395,10 +437,14 @@ class Artery_Network(object):
 	
 	def set_bcs(self, q_in):
 		""" Update boundary conditions for time t_(n+1) at all boundaries.
-		:param q_in: Value of first artery inflow at time t_(n+1)
+		:param q_in: Value of inflow of root artery at time t_(n+1)
 		"""
 		# Update inlet boundary conditions
 		self.arteries[0].q_in.assign(Constant(q_in))
+		
+		####################################################################################
+		#self.set_x()
+		####################################################################################
 		
 		# Update bifurcation boundary conditions
 		for ip in self.range_parent_arteries:
@@ -409,44 +455,6 @@ class Artery_Network(object):
 		for i in self.range_end_arteries:
 			A_out_value = self.compute_A_out(self.arteries[i])
 			self.arteries[i].A_out.assign(Constant(A_out_value))
-
-
-	def define_geometry(self, Nx, Nt, T, N_cycles):
-		"""Calls define_geometry on each artery.
-		:param Nx: Number of spatial steps
-		:param Nt: Number of temporal steps
-		:param T: Period of one cardiac cycle
-		:param N_cycles: Number of cardiac cycles
-		"""
-		self.Nx = Nx
-		self.Nt = Nt
-		self.T = T
-		self.N_cycles = N_cycles
-		self.dt = T/Nt
-		for i in self.range_arteries:
-			self.arteries[i].define_geometry(Nx, Nt, T, N_cycles)
-	
-
-	def define_solution(self, q0):
-		"""Computes q0 on each artery, befor calling define_solution.
-		The daughter vessel gets a flow proportional to its share of the area.
-		:param q0: Initial flow of the first vessel
-		"""
-		self.arteries[0].define_solution(q0)
-		for i in self.range_daughter_arteries:
-			p = self.parent_vessel(i)
-			s = self.sister_vessel(i)
-			q0 = self.arteries[i].A0(0)/(self.arteries[i].A0(0)
-										+self.arteries[s].A0(0))\
-			   * self.arteries[p].q0
-			self.arteries[i].define_solution(q0)
-			
-		# Make an initial guess for x
-		self.x = np.zeros([len(self.range_parent_arteries), 18])
-		for ip in self.range_parent_arteries:
-			i1, i2 = self.daughter_vessels(ip)
-			p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
-			self.x[ip] = self.initial_x(p, d1, d2)
 
 
 	def solve(self, q_ins):
@@ -472,6 +480,7 @@ class Artery_Network(object):
 				for n in range(self.Nt-1):
 
 					print('Iteration '+str(n))
+					
 					self.set_bcs(q_ins[n+1])
 					
 					# Solve equation on each artery
@@ -484,9 +493,10 @@ class Artery_Network(object):
 						artery.update_solution()
 
 						# Store solution at time t_(n+1)
-						writer.writerow({fieldnames[i]: np.array2string(\
-							artery.U.vector().array()[1::2][::-1],
-							separator=',')})
+						if n % self.Nt/10 == 0:
+							writer.writerow({fieldnames[i]: np.array2string(\
+								artery.U.vector().array()[1::2][::-1],
+								separator=',')})
 
 					t += self.dt
 
