@@ -243,15 +243,15 @@ class Artery_Network(object):
 		# Entries from equation (26) 
 		y[12] = x[0] - Um0p[1] + p.dt/p.dex*(Fp[1] - F_half_p[1])\
 			  - p.dt/2*(Sp[1] + S_half_p[1])
-		y[13] = x[3] - U0d1[1] + d1.dt/d1.dex*(F1[1] - F_half_1[1])\
-			  - d1.dt/2*(S1[1] + S_half_1[1])
-		y[14] = x[6] - U0d2[1] + d2.dt/d2.dex*(F2[1] - F_half_2[1])\
-			  - d2.dt/2*(S2[1] + S_half_2[1])
+		y[13] = x[3] - U0d1[1] + d1.dt/d1.dex*(F_half_1[1] - F1[1])\
+			  - d1.dt/2*(S_half_1[1] + S1[1])
+		y[14] = x[6] - U0d2[1] + d2.dt/d2.dex*(F_half_2[1] - F2[1])\
+			  - d2.dt/2*(S_half_2[1] + S2[1])
 		
 		# Entries from equation (27)
 		y[15] = x[9] - Um0p[0] + p.dt/p.dex*(Fp[0] - F_half_p[0])
-		y[16] = x[12] - U0d1[0] + d1.dt/d1.dex*(F1[0] - F_half_1[0])
-		y[17] = x[15] - U0d2[0] + d2.dt/d2.dex*(F2[0] - F_half_2[0])
+		y[16] = x[12] - U0d1[0] + d1.dt/d1.dex*(F_half_1[0] - F1[0])
+		y[17] = x[15] - U0d2[0] + d2.dt/d2.dex*(F_half_2[0] - F2[0])
 		
 		return y
 
@@ -266,11 +266,15 @@ class Artery_Network(object):
 		"""
 		# Abbreviations
 		A0p, A01, A02 = p.A0(p.L), d1.A0(0), d2.A0(0)
+		A0hp, A0h1, A0h2 = p.A0(p.L+p.dex), d1.A0(-d1.dex), d2.A0(-d2.dex)
 		fp, f1, f2 = p.f(p.L),  d1.f(0), d2.f(0)
+		fhp, fh1, fh2 = p.f(p.L+p.dex), d1.f(-d1.dex), d2.f(-d2.dex)
 		dbp, db1, db2 = p.db, d1.db, d2.db
 		Rep, Re1, Re2 = p.Re, d1.Re, d2.Re
-		dfdrp, dfdr1, dfdr2 = p.dfdr(p.L), d1.dfdr(0), d2.dfdr(0)
-		drdxp, drdx1, drdx2 = p.drdx(p.L), d1.drdx(0), d2.drdx(0)
+		dfdrp, dfdr1, dfdr2 = p.dfdr(p.L+p.dex),\
+							  d1.dfdr(-d1.dex), d2.dfdr(-d2.dex)
+		drdxp, drdx1, drdx2 = p.drdx(p.L+p.dex),\
+							  d1.drdx(-d1.dex), d2.drdx(-d2.dex)
 		rpi = np.sqrt(np.pi)
 		
 		# Jacobian matrix
@@ -306,36 +310,36 @@ class Artery_Network(object):
 		J[9, 10] = fp*np.sqrt(A0p)/2/x[10]**(3/2)
 		J[9, 16] = -f2*np.sqrt(A02)/2/x[16]**(3/2)
 		J[10, 9] = fp*np.sqrt(A0p)/2/x[9]**(3/2)
-		J[10, 12] = -f2*np.sqrt(A01)/2/x[12]**(3/2)
+		J[10, 12] = -f1*np.sqrt(A01)/2/x[12]**(3/2)
 		J[11, 9] = fp*np.sqrt(A0p)/2/x[9]**(3/2)
 		J[11, 15] = -f2*np.sqrt(A02)/2/x[15]**(3/2)
 		
 		# Entries from equation (26)
 		J[12, 0] = 1
 		J[12, 2] = p.dt/p.dex*2*x[2]/x[11] + p.dt*rpi/dbp/Rep/np.sqrt(x[11])
-		J[12, 11] = p.dt/p.dex*(-(x[2]/x[11])**2 + fp/2*np.sqrt(A0p/x[11]))\
+		J[12, 11] = p.dt/p.dex*(-(x[2]/x[11])**2 + fhp/2*np.sqrt(A0hp/x[11]))\
 				  - p.dt/2*(rpi/dbp/Rep*x[2]/x[11]**(3/2)\
-						   + (1/np.sqrt(x[11])*(rpi*fp+np.sqrt(A0p)*dfdrp)\
+						   + (1/np.sqrt(x[11])*(rpi*fhp+np.sqrt(A0hp)*dfdrp)\
 											   - dfdrp)*drdxp)
 		J[13, 3] = 1
 		J[13, 5] = -d1.dt/d1.dex*2*x[5]/x[14] + d1.dt*rpi/db1/Re1/np.sqrt(x[14])
-		J[13, 14] = d1.dt/d1.dex*((x[5]/x[14])**2 - f1/2*np.sqrt(A01/x[14]))\
+		J[13, 14] = d1.dt/d1.dex*((x[5]/x[14])**2 - fh1/2*np.sqrt(A0h1/x[14]))\
 				  - d1.dt/2*(rpi/db1/Re1*x[5]/x[14]**(3/2)\
-							+ (1/np.sqrt(x[14])*(rpi*f1+np.sqrt(A01)*dfdr1)\
+							+ (1/np.sqrt(x[14])*(rpi*fh1+np.sqrt(A0h1)*dfdr1)\
 												- dfdr1)*drdx1)
 		J[14, 6] = 1
 		J[14, 8] = -d2.dt/d2.dex*2*x[8]/x[17] + d2.dt*rpi/db2/Re2/np.sqrt(x[17])
-		J[14, 17] = d2.dt/d2.dex*((x[8]/x[17])**2 - f2/2*np.sqrt(A02/x[17]))\
+		J[14, 17] = d2.dt/d2.dex*((x[8]/x[17])**2 - fh2/2*np.sqrt(A0h2/x[17]))\
 				  - d2.dt/2*(rpi/db2/Re2*x[8]/x[17]**(3/2)\
-							+ (1/np.sqrt(x[17])*(rpi*f2+np.sqrt(A02)*dfdr2)\
+							+ (1/np.sqrt(x[17])*(rpi*fh2+np.sqrt(A0h2)*dfdr2)\
 												- dfdr2)*drdx2)
 		
 		# Entries from equation (27)
 		J[15, 2] = p.dt/p.dex
 		J[15, 9] = 1
-		J[15, 5] = d1.dt/d1.dex
+		J[16, 5] = - d1.dt/d1.dex
 		J[16, 12] = 1
-		J[17, 8] = d1.dt/d1.dex
+		J[17, 8] = - d1.dt/d1.dex
 		J[17, 15] = 1
 		
 		return J
@@ -346,7 +350,7 @@ class Artery_Network(object):
 			print('x[%i] = %f' % (i, x[i]))
 		
 
-	def newton(self, p, d1, d2, x=np.ones(18), k_max=5, tol=1.e-10):
+	def newton(self, p, d1, d2, x=np.ones(18), k_max=100, tol=1.e-10):
 		"""Compute solution to the system of equations.
 		:param p: Parent artery
 		:param d1: First daughter vessel
@@ -356,15 +360,13 @@ class Artery_Network(object):
 		:param tol: Tolerance for difference between two steps
 		:return: Solution to the system of equations
 		"""
-		eps = 1.e-0
+		eps = 1.e-8
 		for k in range(k_max):
-			self.show_x(x)
 			x_old = np.copy(x)
 			J = self.jacobian(p, d1, d2, x)
 			func = self.problem_function(p, d1, d2, x)
 			try:
 				x -= npl.solve(J, func)
-				print('Non-singular')
 			except npl.LinAlgError:
 				print('Singular')
 				J += eps*np.eye(18)
@@ -387,8 +389,8 @@ class Artery_Network(object):
 		#d1.U_in.assign(Constant((self.x[12], self.x[3])))
 		#d2.U_in.assign(Constant((self.x[15], self.x[6])))
 		p.A_out.assign(Constant(self.x[ip, 9]))
-		d1.q_in.assign(Constant(self.x[ip, x[3]]))
-		d2.q_in.assign(Constant(self.x[ip, x[6]]))
+		d1.q_in.assign(Constant(self.x[ip, 3]))
+		d2.q_in.assign(Constant(self.x[ip, 6]))
 	
 	
 	def set_bcs(self, q_in):
@@ -470,7 +472,6 @@ class Artery_Network(object):
 				for n in range(self.Nt-1):
 
 					print('Iteration '+str(n))
-
 					self.set_bcs(q_ins[n+1])
 					
 					# Solve equation on each artery
