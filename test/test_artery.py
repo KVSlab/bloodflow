@@ -7,13 +7,13 @@ import configparser
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-sys.path.insert(0, '../src')
+sys.path.insert(0, 'src/')
 
 from utils import *
 from artery_network import Artery_Network
 
 config = configparser.ConfigParser()
-config.read('config.cfg')
+config.read('test/config.cfg')
 
 order = config.getint('Parameters', 'order')
 Ru = [float(f) for f in config.get('Parameters', 'Ru').split(',')]
@@ -35,7 +35,7 @@ Nx = config.getint('Geometry', 'Nx')
 N_cycles = config.getint('Geometry', 'N_cycles')
 
 # Import the inlet flow data
-data_q = np.genfromtxt('../data/example_inlet.csv', delimiter = ',')
+data_q = np.genfromtxt('data/example_inlet.csv', delimiter = ',')
 tt = data_q[:, 0]
 qq = data_q[:, 1]
 T = data_q[-1, 0]

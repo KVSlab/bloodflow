@@ -231,8 +231,8 @@ class Artery_Network(object):
 		y[5] = 2*x[16] - x[17] - U_half_2[0]
 		
 		# Entries from equation (22)
-		y[6] = x[1] - x[4] - x[7]
-		y[7] = x[2] - x[5] - x[8]
+		y[6] = x[0] - x[3] - x[6]
+		y[7] = x[1] - x[4] - x[7]
 		
 		# Entries from equation (23)
 		y[8] = fp*(1-np.sqrt(A0p/x[10])) - f1*(1-np.sqrt(A01/x[13]))
@@ -271,7 +271,7 @@ class Artery_Network(object):
 		Rep, Re1, Re2 = p.Re, d1.Re, d2.Re
 		dfdrp, dfdr1, dfdr2 = p.dfdr(p.L), d1.dfdr(0), d2.dfdr(0)
 		drdxp, drdx1, drdx2 = p.drdx(p.L), d1.drdx(0), d2.drdx(0)
-		rpi = sqrt(np.pi)
+		rpi = np.sqrt(np.pi)
 		
 		# Jacobian matrix
 		J = np.zeros([18, 18])
@@ -293,12 +293,12 @@ class Artery_Network(object):
 		J[5, 17] = -1
 		
 		# Entries from equation (22)
-		J[6, 1] = 1
-		J[6, 4] = -1
-		J[6, 7] = -1
-		J[7, 2] = 1
-		J[7, 5] = -1
-		J[7, 8] = -1
+		J[6, 0] = 1
+		J[6, 3] = -1
+		J[6, 6] = -1
+		J[7, 1] = 1
+		J[7, 4] = -1
+		J[7, 7] = -1
 		
 		# Entries from equation (23)
 		J[8, 10] = fp*np.sqrt(A0p)/2/x[10]**(3/2)
@@ -332,16 +332,21 @@ class Artery_Network(object):
 		
 		# Entries from equation (27)
 		J[15, 2] = p.dt/p.dex
-		J[15, 11] = 1
+		J[15, 9] = 1
 		J[15, 5] = d1.dt/d1.dex
-		J[16, 14] = 1
+		J[16, 12] = 1
 		J[17, 8] = d1.dt/d1.dex
-		J[17, 17] = 1
+		J[17, 15] = 1
 		
 		return J
+
+
+	def show_x(self, x):
+		for i in range(18):
+			print('x[%i] = %f' % (i, x[i]))
 		
 
-	def newton(self, p, d1, d2, x=np.zeros(18), k_max=1000, tol=1.e-10):
+	def newton(self, p, d1, d2, x=np.ones(18), k_max=5, tol=1.e-10):
 		"""Compute solution to the system of equations.
 		:param p: Parent artery
 		:param d1: First daughter vessel
@@ -351,15 +356,19 @@ class Artery_Network(object):
 		:param tol: Tolerance for difference between two steps
 		:return: Solution to the system of equations
 		"""
-		eps = 1.e-8
+		eps = 1.e-0
 		for k in range(k_max):
+			self.show_x(x)
 			x_old = np.copy(x)
 			J = self.jacobian(p, d1, d2, x)
 			func = self.problem_function(p, d1, d2, x)
 			try:
 				x -= npl.solve(J, func)
+				print('Non-singular')
 			except npl.LinAlgError:
+				print('Singular')
 				J += eps*np.eye(18)
+				func[0] += eps
 				x -= npl.solve(J, func)
 			if npl.norm(x-x_old) < tol:
 				break
@@ -442,7 +451,7 @@ class Artery_Network(object):
 		"""Solve the equation on the entire arterial network.
 		:param q_ins: Vector containing inlet flow for the first artery.
 		"""
-		with open('../output/flow.csv', 'w', newline='') as csvfile:
+		with open('output/flow.csv', 'w', newline='') as csvfile:
 			fieldnames = [str(i) for i in self.range_arteries]
 			writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 			writer.writeheader()
