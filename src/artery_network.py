@@ -461,44 +461,56 @@ class Artery_Network(object):
 		"""Solve the equation on the entire arterial network.
 		:param q_ins: Vector containing inlet flow for the first artery.
 		"""
-		with open('output/flow.csv', 'w', newline='') as csvfile:
-			fieldnames = [str(i) for i in self.range_arteries]
+		# Setup storage files
+		xdmffile_area = [0] * len(self.range_arteries)
+		xdmffile_flow = [0] * len(self.range_arteries)
+		for i in self.range_arteries:
+			xdmffile_area[i] = XDMFFile('output/area/area_%i' % (i))
+			xdmffile_flow[i] = XDMFFile('output/flow/flow_%i' % (i))
+
+		# Progress bar
+		progress = Progress('Time-stepping')
+		set_log_level(PROGRESS)
+
+		# Initialise time
+		t = 0
+		
+		# Cardiac cycle iteration
+		for n_cycle in range(self.N_cycles):
+			
+			# Time-stepping for one period
+			for n in range(self.Nt):
+
+				print('Iteration '+str(n))
+				
+				self.set_bcs(q_ins[(n+1) % (self.Nt)])
+
+				# Solve equation on each artery
+				for i, artery in enumerate(self.arteries):
+					
+					# Store solution at time t_n
+					if n_cycles == N_cycles-1 and n % self.Nt/100 == 0:
+						area, flow = artery.U.split()
+						xdmffile_area[i].write_checkpoint(area, 'Area', t)
+						xdmffile_flow[i].write_checkpoint(flow, 'Flow', t)
+					
+					# U_n+1 is solution of FF == 0
+					solve(artery.variational_form == 0, artery.U, artery.bcs)
+
+					# Update current solution
+					artery.update_solution()
+
+				t += self.dt
+
+				# Update progress bar
+				progress.update((t+self.dt)/self.N_cycles/self.T)
+
+		data = {'order': self.order, 'Nx': self.Nx, 'Nt': 100,
+				'location': ['output/area/', 'output/flow/'],
+				'name'=['area', 'flow']}
+		with open('output/data.csv') as csvfile
+			fieldnames = ['order', 'Nx', 'Nt', 'location', 'name']
 			writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 			writer.writeheader()
-		
-			# Progress bar
-			progress = Progress('Time-stepping')
-			set_log_level(PROGRESS)
+			writer.writerow(data)
 
-			# Initialise time
-			t = 0
-
-			# Cardiac cycle iteration
-			for n_cycle in range(self.N_cycles):
-				
-				# Time-stepping for one period
-				for n in range(self.Nt-1):
-
-					print('Iteration '+str(n))
-					
-					self.set_bcs(q_ins[n+1])
-					
-					# Solve equation on each artery
-					for i, artery in enumerate(self.arteries):
-
-						# U_n+1 is solution of FF == 0
-						solve(artery.variational_form == 0, artery.U, artery.bcs)
-
-						# Update current solution
-						artery.update_solution()
-
-						# Store solution at time t_(n+1)
-						if n % self.Nt/10 == 0:
-							writer.writerow({fieldnames[i]: np.array2string(\
-								artery.U.vector().array()[1::2][::-1],
-								separator=',')})
-
-					t += self.dt
-
-					# Update progress bar
-					progress.update((t+self.dt)/self.N_cycles/self.T)

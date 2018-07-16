@@ -1,6 +1,7 @@
 import numpy as np
 
 import matplotlib.pyplot as plt
+from configparser import ConfigParser
 
 
 # Pressure unit converting functions ('unit' = g cm-1 s-2)
@@ -9,7 +10,18 @@ def unit_to_mmHg(p):
 	
 def mmHg_to_unit(p):
 	return 101325/76*p
+
+
+def read_output(datafile):
 	
+
+def XDMF_to_matrix(Nx, Ntm, location, name)
+	M = np.zeros([Nx, Nt])
+	f = XDMFFile(location)
+	for n in range(Nt):
+		XDMFFile.read_checkpoint(u, name, n)
+		M[:, n] = u.vector().array()[::-1]
+	return M	
 
 
 def plot_matrix(t, x, M, label, output):
