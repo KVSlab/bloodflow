@@ -47,7 +47,7 @@ q_ins = q(t)
 # Create artery network
 an = Artery_Network(order, Ru, Rd, L, k1, k2, k3, nu, p0, R1, R2, CT)
 an.define_geometry(Nx, Nt, T, N_cycles)
-an.define_solution(q_ins[0])
+an.define_solution(q_ins[0], 1)
 an.solve(q_ins)
 """
 a = an.arteries[0]

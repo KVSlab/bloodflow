@@ -119,7 +119,7 @@ class Artery_Network(object):
 		# Spatial step, scaled to satisfy the CFL condition
 		x2, x1, x0 = a.L-2*a.dex, a.L-a.dex, a.L
 		x21, x10 = a.L-1.5*a.dex, a.L-0.5*a.dex
-		Um2, Um1, Um0 = a.U_n(x2), a.U_n(x1), a.U_n(x0)
+		Um2, Um1, Um0 = a.Un(x2), a.Un(x1), a.Un(x0)
 
 		# Values at time step n
 		Fm2, Sm2 = self.flux(a, Um2, x2), self.source(a, Um2, x2)
@@ -201,7 +201,7 @@ class Artery_Network(object):
 			self.arteries[i].define_geometry(Nx, Nt, T, N_cycles)
 	
 
-	def define_solution(self, q0):
+	def define_solution(self, q0, theta=0.5):
 		"""Computes q0 on each artery, before calling define_solution.
 		The daughter vessel gets a flow proportional to its share of the area.
 		:param q0: Initial flow of the first vessel
@@ -213,7 +213,7 @@ class Artery_Network(object):
 			q0 = self.arteries[i].A0(0)/(self.arteries[i].A0(0)
 										+self.arteries[s].A0(0))\
 			   * self.arteries[p].q0
-			self.arteries[i].define_solution(q0)
+			self.arteries[i].define_solution(q0, theta)
 			
 		self.define_x()
 
@@ -245,9 +245,9 @@ class Artery_Network(object):
 		S2 = self.source(d2, np.array([x[17], x[8]]), -d2.dex/2)
 		
 		# Compute half-time-step-values in M-1/2 for p and 1/2 for d1 and d2
-		Um1p, Um0p = p.U_n(p.L-p.dex), p.U_n(p.L)
-		U0d1, U1d1 = d1.U_n(0), d1.U_n(d1.dex)
-		U0d2, U1d2 = d2.U_n(0), d2.U_n(d2.dex)
+		Um1p, Um0p = p.Un(p.L-p.dex), p.Un(p.L)
+		U0d1, U1d1 = d1.Un(0), d1.Un(d1.dex)
+		U0d2, U1d2 = d2.Un(0), d2.Un(d2.dex)
 
 		U_half_p = self.compute_U_half(p, Um1p, Um0p, p.L-p.dex, p.L)
 		U_half_1 = self.compute_U_half(d1, U0d1, U1d1, 0, d1.dex)

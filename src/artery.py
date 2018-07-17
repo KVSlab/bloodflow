@@ -69,7 +69,10 @@ class Artery(object):
 							   degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L)
 
 
-	def define_solution(self, q0):
+	def define_solution(self, q0, theta=0.5):
+		
+		# Define Crank-Nicolson parameter
+		self.theta = theta
 		
 		# Define initial flow
 		self.q0 = q0
@@ -79,7 +82,7 @@ class Artery(object):
 		A, q = split(self.U)
 
 		# Define test functions
-		self.v1, self.v2 = TestFunctions(self.V2)
+		v1, v2 = TestFunctions(self.V2)
  
 		# Inlet flow
 		self.q_in = Function(self.V)
@@ -90,8 +93,8 @@ class Artery(object):
 		self.A_out.assign(Constant(self.A0(self.L)))
 
 		# Initial value deduced from bottom boundary conditions
-		self.U_n = Function(self.V2)
-		self.U_n.assign(Expression(('pi*pow(Ru, 2)*pow(Rd/Ru, 2*x[0]/L)', 'q0'),
+		self.Un = Function(self.V2)
+		self.Un.assign(Expression(('pi*pow(Ru, 2)*pow(Rd/Ru, 2*x[0]/L)', 'q0'),
 			degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L, q0=self.q0))
 
 		# Spatial boundary conditions
@@ -103,22 +106,46 @@ class Artery(object):
 		bc_outlet = DirichletBC(self.V2.sub(0), self.A_out, outlet_bdry)
 		bc_inlet = DirichletBC(self.V2.sub(1), self.q_in, inlet_bdry)
 		self.bcs = [bc_inlet, bc_outlet]
+		
+		# Terms for variational form
+		U_v_dx = A*v1*dx + q*v2*dx
+
+		Un_v_dx = self.Un[0]*v1*dx + self.Un[1]*v2*dx
+
+
+		F_v_ds = q*v1*ds\
+			   + (pow(q, 2)/(A+DOLFIN_EPS)\
+				 +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*v2*ds
+		F_dv_dx = q*grad(v1)[0]*dx\
+				- (pow(q, 2)/(A+DOLFIN_EPS)\
+				  +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx
+		dF_v_dx = F_v_ds - F_dv_dx
+
+		Fn_v_ds = self.Un[1]*v1*ds\
+				+ (pow(self.Un[1], 2)/(self.Un[0])\
+				  +self.f*sqrt(self.A0*(self.Un[0])))*v2*ds
+		Fn_dv_dx = self.Un[1]*grad(v1)[0]*dx\
+				 + (pow(self.Un[1], 2)/(self.Un[0])\
+				   +self.f*sqrt(self.A0*(self.Un[0])))*grad(v2)[0]*dx
+		dFn_v_dx = Fn_v_ds - Fn_dv_dx
+
+
+		S_v_dx = - 2*sqrt(pi)/self.db/self.Re*q/sqrt(A+DOLFIN_EPS)*v2*dx\
+			   + (2*sqrt(A+DOLFIN_EPS)*(sqrt(pi)*self.f
+									   +sqrt(self.A0)*self.dfdr)\
+				 -(A+DOLFIN_EPS)*self.dfdr)*self.drdx*v2*dx
+
+		Sn_v_dx = -2*sqrt(pi)/self.db/self.Re*self.Un[1]/sqrt(self.Un[0])*v2*dx\
+				+ (2*sqrt(self.Un[0])*(sqrt(pi)*self.f+sqrt(self.A0)*self.dfdr)\
+				  -(self.Un[0])*self.dfdr)*self.drdx*v2*dx
 
 		# Variational form
-		self.variational_form = A*self.v1*dx\
-			+ q*self.v2*dx\
-			+ self.dt*grad(q)[0]*self.v1*dx\
-			+ self.dt*(pow(q, 2)/(A+DOLFIN_EPS)\
-				  +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*self.v2*ds\
-			- self.dt*(pow(q, 2)/(A+DOLFIN_EPS)\
-				  +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*grad(self.v2)[0]*dx\
-			+ self.dt*2*sqrt(pi)/self.db/self.Re
-					 *q/sqrt(A+DOLFIN_EPS)*self.v2*dx\
-			- self.dt*(2*sqrt(A+DOLFIN_EPS)*(sqrt(pi)*self.f
-					  +sqrt(self.A0)*self.dfdr)\
-				  -(A+DOLFIN_EPS)*self.dfdr)*self.drdx*self.v2*dx\
-			- self.U_n[0]*self.v1*dx\
-			- self.U_n[1]*self.v2*dx
+		self.variational_form = U_v_dx\
+							  - Un_v_dx\
+							  + self.dt*self.theta*dF_v_dx\
+							  + self.dt*(1-self.theta)*dFn_v_dx\
+							  - self.dt*self.theta*S_v_dx\
+							  - self.dt*(1-self.theta)*Sn_v_dx\
 
 
 	def solve(self):
@@ -131,7 +158,7 @@ class Artery(object):
 	def update_solution(self):
 		"""Assign new values to U_n.
 		"""
-		self.U_n.assign(self.U)
+		self.Un.assign(self.U)
 
 
 	def pressure(self, f, A0, A):
