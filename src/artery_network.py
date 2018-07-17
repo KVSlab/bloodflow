@@ -185,7 +185,11 @@ class Artery_Network(object):
 			i1, i2 = self.daughter_vessels(ip)
 			p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
 			self.x[ip] = self.initial_x(p, d1, d2)
-
+	
+	
+	def show_x(self, x):
+		for i in range(18):
+			print('x[%i] = %f' % (i, x[i]))
 
 	def define_geometry(self, Nx, Nt, T, N_cycles):
 		"""Calls define_geometry on each artery.
@@ -400,7 +404,7 @@ class Artery_Network(object):
 		:param tol: Tolerance for difference between two steps
 		:return: Solution to the system of equations
 		"""
-		eps = 1.e-8
+		eps = 1.e-10
 		for k in range(k_max):
 			x_old = np.copy(x)
 			J = self.jacobian(p, d1, d2, x)
@@ -427,11 +431,11 @@ class Artery_Network(object):
 		p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
 		self.x[ip] = self.newton(p, d1, d2, self.x[ip])
 		p.U_out.assign(Constant((self.x[ip, 9], self.x[ip, 0])))
-		d1.U_in.assign(Constant((self.x[ip, 12], self.x[ip, 3])))
-		d2.U_in.assign(Constant((self.x[ip, 15], self.x[ip, 6])))
+		#d1.U_in.assign(Constant((self.x[ip, 12], self.x[ip, 3])))
+		#d2.U_in.assign(Constant((self.x[ip, 15], self.x[ip, 6])))
 		#p.A_out.assign(Constant(self.x[ip, 9]))
-		#d1.q_in.assign(Constant(self.x[ip, 3]))
-		#d2.q_in.assign(Constant(self.x[ip, 6]))
+		d1.q_in.assign(Constant(self.x[ip, 3]))
+		d2.q_in.assign(Constant(self.x[ip, 6]))
 	
 	
 	def set_bcs(self, q_in):

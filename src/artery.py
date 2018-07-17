@@ -88,19 +88,19 @@ class Artery(object):
  
 		# Inlet flow
 		self.q_in = Function(self.V)
-		#self.q_in.assign(Constant(self.q0))
+		self.q_in.assign(Constant(self.q0))
 		
 		# Inlet bc
 		self.U_in = Function(self.V2)
-		#self.U_in.assign(Constant((self.Ru, self.q0)))
+		self.U_in.assign(Constant((self.Ru, self.q0)))
 
 		# Outlet area
 		self.A_out = Function(self.V)
-		#self.A_out.assign(Constant(self.A0(self.L)))
+		self.A_out.assign(Constant(self.A0(self.L)))
 
 		# Outlet bc
 		self.U_out = Function(self.V2)
-		#self.U_out.assign(Constant((self.Rd, self.q0)))
+		self.U_out.assign(Constant((self.Rd, self.q0)))
 
 		# Initial value deduced from bottom boundary conditions
 		self.Un = Function(self.V2)
@@ -113,7 +113,7 @@ class Artery(object):
 			return on_boundary and near(x[0], 0, tol)
 		def outlet_bdry(x, on_boundary):
 			return on_boundary and near(x[0], self.L, tol)
-		if self.root_vessel:
+		if 1:#self.root_vessel:
 			bc_inlet = DirichletBC(self.V2.sub(1), self.q_in, inlet_bdry)
 		else:
 			bc_inlet = DirichletBC(self.V2, self.U_in, inlet_bdry)
@@ -122,7 +122,7 @@ class Artery(object):
 		else:
 			bc_outlet = DirichletBC(self.V2, self.U_out, outlet_bdry)
 		self.bcs = [bc_inlet, bc_outlet]
-		
+
 		# Terms for variational form
 		U_v_dx = A*v1*dx + q*v2*dx
 
@@ -136,10 +136,9 @@ class Artery(object):
 				  +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx
 		dF_v_dx = F_v_ds - F_dv_dx
 
-		Fn_v_ds = self.Un[1]*v1*ds\
-				+ (pow(self.Un[1], 2)/(self.Un[0])\
+		Fn_v_ds = (pow(self.Un[1], 2)/(self.Un[0])\
 				  +self.f*sqrt(self.A0*(self.Un[0])))*v2*ds
-		Fn_dv_dx = self.Un[1]*grad(v1)[0]*dx\
+		Fn_dv_dx = -grad(self.Un[1])[0]*v1*dx\
 				 + (pow(self.Un[1], 2)/(self.Un[0])\
 				   +self.f*sqrt(self.A0*(self.Un[0])))*grad(v2)[0]*dx
 		dFn_v_dx = Fn_v_ds - Fn_dv_dx
