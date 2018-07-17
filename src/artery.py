@@ -112,8 +112,10 @@ class Artery(object):
 				  +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*self.v2*ds\
 			- self.dt*(pow(q, 2)/(A+DOLFIN_EPS)\
 				  +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*grad(self.v2)[0]*dx\
-			+ self.dt*2*sqrt(pi)/self.db/self.Re*q/sqrt(A+DOLFIN_EPS)*self.v2*dx\
-			- self.dt*(2*sqrt(A+DOLFIN_EPS)*(sqrt(pi)*self.f+sqrt(self.A0)*self.dfdr)\
+			+ self.dt*2*sqrt(pi)/self.db/self.Re
+					 *q/sqrt(A+DOLFIN_EPS)*self.v2*dx\
+			- self.dt*(2*sqrt(A+DOLFIN_EPS)*(sqrt(pi)*self.f
+					  +sqrt(self.A0)*self.dfdr)\
 				  -(A+DOLFIN_EPS)*self.dfdr)*self.drdx*self.v2*dx\
 			- self.U_n[0]*self.v1*dx\
 			- self.U_n[1]*self.v2*dx
@@ -123,7 +125,7 @@ class Artery(object):
 		"""Solve problem for one iteration.
 		U_(n+1) is solution of variational_form == 0
 		"""
-		solve(variational_form == 0, self.U, self.bcs)
+		solve(self.variational_form == 0, self.U, self.bcs)
 
 
 	def update_solution(self):
