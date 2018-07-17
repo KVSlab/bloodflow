@@ -30,8 +30,10 @@ class Artery_Network(object):
 		self.range_daughter_arteries = range(1, 2**self.order-1)
 		self.range_end_arteries = range(2**(self.order-1)-1, 2**self.order-1)
 		for i in self.range_arteries:
-			self.arteries[i] = Artery(Ru[i], Rd[i], L[i], k1,
-								 k2, k3, nu, p0)
+			root_vessel = (i==0)
+			end_vessel = (i in self.range_end_arteries)
+			self.arteries[i] = Artery(root_vessel, end_vessel, Ru[i], Rd[i],
+									  L[i], k1, k2, k3, nu, p0)
 		self.R1, self.R2, self.CT = R1, R2, CT
 
 
@@ -166,12 +168,12 @@ class Artery_Network(object):
 		:return: x, an 18-dimensional vector containing guess values
 		"""
 		x = np.zeros(18)
-		x[:3] = p.q_in(p.L)*np.ones(3)
-		x[3:6] = d1.q_in(0)*np.ones(3)
-		x[6:9] = d2.q_in(0)*np.ones(3)
-		x[9:12] = p.A_out(p.L)*np.ones(3)
-		x[12:15] = d1.A_out(0)*np.ones(3)
-		x[15:] = d2.A_out(0)*np.ones(3)
+		x[:3] = p.q0*np.ones(3)
+		x[3:6] = d1.q0*np.ones(3)
+		x[6:9] = d2.q0*np.ones(3)
+		x[9:12] = p.A0(p.L)*np.ones(3)
+		x[12:15] = d1.A0(0)*np.ones(3)
+		x[15:] = d2.A0(0)*np.ones(3)
 		return x
 
 
@@ -424,12 +426,12 @@ class Artery_Network(object):
 		"""
 		p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
 		self.x[ip] = self.newton(p, d1, d2, self.x[ip])
-		#p.U_out.assign(Constant((self.x[9], self.x[0])))
-		#d1.U_in.assign(Constant((self.x[12], self.x[3])))
-		#d2.U_in.assign(Constant((self.x[15], self.x[6])))
-		p.A_out.assign(Constant(self.x[ip, 9]))
-		d1.q_in.assign(Constant(self.x[ip, 3]))
-		d2.q_in.assign(Constant(self.x[ip, 6]))
+		p.U_out.assign(Constant((self.x[ip, 9], self.x[ip, 0])))
+		d1.U_in.assign(Constant((self.x[ip, 12], self.x[ip, 3])))
+		d2.U_in.assign(Constant((self.x[ip, 15], self.x[ip, 6])))
+		#p.A_out.assign(Constant(self.x[ip, 9]))
+		#d1.q_in.assign(Constant(self.x[ip, 3]))
+		#d2.q_in.assign(Constant(self.x[ip, 6]))
 	
 	
 	def set_bcs(self, q_in):
@@ -438,8 +440,6 @@ class Artery_Network(object):
 		"""
 		# Update inlet boundary conditions
 		self.arteries[0].q_in.assign(Constant(q_in))
-		
-		#self.define_x()
 		
 		# Update bifurcation boundary conditions
 		for ip in self.range_parent_arteries:
@@ -508,6 +508,7 @@ class Artery_Network(object):
 
 				# Solve equation on each artery
 				for i, artery in enumerate(self.arteries):
+					print('Artery %i' % (i))
 
 					# Store solution at time t_n
 					if n_cycle == self.N_cycles-1 and n % self.Nt/100 == 0:

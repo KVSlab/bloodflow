@@ -16,10 +16,12 @@ class Artery(object):
 	:param Re: Reynolds number
 	:param p0: Diastolic pressure
 	"""
-	def __init__(self, Ru, Rd, L, k1, k2, k3, nu, p0):
+	def __init__(self, root_vessel, end_vessel, Ru, Rd, L, k1, k2, k3, nu, p0):
 		""" Construct artery.
 		Add its intrinsic characteristics, not its numerical solution.
 		"""
+		self.root_vessel = root_vessel
+		self.end_vessel = end_vessel
 		self.Ru = Ru
 		self.Rd = Rd
 		self.L = L
@@ -86,11 +88,19 @@ class Artery(object):
  
 		# Inlet flow
 		self.q_in = Function(self.V)
-		self.q_in.assign(Constant(self.q0))
+		#self.q_in.assign(Constant(self.q0))
+		
+		# Inlet bc
+		self.U_in = Function(self.V2)
+		#self.U_in.assign(Constant((self.Ru, self.q0)))
 
 		# Outlet area
 		self.A_out = Function(self.V)
-		self.A_out.assign(Constant(self.A0(self.L)))
+		#self.A_out.assign(Constant(self.A0(self.L)))
+
+		# Outlet bc
+		self.U_out = Function(self.V2)
+		#self.U_out.assign(Constant((self.Rd, self.q0)))
 
 		# Initial value deduced from bottom boundary conditions
 		self.Un = Function(self.V2)
@@ -103,8 +113,14 @@ class Artery(object):
 			return on_boundary and near(x[0], 0, tol)
 		def outlet_bdry(x, on_boundary):
 			return on_boundary and near(x[0], self.L, tol)
-		bc_outlet = DirichletBC(self.V2.sub(0), self.A_out, outlet_bdry)
-		bc_inlet = DirichletBC(self.V2.sub(1), self.q_in, inlet_bdry)
+		if self.root_vessel:
+			bc_inlet = DirichletBC(self.V2.sub(1), self.q_in, inlet_bdry)
+		else:
+			bc_inlet = DirichletBC(self.V2, self.U_in, inlet_bdry)
+		if self.end_vessel:
+			bc_outlet = DirichletBC(self.V2.sub(0), self.A_out, outlet_bdry)
+		else:
+			bc_outlet = DirichletBC(self.V2, self.U_out, outlet_bdry)
 		self.bcs = [bc_inlet, bc_outlet]
 		
 		# Terms for variational form
@@ -113,11 +129,10 @@ class Artery(object):
 		Un_v_dx = self.Un[0]*v1*dx + self.Un[1]*v2*dx
 
 
-		F_v_ds = q*v1*ds\
-			   + (pow(q, 2)/(A+DOLFIN_EPS)\
+		F_v_ds = (pow(q, 2)/(A+DOLFIN_EPS)\
 				 +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*v2*ds
-		F_dv_dx = q*grad(v1)[0]*dx\
-				- (pow(q, 2)/(A+DOLFIN_EPS)\
+		F_dv_dx = -grad(q)[0]*v1*dx\
+				+ (pow(q, 2)/(A+DOLFIN_EPS)\
 				  +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx
 		dF_v_dx = F_v_ds - F_dv_dx
 
@@ -140,12 +155,13 @@ class Artery(object):
 				  -(self.Un[0])*self.dfdr)*self.drdx*v2*dx
 
 		# Variational form
-		self.variational_form = U_v_dx\
-							  - Un_v_dx\
-							  + self.dt*self.theta*dF_v_dx\
-							  + self.dt*(1-self.theta)*dFn_v_dx\
-							  - self.dt*self.theta*S_v_dx\
-							  - self.dt*(1-self.theta)*Sn_v_dx\
+		self.variational_form =\
+			  U_v_dx\
+		 	- Un_v_dx\
+			+ self.dt*self.theta*dF_v_dx\
+			+ self.dt*(1-self.theta)*dFn_v_dx\
+			- self.dt*self.theta*S_v_dx\
+			- self.dt*(1-self.theta)*Sn_v_dx
 
 
 	def solve(self):

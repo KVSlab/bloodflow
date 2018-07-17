@@ -39,7 +39,7 @@ def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
 	for n in range(Nt):
 		f.read_checkpoint(u, name, n)
 		M[:, n] = u.vector().array()[::-1]
-	return M	
+	return M
 
 
 def plot_matrix(t, x, M, label, output):
