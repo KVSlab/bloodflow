@@ -471,7 +471,7 @@ class Artery_Network(object):
 		config.add_section('data')
 		config.set('data', 'order', str(self.order))
 		config.set('data', 'Nx', str(self.Nx))
-		config.set('data', 'Nt', '100')
+		config.set('data', 'Nt', str(self.N_store))
 		config.set('data', 'T', str(self.T))
 		config.set('data', 'L', L)
 		config.set('data', 'mesh_location', 'output/mesh.xml.gz')
@@ -481,10 +481,13 @@ class Artery_Network(object):
 			config.write(configfile)
 
 
-	def solve(self, q_ins):
+	def solve(self, q_ins, N_store):
 		"""Solve the equation on the entire arterial network.
-		:param q_ins: Vector containing inlet flow for the first artery.
+		:param q_ins: Vector containing inlet flow for the first artery
+		:param N_store: Number of time-steps to be stored
 		"""
+		self.N_store = N_store
+		
 		# Setup storage files
 		xdmffile_area = [0] * len(self.range_arteries)
 		xdmffile_flow = [0] * len(self.range_arteries)
@@ -515,7 +518,7 @@ class Artery_Network(object):
 					print('Artery %i' % (i))
 
 					# Store solution at time t_n
-					if n_cycle == self.N_cycles-1 and n % self.Nt/100 == 0:
+					if n_cycle == self.N_cycles-1 and n % (self.Nt/self.N_store) == 0:
 						area, flow = artery.U.split()
 						xdmffile_area[i].write_checkpoint(area, 'area', t)
 						xdmffile_flow[i].write_checkpoint(flow, 'flow', t)
@@ -532,5 +535,8 @@ class Artery_Network(object):
 				progress.update((t+self.dt)/self.N_cycles/self.T)
 		
 		self.dump_metadata()
-		
+		for i in self.range_arteries:
+			xdmffile_area[i].close()
+			xdmffile_flow[i].close()
+
 		

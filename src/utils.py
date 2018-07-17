@@ -3,6 +3,7 @@ import numpy as np
 from fenics import *
 from mshr import *
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from configparser import ConfigParser
 
 
