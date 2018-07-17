@@ -119,6 +119,13 @@ class Artery(object):
 			- self.U_n[1]*self.v2*dx
 
 
+	def solve(self):
+		"""Solve problem for one iteration.
+		U_(n+1) is solution of variational_form == 0
+		"""
+		solve(variational_form == 0, self.U, self.bcs)
+
+
 	def update_solution(self):
 		"""Assign new values to U_n.
 		"""

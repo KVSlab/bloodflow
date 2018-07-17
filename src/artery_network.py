@@ -175,7 +175,10 @@ class Artery_Network(object):
 		return x
 
 
-	def set_x(self):
+	def define_x(self):
+		"""Define and make an initial guess for the solution to the system of equations.
+		"""
+		self.x = np.zeros([len(self.range_parent_arteries), 18])
 		for ip in self.range_parent_arteries:
 			i1, i2 = self.daughter_vessels(ip)
 			p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
@@ -199,7 +202,7 @@ class Artery_Network(object):
 	
 
 	def define_solution(self, q0):
-		"""Computes q0 on each artery, befor calling define_solution.
+		"""Computes q0 on each artery, before calling define_solution.
 		The daughter vessel gets a flow proportional to its share of the area.
 		:param q0: Initial flow of the first vessel
 		"""
@@ -212,10 +215,8 @@ class Artery_Network(object):
 			   * self.arteries[p].q0
 			self.arteries[i].define_solution(q0)
 			
-		self.x = np.zeros([len(self.range_parent_arteries), 18])
-		########################################################################################
-		self.set_x()
-		########################################################################################
+		self.define_x()
+
 
 	def problem_function(self, p, d1, d2, x):
 		"""Compute the function representing the system of equations <system>.
@@ -387,11 +388,6 @@ class Artery_Network(object):
 		return J
 
 
-	def show_x(self, x):
-		for i in range(18):
-			print('x[%i] = %f' % (i, x[i]))
-		
-
 	def newton(self, p, d1, d2, x=np.ones(18), k_max=100, tol=1.e-10):
 		"""Compute solution to the system of equations.
 		:param p: Parent artery
@@ -443,9 +439,7 @@ class Artery_Network(object):
 		# Update inlet boundary conditions
 		self.arteries[0].q_in.assign(Constant(q_in))
 		
-		####################################################################################
-		#self.set_x()
-		####################################################################################
+		#self.define_x()
 		
 		# Update bifurcation boundary conditions
 		for ip in self.range_parent_arteries:
@@ -507,8 +501,9 @@ class Artery_Network(object):
 			# Time-stepping for one period
 			for n in range(self.Nt):
 
-				print('Iteration '+str(n))
+				print('Current time-step t_%i: %f' % (n, t))
 				
+				# Apply boundary conditions for time t_(n+1)
 				self.set_bcs(q_ins[(n+1) % (self.Nt)])
 
 				# Solve equation on each artery
@@ -520,8 +515,8 @@ class Artery_Network(object):
 						xdmffile_area[i].write_checkpoint(area, 'area', t)
 						xdmffile_flow[i].write_checkpoint(flow, 'flow', t)
 
-					# U_n+1 is solution of FF == 0
-					solve(artery.variational_form == 0, artery.U, artery.bcs)
+					# Solve problem on artery for time t_(n+1)
+					artery.solve()
 
 					# Update current solution
 					artery.update_solution()
