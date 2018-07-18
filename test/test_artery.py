@@ -16,14 +16,15 @@ config = configparser.ConfigParser()
 config.read('test/config.cfg')
 
 order = config.getint('Parameters', 'order')
-Ru = [float(f) for f in config.get('Parameters', 'Ru').split(',')]
-Rd = [float(f) for f in config.get('Parameters', 'Rd').split(',')]
-L = [float(f) for f in config.get('Parameters', 'L').split(',')]
-
-
+rc = config.getfloat('Parameters', 'rc')
+qc = config.getfloat('Parameters', 'qc')
+Ru = np.array([float(f) for f in config.get('Parameters', 'Ru').split(',')])
+Rd = np.array([float(f) for f in config.get('Parameters', 'Rd').split(',')])
+L = np.array([float(f) for f in config.get('Parameters', 'L').split(',')])
 k1 = config.getfloat('Parameters', 'k1')
 k2 = config.getfloat('Parameters', 'k2')
 k3 = config.getfloat('Parameters', 'k3')
+rho = config.getfloat('Parameters', 'rho')
 nu = config.getfloat('Parameters', 'nu')
 p0 = config.getfloat('Parameters', 'p0')
 R1 = config.getfloat('Parameters', 'R1')
@@ -47,8 +48,12 @@ t = np.linspace(0, T, Nt)
 q_ins = q(t)
 #q_ins = np.zeros(Nt)
 
+# Adimensionalise
+Ru, Rd, L, k1, k2, k3, Re, nu, p0, q_ins, T  =\
+	adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, q_ins, T)
+
 # Create artery network
-an = Artery_Network(order, Ru, Rd, L, k1, k2, k3, nu, p0, R1, R2, CT)
+an = Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT)
 an.define_geometry(Nx, Nt, T, N_cycles)
 an.define_solution(q_ins[0], theta)
 an.solve(q_ins, N_store)

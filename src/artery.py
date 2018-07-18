@@ -1,6 +1,6 @@
 __author__ = 'Syver Døving Agdestein'
 
-
+import sys
 import numpy as np
 from fenics import *
 import matplotlib.pyplot as plt
@@ -16,20 +16,23 @@ class Artery(object):
 	:param Re: Reynolds number
 	:param p0: Diastolic pressure
 	"""
-	def __init__(self, root_vessel, end_vessel, Ru, Rd, L, k1, k2, k3, nu, p0):
+	def __init__(self, root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0):
 		""" Construct artery.
 		Add its intrinsic characteristics, not its numerical solution.
 		"""
 		self.root_vessel = root_vessel
 		self.end_vessel = end_vessel
+		self.rc = rc
+		self.qc = qc
 		self.Ru = Ru
 		self.Rd = Rd
 		self.L = L
 		self.k1 = k1
 		self.k2 = k2
 		self.k3 = k3
+		self.rho = rho
+		self.Re = Re
 		self.nu = nu
-		self.Re = 10.0/nu/1.0
 		self.p0 = p0
 
 
@@ -106,23 +109,26 @@ class Artery(object):
 		self.Un = Function(self.V2)
 		self.Un.assign(Expression(('pi*pow(Ru, 2)*pow(Rd/Ru, 2*x[0]/L)', 'q0'),
 			degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L, q0=self.q0))
-
+		
 		# Spatial boundary conditions
 		tol = 1.e-14
 		def inlet_bdry(x, on_boundary):
 			return on_boundary and near(x[0], 0, tol)
 		def outlet_bdry(x, on_boundary):
 			return on_boundary and near(x[0], self.L, tol)
+
 		if 1:#self.root_vessel:
 			bc_inlet = DirichletBC(self.V2.sub(1), self.q_in, inlet_bdry)
 		else:
 			bc_inlet = DirichletBC(self.V2, self.U_in, inlet_bdry)
+			
 		if self.end_vessel:
 			bc_outlet = DirichletBC(self.V2.sub(0), self.A_out, outlet_bdry)
 		else:
 			bc_outlet = DirichletBC(self.V2, self.U_out, outlet_bdry)
-		self.bcs = [bc_inlet, bc_outlet]
 
+		self.bcs = [bc_inlet, bc_outlet]
+		
 		# Terms for variational form
 		U_v_dx = A*v1*dx + q*v2*dx
 

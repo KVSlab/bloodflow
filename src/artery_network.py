@@ -1,10 +1,9 @@
 __author__ = 'Syver Døving Agdestein'
 
-
+import sys
 import numpy as np
 import numpy.linalg as npl
 from fenics import *
-import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 import configparser
 from mshr import *
@@ -22,19 +21,20 @@ class Artery_Network(object):
 	:param Re: Reynolds' number
 	:param p0: Diastolic pressure
 	"""
-	def __init__(self, order, Ru, Rd, L, k1, k2, k3, nu, p0, R1, R2, CT):
+	def __init__(self, order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT):
 		self.order = order
 		self.arteries = [0] * (2**self.order-1)
 		self.range_arteries = range(2**self.order-1)
 		self.range_parent_arteries = range(2**(self.order-1)-1)
 		self.range_daughter_arteries = range(1, 2**self.order-1)
 		self.range_end_arteries = range(2**(self.order-1)-1, 2**self.order-1)
+		self.rc, self.qc, self.rho = rc, qc, rho
+		self.R1, self.R2, self.CT = R1, R2, CT
 		for i in self.range_arteries:
 			root_vessel = (i==0)
 			end_vessel = (i in self.range_end_arteries)
-			self.arteries[i] = Artery(root_vessel, end_vessel, Ru[i], Rd[i],
-									  L[i], k1, k2, k3, nu, p0)
-		self.R1, self.R2, self.CT = R1, R2, CT
+			self.arteries[i] = Artery(root_vessel, end_vessel, rc, qc, Ru[i], Rd[i],
+									  L[i], k1, k2, k3, rho, Re, nu, p0)
 
 
 	def daughter_vessels(self, i):
@@ -191,6 +191,7 @@ class Artery_Network(object):
 		for i in range(18):
 			print('x[%i] = %f' % (i, x[i]))
 
+
 	def define_geometry(self, Nx, Nt, T, N_cycles):
 		"""Calls define_geometry on each artery.
 		:param Nx: Number of spatial steps
@@ -212,11 +213,11 @@ class Artery_Network(object):
 		The daughter vessel gets a flow proportional to its share of the area.
 		:param q0: Initial flow of the first vessel
 		"""
-		self.arteries[0].define_solution(q0)
+		self.arteries[0].define_solution(q0, theta)
 		for i in self.range_daughter_arteries:
 			p = self.parent_vessel(i)
 			s = self.sister_vessel(i)
-			q0 = self.arteries[i].A0(0)/(self.arteries[i].A0(0)
+			q0 = self.arteries[i].A0(0)/(self.arteries[i].A0(0)\
 										+self.arteries[s].A0(0))\
 			   * self.arteries[p].q0
 			self.arteries[i].define_solution(q0, theta)
@@ -438,13 +439,13 @@ class Artery_Network(object):
 		d2.q_in.assign(Constant(self.x[ip, 6]))
 	
 	
-	def set_bcs(self, q_in):
+	def set_bcs(self, q_in_value):
 		""" Update boundary conditions for time t_(n+1) at all boundaries.
-		:param q_in: Value of inflow of root artery at time t_(n+1)
+		:param q_in_value: Value of inflow of root artery at time t_(n+1)
 		"""
 		# Update inlet boundary conditions
-		self.arteries[0].q_in.assign(Constant(q_in))
-		
+		self.arteries[0].q_in.assign(Constant(q_in_value))
+
 		# Update bifurcation boundary conditions
 		for ip in self.range_parent_arteries:
 			i1, i2 = self.daughter_vessels(ip)
@@ -474,6 +475,9 @@ class Artery_Network(object):
 		config.set('data', 'Nt', str(self.N_store))
 		config.set('data', 'T', str(self.T))
 		config.set('data', 'L', L)
+		config.set('data', 'qc', str(self.rc))
+		config.set('data', 'rc', str(self.qc))
+		config.set('data', 'rho', str(self.rho))
 		config.set('data', 'mesh_location', 'output/mesh.xml.gz')
 		config.set('data', 'locations', 'output/area,output/flow')
 		config.set('data', 'names', 'area,flow')
@@ -515,14 +519,13 @@ class Artery_Network(object):
 
 				# Solve equation on each artery
 				for i, artery in enumerate(self.arteries):
-					print('Artery %i' % (i))
-
+				
 					# Store solution at time t_n
 					if n_cycle == self.N_cycles-1 and n % (self.Nt/self.N_store) == 0:
-						area, flow = artery.U.split()
-						xdmffile_area[i].write_checkpoint(area, 'area', t)
-						xdmffile_flow[i].write_checkpoint(flow, 'flow', t)
-
+						#area, flow = artery.Un.split()[0], artery.Un.split()[1]
+						xdmffile_area[i].write_checkpoint(artery.Un.split()[0], 'area', t)
+						xdmffile_flow[i].write_checkpoint(artery.Un.split()[1], 'flow', t)
+					
 					# Solve problem on artery for time t_(n+1)
 					artery.solve()
 
@@ -535,8 +538,3 @@ class Artery_Network(object):
 				progress.update((t+self.dt)/self.N_cycles/self.T)
 		
 		self.dump_metadata()
-		for i in self.range_arteries:
-			xdmffile_area[i].close()
-			xdmffile_flow[i].close()
-
-		
