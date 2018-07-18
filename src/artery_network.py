@@ -527,9 +527,9 @@ class Artery_Network(object):
 					
 					# Store solution at time t_n
 					if n % (self.Nt/self.N_store) == 0 and n_cycle == self.N_cycles-1 :
-						#area, flow = artery.Un.split()[0], artery.Un.split()[1]
-						xdmffile_area[i].write_checkpoint(artery.Un.split()[0], 'area', t)
-						xdmffile_flow[i].write_checkpoint(artery.Un.split()[1], 'flow', t)
+						area, flow = artery.Un.split()[0], artery.Un.split()[1]
+						xdmffile_area[i].write_checkpoint(area, 'area', t)
+						xdmffile_flow[i].write_checkpoint(flow, 'flow', t)
 					
 					# Solve problem on artery for time t_(n+1)
 					artery.solve()

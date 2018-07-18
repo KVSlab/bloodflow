@@ -98,14 +98,14 @@ def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
 	u = Function(V)
 	for n in range(Nt):
 		f.read_checkpoint(u, name, n)
-		fig = plt.figure()
-		plot(u)
-		if name == 'area':
-			plt.ylim(0, 0.7)
-		else:
-			plt.ylim(0, 27)
-		plt.savefig('output/plot/%s_%i' % (name, n))
-		plt.close(fig)
+		#fig = plt.figure()
+		#plot(u)
+		#if name == 'area':
+		#	plt.ylim(0, 0.7)
+		#else:
+		#	plt.ylim(0, 27)
+		#plt.savefig('output/plot/%s_%i' % (name, n))
+		#plt.close(fig)
 		M[:, n] = u.vector().get_local()[:-1][::-1]
 	f.close()
 	return M
