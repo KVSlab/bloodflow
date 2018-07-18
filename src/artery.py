@@ -36,6 +36,38 @@ class Artery(object):
 		self.p0 = p0
 
 
+	def CFL_term(self, x, A, q):
+		"""Compute the term of the CFL condition.
+		:param x: Point at which the condition is to be checked
+		:param A: Value of area at x
+		:param q: Value of flow at x
+		:return: CFL term
+		"""
+		return 1/np.abs(q/A+np.sqrt(self.f(x)/2/self.rho\
+								   *np.sqrt(self.A0(x)/A)))
+
+
+	def check_CFL(self, x, A, q):
+		"""Check the CFL condition.
+		:param x: Point at which the condition is to be checked
+		:param A: Value of area at x
+		:param q: Value of flow at x
+		:return: True if condition is verified
+		"""
+		return self.dt/self.dex < self.CFL_term
+
+
+	def adjust_dex(self, x, A, q, margin=1.05):
+		"""Adjust boundary step-size so that the CFL condition is verified.
+		:param x: Point at which the condition is to be checked
+		:param A: Value of area at x
+		:param q: Value of flow at x
+		"""
+		M = self.CFL_term(x, A, q)
+		if self.dt/self.dex > M:
+			self.dex = margin*self.dt/M
+		
+
 	def define_geometry(self, Nx, Nt, T, N_cycles):
 		"""Define FEniCS parameters.
 		:param Nx: Number of spatial steps
@@ -51,7 +83,10 @@ class Artery(object):
 		
 		self.dt = self.T/self.Nt
 		self.dx = self.L/self.Nx
-		self.dex = 10*self.dx
+		
+		# Step for boundary condition computations, starting at normal size
+		self.dex = self.dx
+		
 		self.db = np.sqrt(self.nu*self.T/2/np.pi)
 		
 		self.mesh = IntervalMesh(self.Nx, 0, self.L)

@@ -49,8 +49,8 @@ q_ins = q(t)
 #q_ins = np.zeros(Nt)
 
 # Adimensionalise
-Ru, Rd, L, k1, k2, k3, Re, nu, p0, q_ins, T  =\
-	adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, q_ins, T)
+Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q_ins, T  =\
+	adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, R1, R2, CT, q_ins, T)
 
 # Create artery network
 an = Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT)

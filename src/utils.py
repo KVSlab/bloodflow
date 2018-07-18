@@ -15,7 +15,7 @@ def mmHg_to_unit(p):
 	return 101325/76*p
 
 
-def adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, q_ins, T):
+def adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, R1, R2, CT, q_ins, T):
 	"""Make quantities independent of units.
 	:param rc: Characteristic length (radius)
 	:param qc: Characteristic flow
@@ -30,6 +30,9 @@ def adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, q_ins, T):
 	:param p0: Pressure
 	:param q_ins: Flow
 	:param T: Time
+	:param R1: Windkessel model resistance
+	:param R2: Windkessel model resistance
+	:param CT: Windkessel model compliance
 	:return: Adimensionalised quantities, including Reynolds' number
 	"""
 	Ru = Ru/rc
@@ -41,9 +44,12 @@ def adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, q_ins, T):
 	Re = qc/nu/rc
 	nu = nu*rc/qc
 	p0 = p0*rc**4/rho/qc**2
+	R1 = R1*rc**4/rho/qc
+	R2 = R2*rc**4/rho/qc
+	CT = CT*rho*qc**2/rc**7
 	q_ins = q_ins/qc
 	T = T*qc/rc**3
-	return Ru, Rd, L, k1, k2, k3, Re, nu, p0, q_ins, T
+	return Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q_ins, T
 
 
 def redimensionalise(rc, qc, rho, x, nature):

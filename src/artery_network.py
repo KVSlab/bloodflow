@@ -118,6 +118,8 @@ class Artery_Network(object):
 		:param tol: Tolerance for Piccards fixed point iteration scheme
 		:return: Outlet boundary value of A at time step t_(n+1).
 		"""
+		a.adjust_dex(a.L, a.Un(a.L)[0], a.Un(a.L)[1])
+		
 		# Spatial step, scaled to satisfy the CFL condition
 		x2, x1, x0 = a.L-2*a.dex, a.L-a.dex, a.L
 		x21, x10 = a.L-1.5*a.dex, a.L-0.5*a.dex
@@ -430,6 +432,9 @@ class Artery_Network(object):
 		:param i2: Second daughter vessel index
 		"""
 		p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
+		p.adjust_dex(p.L, p.Un(p.L)[0], p.Un(p.L)[1])
+		d1.adjust_dex(0, d1.Un(0)[0], d1.Un(0)[1])
+		d2.adjust_dex(0, d2.Un(0)[0], d2.Un(0)[1])
 		self.x[ip] = self.newton(p, d1, d2, self.x[ip])
 		p.U_out.assign(Constant((self.x[ip, 9], self.x[ip, 0])))
 		#d1.U_in.assign(Constant((self.x[ip, 12], self.x[ip, 3])))
@@ -475,8 +480,8 @@ class Artery_Network(object):
 		config.set('data', 'Nt', str(self.N_store))
 		config.set('data', 'T', str(self.T))
 		config.set('data', 'L', L)
-		config.set('data', 'qc', str(self.rc))
-		config.set('data', 'rc', str(self.qc))
+		config.set('data', 'rc', str(self.rc))
+		config.set('data', 'qc', str(self.qc))
 		config.set('data', 'rho', str(self.rho))
 		config.set('data', 'mesh_location', 'output/mesh.xml.gz')
 		config.set('data', 'locations', 'output/area,output/flow')
@@ -519,9 +524,9 @@ class Artery_Network(object):
 
 				# Solve equation on each artery
 				for i, artery in enumerate(self.arteries):
-				
+					
 					# Store solution at time t_n
-					if n_cycle == self.N_cycles-1 and n % (self.Nt/self.N_store) == 0:
+					if n % (self.Nt/self.N_store) == 0 and n_cycle == self.N_cycles-1 :
 						#area, flow = artery.Un.split()[0], artery.Un.split()[1]
 						xdmffile_area[i].write_checkpoint(artery.Un.split()[0], 'area', t)
 						xdmffile_flow[i].write_checkpoint(artery.Un.split()[1], 'flow', t)
