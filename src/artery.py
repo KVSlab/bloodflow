@@ -65,16 +65,13 @@ class Artery(object):
 		# Initial vessel-radius and deduced quantities
 		self.r0 = Expression('Ru*pow(Rd/Ru, x[0]/L)',
 							degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L)
-		self.A0 = Expression('pi*pow(Ru, 2)*pow(Rd/Ru, 2*x[0]/L)',
-							degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L)
-		self.f = Expression('4/3*(k1*exp(k2*Ru*pow(Ru/Rd, x[0]/L)) + k3)',
-							degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L,
-							k1=self.k1, k2=self.k2, k3=self.k3)
-		self.dfdr = Expression('4/3*k1*k2*exp(k2*Ru*pow(Rd/Ru, x[0]/L))',
-						 	   degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L,
-							   k1=self.k1, k2=self.k2)
-		self.drdx = Expression('log(Rd/Ru)/L*Ru*pow(Rd/Ru, x[0]/L)',
-							   degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L)
+		self.A0 = Expression('pi*pow(r0, 2)', degree=2, r0=self.r0)
+		self.f = Expression('4/3*(k1*exp(k2*r0) + k3)', degree=2,
+							k1=self.k1, k2=self.k2, k3=self.k3, r0=self.r0)
+		self.dfdr = Expression('4/3*k1*k2*exp(k2*r0)', degree=2,
+						 	   k1=self.k1, k2=self.k2, r0=self.r0)
+		self.drdx = Expression('log(Rd/Ru)/L*Ru*pow(Rd/Ru, x[0]/L)', degree=2,
+							   Ru=self.Ru, Rd=self.Rd, L=self.L)
 
 
 	def define_solution(self, q0, theta=0.5):
@@ -94,14 +91,13 @@ class Artery(object):
  
 		# Initial value
 		self.Un = Function(self.V2)
-		self.Un.assign(Expression(('pi*pow(Ru, 2)*pow(Rd/Ru, 2*x[0]/L)', 'q0'),
-			degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L, q0=self.q0))
+		self.Un.assign(Expression(('A0', 'q0'), degree=2,
+								  A0=self.A0, q0=self.q0))
 		
-		# Pressure
+		# Initial pressure
 		self.pn = Function(self.V)
 		self.pn.assign(Expression('f*(1-sqrt(A0/A))', degree=2,
-							 f=self.f, A0=self.A0, A=self.Un.split()[0]))
-
+								  f=self.f, A0=self.A0, A=self.Un.split()[0]))
 		
 		# Boundary conditions (spatial)
 		tol = 1.e-14
