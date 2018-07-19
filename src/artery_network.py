@@ -39,8 +39,8 @@ class Artery_Network(object):
 
 	def daughter_vessels(self, i):
 		"""Find daughter vessels.
-		:param i: Index of parent vessel
-		:return: Indices of daughter vessels
+		:param i: Parent vessel index
+		:return: Daughter vessel indices
 		"""
 		if i < 0 or i >= 2**(self.order-1):
 			raise Exception('Vessel index out of range')
@@ -50,8 +50,8 @@ class Artery_Network(object):
 
 	def parent_vessel(self, i):
 		"""Find parent vessel.
-		:param i: Index of daughter vessel
-		:return: Index of parent vessel
+		:param i: Daughter vessel index
+		:return: Parent vessel index
 		"""
 		if i <= 0 or i >= 2**self.order:
 			raise Exception('Vessel index out of range')
@@ -61,8 +61,8 @@ class Artery_Network(object):
 		
 	def sister_vessel(self, i):
 		"""Find sister vessel.
-		:param i: Index of vessel
-		:return: Index of sister vessel
+		:param i: Vessel index
+		:return: Sister vessel index
 		"""
 		if i%2 == 0:
 			return i-1
@@ -114,9 +114,10 @@ class Artery_Network(object):
 
 	def compute_A_out(self, a, k_max=100, tol=1.0e-7):
 		"""Compute the outlet boundary condition.
+		:param a: Artery on which the outlet area is to be computed
 		:param k_max: Maximum number of iterations in Piccards scheme
 		:param tol: Tolerance for Piccards fixed point iteration scheme
-		:return: Outlet boundary value of A at time step t_(n+1).
+		:return: Outlet boundary value of A at time step t_(n+1)
 		"""
 		a.adjust_dex(a.L, a.Un(a.L)[0], a.Un(a.L)[1])
 		
@@ -162,7 +163,7 @@ class Artery_Network(object):
 
 	def initial_x(self, p, d1, d2):
 		""" Make an initial guess for x at a bifurcation point.
-		At time t_(n+1) and t_(n+1/2), set same value as time t_n.
+		Set same value at time t_(n+1) and t_(n+1/2) as time t_n.
 		At point M+-1/2, set same value as in point M.
 		:param p: Parent artery
 		:param d1: First daughter artery
@@ -180,25 +181,20 @@ class Artery_Network(object):
 
 
 	def define_x(self):
-		"""Define and make an initial guess for the solution to the system of equations.
+		"""Make an initial guess for the solutions to the systems of equations.
 		"""
 		self.x = np.zeros([len(self.range_parent_arteries), 18])
 		for ip in self.range_parent_arteries:
 			i1, i2 = self.daughter_vessels(ip)
 			p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
 			self.x[ip] = self.initial_x(p, d1, d2)
-	
-	
-	def show_x(self, x):
-		for i in range(18):
-			print('x[%i] = %f' % (i, x[i]))
 
 
 	def define_geometry(self, Nx, Nt, T, N_cycles):
-		"""Calls define_geometry on each artery.
+		"""Define the FEniCS geometry for the entire arterial network.
 		:param Nx: Number of spatial steps
 		:param Nt: Number of temporal steps
-		:param T: Period of one cardiac cycle
+		:param T: Duration of one cardiac cycle
 		:param N_cycles: Number of cardiac cycles
 		"""
 		self.Nx = Nx
@@ -214,6 +210,7 @@ class Artery_Network(object):
 		"""Computes q0 on each artery, before calling define_solution.
 		The daughter vessel gets a flow proportional to its share of the area.
 		:param q0: Initial flow of the first vessel
+		:param theta: Crank-Nicolson weight parameter
 		"""
 		self.arteries[0].define_solution(q0, theta)
 		for i in self.range_daughter_arteries:
@@ -228,12 +225,12 @@ class Artery_Network(object):
 
 
 	def problem_function(self, p, d1, d2, x):
-		"""Compute the function representing the system of equations <system>.
+		"""Function representing the system of equations.
 		If x is the solution to the problem, then function(x) = 0.
 		:param p: Parent artery
 		:param d1: First daughter vessel
 		:param d2: Second daughter vessel
-		:param x: Current point, an 18-dimensional vector
+		:param x: Current solution, an 18-dimensional vector
 		:return: Value of function in x
 		"""
 		# Abbreviations
@@ -309,11 +306,11 @@ class Artery_Network(object):
 
 
 	def jacobian(self, p, d1, d2, x):
-		"""Compute the jacobian matrix for the system of equations <system>.
+		"""Compute the jacobian matrix for the system of equations.
 		:param p: Parent artery
 		:param d1: First daughter vessel
 		:param d2: Second daughter vessel
-		:param x: Current point, an 18-dimensional vector
+		:param x: Current solution, an 18-dimensional vector
 		:return: Jacobian matrix
 		"""
 		# Abbreviations
@@ -407,7 +404,8 @@ class Artery_Network(object):
 		:param tol: Tolerance for difference between two steps
 		:return: Solution to the system of equations
 		"""
-		eps = 1.e-10
+		# Perturbation value in the case of a singular matrix
+		eps = 1.e-6
 		for k in range(k_max):
 			x_old = np.copy(x)
 			J = self.jacobian(p, d1, d2, x)
@@ -462,17 +460,31 @@ class Artery_Network(object):
 			self.arteries[i].A_out.assign(Constant(A_out_value))
 
 
-	def dump_metadata(self):
+	def dump_metadata(self, store_area, store_pressure):
 		"""Dump metadata necessary for interpretation of xdmf-files.
+		:param boolean store_area: Store area if true
+		:param boolean store_pressure: Store pressure if true
 		"""
 		# Save mesh
 		File('output/mesh.xml.gz') << self.arteries[0].mesh
 		
-		# Save metadata
+		# Assemble strings
 		L = ''
 		for artery in self.arteries[:-1]:
 			L += str(artery.L)+','
 		L += str(self.arteries[-1].L)
+		locations = ''
+		names = ''
+		if store_area:
+			locations += 'output/area,'
+			names += 'area,'
+		locations += 'output/flow'
+		names += 'flow'
+		if store_pressure:
+			locations += ',output/pressure'
+			names += ',pressure'
+
+		# Save metadata
 		config = configparser.RawConfigParser()
 		config.add_section('data')
 		config.set('data', 'order', str(self.order))
@@ -484,26 +496,37 @@ class Artery_Network(object):
 		config.set('data', 'qc', str(self.qc))
 		config.set('data', 'rho', str(self.rho))
 		config.set('data', 'mesh_location', 'output/mesh.xml.gz')
-		config.set('data', 'locations', 'output/area,output/flow')
-		config.set('data', 'names', 'area,flow')
+		config.set('data', 'locations', locations)
+		config.set('data', 'names', names)
 		with open('output/data.cfg', 'w') as configfile:
 			config.write(configfile)
 
 
-	def solve(self, q_ins, Nt_store, N_cycles_store=1):
+	def solve(self, q_ins, Nt_store, N_cycles_store=1, store_area=False,
+			  store_pressure=True):
 		"""Solve the equation on the entire arterial network.
 		:param q_ins: Vector containing inlet flow for the first artery
 		:param Nt_store: Number of time-steps to be stored per cycle
-		:param N_cycles_store: Number of cycles to be stores (starting at last)
+		:param N_cycles_store: Number of cycles to be stored (starting at last)
+		:param boolean store_area: Store area if true
+		:param boolean store_pressure: Store pressure if true
 		"""
 		self.Nt_store = Nt_store
 		self.N_cycles_store = N_cycles_store
 
 		# Setup storage files
-		xdmffile_area = [0] * len(self.range_arteries)
+		if store_area:
+			xdmffile_area = [0] * len(self.range_arteries)
 		xdmffile_flow = [0] * len(self.range_arteries)
+		if store_pressure:
+			xdmffile_pressure = [0] * len(self.range_arteries)
+
 		for i in self.range_arteries:
-			xdmffile_area[i] = XDMFFile('output/area/area_%i.xdmf' % (i))
+			if store_area:
+				xdmffile_area[i] = XDMFFile('output/area/area_%i.xdmf' % (i))
+			if store_pressure:
+				xdmffile_pressure[i] =\
+					XDMFFile('output/pressure/pressure_%i.xdmf' % (i))
 			xdmffile_flow[i] = XDMFFile('output/flow/flow_%i.xdmf' % (i))
 
 		# Progress bar
@@ -519,7 +542,8 @@ class Artery_Network(object):
 			# Time-stepping for one period
 			for n in range(self.Nt):
 
-				print('Current time-step t_%i: %f' % (n, t))
+				print('Current cycle: %i\nCycle iteration: %i\nTime-step t_%i'\
+					  % (n_cycle, n, n_cycle*self.Nt+n))
 				
 				# Apply boundary conditions for time t_(n+1)
 				self.set_bcs(q_ins[(n+1) % (self.Nt)])
@@ -531,7 +555,10 @@ class Artery_Network(object):
 					cycle_store = (n_cycle >= self.N_cycles-self.N_cycles_store)
 					if n % (self.Nt/self.Nt_store) == 0 and cycle_store:
 						area, flow = artery.Un.split()[0], artery.Un.split()[1]
-						xdmffile_area[i].write_checkpoint(area, 'area', t)
+						if store_area:
+							xdmffile_area[i].write_checkpoint(area, 'area', t)
+						if store_pressure:
+							xdmffile_pressure[i].write_checkpoint(artery.p, 'pressure', t)
 						xdmffile_flow[i].write_checkpoint(flow, 'flow', t)
 					
 					# Solve problem on artery for time t_(n+1)
@@ -546,7 +573,7 @@ class Artery_Network(object):
 				progress.update((t+self.dt)/self.N_cycles/self.T)
 		
 		# Store parameters necessary for postprocessing
-		self.dump_metadata()
+		self.dump_metadata(store_area, store_pressure)
 		
 		# Show boundary stepsizes to verify that they stay reasonably small
 		for artery in self.arteries:

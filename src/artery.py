@@ -18,7 +18,7 @@ class Artery(object):
 	"""
 	def __init__(self, root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0):
 		""" Construct artery.
-		Add its intrinsic characteristics, not its numerical solution.
+		Add its intrinsic characteristics.
 		"""
 		self.root_vessel = root_vessel
 		self.end_vessel = end_vessel
@@ -36,38 +36,6 @@ class Artery(object):
 		self.p0 = p0
 
 
-	def CFL_term(self, x, A, q):
-		"""Compute the term of the CFL condition.
-		:param x: Point at which the condition is to be checked
-		:param A: Value of area at x
-		:param q: Value of flow at x
-		:return: CFL term
-		"""
-		return 1/np.abs(q/A+np.sqrt(self.f(x)/2/self.rho\
-								   *np.sqrt(self.A0(x)/A)))
-
-
-	def check_CFL(self, x, A, q):
-		"""Check the CFL condition.
-		:param x: Point at which the condition is to be checked
-		:param A: Value of area at x
-		:param q: Value of flow at x
-		:return: True if condition is verified
-		"""
-		return self.dt/self.dex < self.CFL_term
-
-
-	def adjust_dex(self, x, A, q, margin=1.01):
-		"""Adjust boundary step-size so that the CFL condition is verified.
-		:param x: Point at which the condition is to be checked
-		:param A: Value of area at x
-		:param q: Value of flow at x
-		:param margin: A number greater than or equal to one
-		"""
-		M = self.CFL_term(x, A, q)
-		if self.dt/self.dex > M:
-			self.dex = margin*self.dt/M
-		
 
 	def define_geometry(self, Nx, Nt, T, N_cycles):
 		"""Define FEniCS parameters.
@@ -112,55 +80,54 @@ class Artery(object):
 
 	def define_solution(self, q0, theta=0.5):
 		
-		# Define Crank-Nicolson parameter
+		# Crank-Nicolson parameter
 		self.theta = theta
 		
-		# Define initial flow
+		# Initial flow
 		self.q0 = q0
 		
-		# Define trial function
+		# Trial function
 		self.U = Function(self.V2)
 		A, q = split(self.U)
 
-		# Define test functions
+		# Test functions
 		v1, v2 = TestFunctions(self.V2)
  
-		# Inlet flow
-		self.q_in = Function(self.V)
-		self.q_in.assign(Constant(self.q0))
-		
-		# Inlet bc
-		self.U_in = Function(self.V2)
-		self.U_in.assign(Constant((self.Ru, self.q0)))
-
-		# Outlet area
-		self.A_out = Function(self.V)
-		self.A_out.assign(Constant(self.A0(self.L)))
-
-		# Outlet bc
-		self.U_out = Function(self.V2)
-		self.U_out.assign(Constant((self.Rd, self.q0)))
-
-		# Initial value deduced from bottom boundary conditions
+		# Initial value
 		self.Un = Function(self.V2)
 		self.Un.assign(Expression(('pi*pow(Ru, 2)*pow(Rd/Ru, 2*x[0]/L)', 'q0'),
 			degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L, q0=self.q0))
 		
-		# Spatial boundary conditions
+		self.pn = Expression('f*(1-sqrt(A0/A))', degree=2,
+							 f=self.f, A0=self.A0, A=self.Un.split()[0])
+		self.p = Function(self.V)
+		self.p.assign(self.pn)
+		
+		# Boundary conditions (spatial)
 		tol = 1.e-14
 		def inlet_bdry(x, on_boundary):
 			return on_boundary and near(x[0], 0, tol)
 		def outlet_bdry(x, on_boundary):
 			return on_boundary and near(x[0], self.L, tol)
 
+		# Inlet boundary conditions
 		if 1:#self.root_vessel:
+			self.q_in = Function(self.V)
+			self.q_in.assign(Constant(self.q0))
 			bc_inlet = DirichletBC(self.V2.sub(1), self.q_in, inlet_bdry)
 		else:
+			self.U_in = Function(self.V2)
+			self.U_in.assign(Constant((self.Ru, self.q0)))
 			bc_inlet = DirichletBC(self.V2, self.U_in, inlet_bdry)
 			
+		# Outlet boundary conditions
 		if self.end_vessel:
+			self.A_out = Function(self.V)
+			self.A_out.assign(Constant(self.A0(self.L)))
 			bc_outlet = DirichletBC(self.V2.sub(0), self.A_out, outlet_bdry)
 		else:
+			self.U_out = Function(self.V2)
+			self.U_out.assign(Constant((self.Rd, self.q0)))
 			bc_outlet = DirichletBC(self.V2, self.U_out, outlet_bdry)
 
 		self.bcs = [bc_inlet, bc_outlet]
@@ -173,6 +140,7 @@ class Artery(object):
 
 		F_v_ds = (pow(q, 2)/(A+DOLFIN_EPS)\
 				 +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*v2*ds
+		
 		F_dv_dx = -grad(q)[0]*v1*dx\
 				+ (pow(q, 2)/(A+DOLFIN_EPS)\
 				  +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx
@@ -216,6 +184,7 @@ class Artery(object):
 		"""Assign new values to U_n.
 		"""
 		self.Un.assign(self.U)
+		self.p.assign(self.pn)
 
 
 	def pressure(self, f, A0, A):
@@ -234,3 +203,36 @@ class Artery(object):
 		:return: Pressure in L at time t
 		"""
 		return self.p0 + self.f(self.L)*(1-np.sqrt(self.A0(self.L)/A))
+
+
+	def CFL_term(self, x, A, q):
+		"""Compute the term of the CFL condition.
+		:param x: Point at which the condition is to be checked
+		:param A: Value of area at x
+		:param q: Value of flow at x
+		:return: CFL term
+		"""
+		return 1/np.abs(q/A+np.sqrt(self.f(x)/2/self.rho\
+								   *np.sqrt(self.A0(x)/A)))
+
+
+	def check_CFL(self, x, A, q):
+		"""Check the CFL condition.
+		:param x: Point at which the condition is to be checked
+		:param A: Value of area at x
+		:param q: Value of flow at x
+		:return: True if condition is verified
+		"""
+		return self.dt/self.dex < self.CFL_term
+
+
+	def adjust_dex(self, x, A, q, margin=1.01):
+		"""Adjust boundary step-size so that the CFL condition is verified.
+		:param x: Point at which the condition is to be checked
+		:param A: Value of area at x
+		:param q: Value of flow at x
+		:param margin: A number greater than or equal to one
+		"""
+		M = self.CFL_term(x, A, q)
+		if self.dt/self.dex > M:
+			self.dex = margin*self.dt/M
