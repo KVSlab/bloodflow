@@ -36,7 +36,6 @@ class Artery(object):
 		self.p0 = p0
 
 
-
 	def define_geometry(self, Nx, Nt, T, N_cycles):
 		"""Define FEniCS parameters.
 		:param Nx: Number of spatial steps
@@ -98,10 +97,11 @@ class Artery(object):
 		self.Un.assign(Expression(('pi*pow(Ru, 2)*pow(Rd/Ru, 2*x[0]/L)', 'q0'),
 			degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L, q0=self.q0))
 		
-		self.pn = Expression('f*(1-sqrt(A0/A))', degree=2,
-							 f=self.f, A0=self.A0, A=self.Un.split()[0])
-		self.p = Function(self.V)
-		self.p.assign(self.pn)
+		# Pressure
+		self.pn = Function(self.V)
+		self.pn.assign(Expression('f*(1-sqrt(A0/A))', degree=2,
+							 f=self.f, A0=self.A0, A=self.Un.split()[0]))
+
 		
 		# Boundary conditions (spatial)
 		tol = 1.e-14
@@ -112,23 +112,19 @@ class Artery(object):
 
 		# Inlet boundary conditions
 		if 1:#self.root_vessel:
-			self.q_in = Function(self.V)
-			self.q_in.assign(Constant(self.q0))
-			bc_inlet = DirichletBC(self.V2.sub(1), self.q_in, inlet_bdry)
+			self._q_in = Expression('value', degree=0, value=self.q0)
+			bc_inlet = DirichletBC(self.V2.sub(1), self._q_in, inlet_bdry)
 		else:
-			self.U_in = Function(self.V2)
-			self.U_in.assign(Constant((self.Ru, self.q0)))
-			bc_inlet = DirichletBC(self.V2, self.U_in, inlet_bdry)
+			self._U_in = Expression(('A', 'q'), degree = 0, A=self.A0(0), q=self.q0)
+			bc_inlet = DirichletBC(self.V2, self._U_in, inlet_bdry)
 			
 		# Outlet boundary conditions
 		if self.end_vessel:
-			self.A_out = Function(self.V)
-			self.A_out.assign(Constant(self.A0(self.L)))
-			bc_outlet = DirichletBC(self.V2.sub(0), self.A_out, outlet_bdry)
+			self._A_out = Expression('value', degree=0, value=self.A0(self.L))
+			bc_outlet = DirichletBC(self.V2.sub(0), self._A_out, outlet_bdry)
 		else:
-			self.U_out = Function(self.V2)
-			self.U_out.assign(Constant((self.Rd, self.q0)))
-			bc_outlet = DirichletBC(self.V2, self.U_out, outlet_bdry)
+			self._U_out = Expression(('A', 'q'), degree=0, A=self.A0(self.L), q=self.q0)
+			bc_outlet = DirichletBC(self.V2, self._U_out, outlet_bdry)
 
 		self.bcs = [bc_inlet, bc_outlet]
 		
@@ -181,13 +177,13 @@ class Artery(object):
 
 
 	def update_solution(self):
-		"""Assign new values to U_n.
+		"""Assign new values to Un and pn.
 		"""
 		self.Un.assign(self.U)
-		self.p.assign(self.pn)
+		self.pn.assign(Expression('p0 + f*(1-sqrt(A0/A))', degree=2, p0=self.p0,
+								  f=self.f, A0=self.A0, A=self.Un.split()[0]))
 
-
-	def pressure(self, f, A0, A):
+	def compute_pressure(self, f, A0, A):
 		""" Compute the pressure at a given point x and time t.
 		:param f: Value of f(r0) in x
 		:param A0: Value of A0 in x
@@ -197,7 +193,7 @@ class Artery(object):
 		return self.p0 + f*(1-np.sqrt(A0/A))
 
 
-	def outlet_pressure(self, A):
+	def compute_outlet_pressure(self, A):
 		""" Compute the outlet pressure at a given time t.
 		:param A: Area in L at a given time t
 		:return: Pressure in L at time t
@@ -236,3 +232,38 @@ class Artery(object):
 		M = self.CFL_term(x, A, q)
 		if self.dt/self.dex > M:
 			self.dex = margin*self.dt/M
+
+		
+	@property
+	def q_in(self):
+		return self._q_in
+	
+	@q_in.setter
+	def q_in(self, value):
+		self._q_in.value = value
+
+	@property
+	def U_in(self):
+		return self._U_in
+	
+	@U_in.setter
+	def U_in(self, U):
+		self._U_in.A = U[0]
+		self._U_in.q = U[1]
+	
+	@property
+	def A_out(self):
+		return self._A_out
+	
+	@A_out.setter
+	def A_out(self, value):
+		self._A_out.value = value
+
+	@property
+	def U_out(self):
+		return _U_out
+	
+	@U_out.setter
+	def U_out(self, U):
+		self._U_out.A = U[0]
+		self._U_out.q = U[1]

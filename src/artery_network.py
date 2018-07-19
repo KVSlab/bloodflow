@@ -145,7 +145,7 @@ class Artery_Network(object):
 			+ a.dt/2*(S_half_10[1]+S_half_21[1])
 
 		# Fixed point iteration
-		pn = a.outlet_pressure(Um0[0])
+		pn = a.compute_outlet_pressure(Um0[0])
 		p = pn
 		for k in range(k_max):
 			p_old = p
@@ -154,7 +154,7 @@ class Artery_Network(object):
 				+ self.dt/self.R1/self.R2/self.CT*pn\
 				- self.dt*(self.R1+self.R2)/self.R1/self.R2/self.CT*Um0[1]
 			Am0 = Um0[0] - self.dt/a.dex*(qm0-qm1)
-			p = a.outlet_pressure(Am0)
+			p = a.compute_outlet_pressure(Am0)
 			if abs(p-p_old) < tol:
 				break
 
@@ -430,24 +430,27 @@ class Artery_Network(object):
 		:param i2: Second daughter vessel index
 		"""
 		p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
+		
 		p.adjust_dex(p.L, p.Un(p.L)[0], p.Un(p.L)[1])
 		d1.adjust_dex(0, d1.Un(0)[0], d1.Un(0)[1])
 		d2.adjust_dex(0, d2.Un(0)[0], d2.Un(0)[1])
+		
 		self.x[ip] = self.newton(p, d1, d2, self.x[ip])
-		p.U_out.assign(Constant((self.x[ip, 9], self.x[ip, 0])))
-		#d1.U_in.assign(Constant((self.x[ip, 12], self.x[ip, 3])))
-		#d2.U_in.assign(Constant((self.x[ip, 15], self.x[ip, 6])))
+		
+		p.U_out = [self.x[ip, 9], self.x[ip, 0]]
+		#d1.U_in = [(self.x[ip, 12], self.x[ip, 3]]
+		#d2.U_in = [(self.x[ip, 15], self.x[ip, 6]]
 		#p.A_out.assign(Constant(self.x[ip, 9]))
-		d1.q_in.assign(Constant(self.x[ip, 3]))
-		d2.q_in.assign(Constant(self.x[ip, 6]))
+		d1.q_in = self.x[ip, 3]
+		d2.q_in = self.x[ip, 6]
 	
 	
-	def set_bcs(self, q_in_value):
+	def set_bcs(self, q_in):
 		""" Update boundary conditions for time t_(n+1) at all boundaries.
 		:param q_in_value: Value of inflow of root artery at time t_(n+1)
 		"""
 		# Update inlet boundary conditions
-		self.arteries[0].q_in.assign(Constant(q_in_value))
+		self.arteries[0].q_in = q_in
 
 		# Update bifurcation boundary conditions
 		for ip in self.range_parent_arteries:
@@ -456,8 +459,7 @@ class Artery_Network(object):
 		
 		# Update outlet boundary condition
 		for i in self.range_end_arteries:
-			A_out_value = self.compute_A_out(self.arteries[i])
-			self.arteries[i].A_out.assign(Constant(A_out_value))
+			self.arteries[i].A_out = self.compute_A_out(self.arteries[i])
 
 
 	def dump_metadata(self, store_area, store_pressure):
@@ -558,7 +560,7 @@ class Artery_Network(object):
 						if store_area:
 							xdmffile_area[i].write_checkpoint(area, 'area', t)
 						if store_pressure:
-							xdmffile_pressure[i].write_checkpoint(artery.p, 'pressure', t)
+							xdmffile_pressure[i].write_checkpoint(artery.pn, 'pressure', t)
 						xdmffile_flow[i].write_checkpoint(flow, 'flow', t)
 					
 					# Solve problem on artery for time t_(n+1)
