@@ -57,11 +57,12 @@ class Artery(object):
 		return self.dt/self.dex < self.CFL_term
 
 
-	def adjust_dex(self, x, A, q, margin=1.05):
+	def adjust_dex(self, x, A, q, margin=1.01):
 		"""Adjust boundary step-size so that the CFL condition is verified.
 		:param x: Point at which the condition is to be checked
 		:param A: Value of area at x
 		:param q: Value of flow at x
+		:param margin: A number greater than or equal to one
 		"""
 		M = self.CFL_term(x, A, q)
 		if self.dt/self.dex > M:

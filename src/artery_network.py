@@ -420,7 +420,7 @@ class Artery_Network(object):
 				func[0] += eps
 				x -= npl.solve(J, func)
 			if npl.norm(x-x_old) < tol:
-				print('Finishing NewtonSolver at iteration '+str(k))
+				#print('Finishing NewtonSolver at iteration '+str(k))
 				break
 		return x
 
@@ -470,15 +470,15 @@ class Artery_Network(object):
 		
 		# Save metadata
 		L = ''
-		for i in self.range_arteries[:-1]:
-			L += str(self.arteries[i].L)+','
+		for artery in self.arteries[:-1]:
+			L += str(artery.L)+','
 		L += str(self.arteries[-1].L)
 		config = configparser.RawConfigParser()
 		config.add_section('data')
 		config.set('data', 'order', str(self.order))
 		config.set('data', 'Nx', str(self.Nx))
-		config.set('data', 'Nt', str(self.N_store))
-		config.set('data', 'T', str(self.T))
+		config.set('data', 'Nt', str(self.Nt_store*self.N_cycles_store))
+		config.set('data', 'T', str(self.T*self.N_cycles_store))
 		config.set('data', 'L', L)
 		config.set('data', 'rc', str(self.rc))
 		config.set('data', 'qc', str(self.qc))
@@ -490,13 +490,15 @@ class Artery_Network(object):
 			config.write(configfile)
 
 
-	def solve(self, q_ins, N_store):
+	def solve(self, q_ins, Nt_store, N_cycles_store=1):
 		"""Solve the equation on the entire arterial network.
 		:param q_ins: Vector containing inlet flow for the first artery
-		:param N_store: Number of time-steps to be stored
+		:param Nt_store: Number of time-steps to be stored per cycle
+		:param N_cycles_store: Number of cycles to be stores (starting at last)
 		"""
-		self.N_store = N_store
-		
+		self.Nt_store = Nt_store
+		self.N_cycles_store = N_cycles_store
+
 		# Setup storage files
 		xdmffile_area = [0] * len(self.range_arteries)
 		xdmffile_flow = [0] * len(self.range_arteries)
@@ -526,7 +528,8 @@ class Artery_Network(object):
 				for i, artery in enumerate(self.arteries):
 					
 					# Store solution at time t_n
-					if n % (self.Nt/self.N_store) == 0 and n_cycle == self.N_cycles-1 :
+					cycle_store = (n_cycle >= self.N_cycles-self.N_cycles_store)
+					if n % (self.Nt/self.Nt_store) == 0 and cycle_store:
 						area, flow = artery.Un.split()[0], artery.Un.split()[1]
 						xdmffile_area[i].write_checkpoint(area, 'area', t)
 						xdmffile_flow[i].write_checkpoint(flow, 'flow', t)
@@ -534,7 +537,7 @@ class Artery_Network(object):
 					# Solve problem on artery for time t_(n+1)
 					artery.solve()
 
-					# Update current solution
+					# Update current solution on artery
 					artery.update_solution()
 
 				t += self.dt
@@ -542,4 +545,9 @@ class Artery_Network(object):
 				# Update progress bar
 				progress.update((t+self.dt)/self.N_cycles/self.T)
 		
+		# Store parameters necessary for postprocessing
 		self.dump_metadata()
+		
+		# Show boundary stepsizes to verify that they stay reasonably small
+		for artery in self.arteries:
+			print(artery.dex)

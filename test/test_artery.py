@@ -36,7 +36,8 @@ Nx = config.getint('Geometry', 'Nx')
 N_cycles = config.getint('Geometry', 'N_cycles')
 
 theta = config.getfloat('Solution', 'theta')
-N_store = config.getint('Solution', 'N_store')
+Nt_store = config.getint('Solution', 'Nt_store')
+N_cycles_store = config.getint('Solution', 'N_cycles_store')
 
 # Import the inlet flow data
 data_q = np.genfromtxt('data/example_inlet.csv', delimiter = ',')
@@ -56,7 +57,7 @@ Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q_ins, T  =\
 an = Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT)
 an.define_geometry(Nx, Nt, T, N_cycles)
 an.define_solution(q_ins[0], theta)
-an.solve(q_ins, N_store)
+an.solve(q_ins, Nt_store, N_cycles_store)
 """
 a = an.arteries[0]
 
