@@ -23,6 +23,9 @@ for i, name in enumerate(names):
 			
 		M = redimensionalise(rc, qc, rho, M, name)
 		
-		x = np.linspace(0, L[j], Nx)
+		if name == 'pressure':
+			M = unit_to_mmHg(M)
+		
+		x = np.linspace(0, L[j], Nx+1)
 
 		plot_matrix(t, x, M, name, '%s/%s_%i.png' % (locations[i], name, j))

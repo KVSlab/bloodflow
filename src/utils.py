@@ -91,7 +91,7 @@ def read_output(filename):
 
 
 def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
-	M = np.zeros([Nx, Nt])
+	M = np.zeros([Nx+1, Nt])
 	f = XDMFFile(location)
 	mesh = Mesh(mesh_location)
 	V = FunctionSpace(mesh, 'CG', 1)
@@ -106,7 +106,7 @@ def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
 		#	plt.ylim(0, 27)
 		#plt.savefig('output/plot/%s_%i' % (name, n))
 		#plt.close(fig)
-		M[:, n] = u.vector().get_local()[:-1][::-1]
+		M[:, n] = u.vector().get_local()[::-1]
 	f.close()
 	return M
 

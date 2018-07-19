@@ -16,7 +16,8 @@ class Artery(object):
 	:param Re: Reynolds number
 	:param p0: Diastolic pressure
 	"""
-	def __init__(self, root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0):
+	def __init__(self, root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3,
+				 rho, Re, nu, p0):
 		""" Construct artery.
 		Add its intrinsic characteristics.
 		"""
@@ -75,7 +76,12 @@ class Artery(object):
 
 
 	def define_solution(self, q0, theta=0.5):
-		
+		"""Set up FEniCS solution objects.
+		Define boundary conditions.
+		Define variational form.
+		:param q0: Initial flow
+		:param theta: Crank-Nicolson parameter
+		"""
 		# Crank-Nicolson parameter
 		self.theta = theta
 		
@@ -111,7 +117,8 @@ class Artery(object):
 			self._q_in = Expression('value', degree=0, value=self.q0)
 			bc_inlet = DirichletBC(self.V2.sub(1), self._q_in, inlet_bdry)
 		else:
-			self._U_in = Expression(('A', 'q'), degree = 0, A=self.A0(0), q=self.q0)
+			self._U_in = Expression(('A', 'q'), degree = 0,
+									A=self.A0(0), q=self.q0)
 			bc_inlet = DirichletBC(self.V2, self._U_in, inlet_bdry)
 			
 		# Outlet boundary conditions
@@ -119,7 +126,8 @@ class Artery(object):
 			self._A_out = Expression('value', degree=0, value=self.A0(self.L))
 			bc_outlet = DirichletBC(self.V2.sub(0), self._A_out, outlet_bdry)
 		else:
-			self._U_out = Expression(('A', 'q'), degree=0, A=self.A0(self.L), q=self.q0)
+			self._U_out = Expression(('A', 'q'), degree=0,
+									 A=self.A0(self.L), q=self.q0)
 			bc_outlet = DirichletBC(self.V2, self._U_out, outlet_bdry)
 
 		self.bcs = [bc_inlet, bc_outlet]
@@ -173,11 +181,17 @@ class Artery(object):
 
 
 	def update_solution(self):
-		"""Assign new values to Un and pn.
+		"""Assign new values to Un.
 		"""
 		self.Un.assign(self.U)
+
+
+	def update_pressure(self):
+		"""Assign new values to pn.
+		"""
 		self.pn.assign(Expression('p0 + f*(1-sqrt(A0/A))', degree=2, p0=self.p0,
 								  f=self.f, A0=self.A0, A=self.Un.split()[0]))
+
 
 	def compute_pressure(self, f, A0, A):
 		""" Compute the pressure at a given point x and time t.
@@ -226,37 +240,48 @@ class Artery(object):
 		:param margin: A number greater than or equal to one
 		"""
 		M = self.CFL_term(x, A, q)
-		if self.dt/self.dex > M:
+		if self.dt/self.dex > M:	
 			self.dex = margin*self.dt/M
 
 		
 	@property
 	def q_in(self):
+		"""Inlet flow
+		"""
 		return self._q_in
 	
 	@q_in.setter
 	def q_in(self, value):
 		self._q_in.value = value
 
+
 	@property
 	def U_in(self):
+		"""Inlet boundary conditions (only for non-root arteries)
+		"""
 		return self._U_in
 	
 	@U_in.setter
 	def U_in(self, U):
 		self._U_in.A = U[0]
 		self._U_in.q = U[1]
+
 	
 	@property
 	def A_out(self):
+		"""Outlet area (only in use for end arteries)
+		"""
 		return self._A_out
 	
 	@A_out.setter
 	def A_out(self, value):
 		self._A_out.value = value
 
+
 	@property
 	def U_out(self):
+		"""Outlet boundary conditions (only for parent arteries)
+		"""
 		return _U_out
 	
 	@U_out.setter

@@ -394,7 +394,7 @@ class Artery_Network(object):
 		return J
 
 
-	def newton(self, p, d1, d2, x=np.ones(18), k_max=100, tol=1.e-10):
+	def newton(self, p, d1, d2, x=np.ones(18), k_max=100, tol=1.e-12):
 		"""Compute solution to the system of equations.
 		:param p: Parent artery
 		:param d1: First daughter vessel
@@ -406,6 +406,7 @@ class Artery_Network(object):
 		"""
 		# Perturbation value in the case of a singular matrix
 		eps = 1.e-6
+		
 		for k in range(k_max):
 			x_old = np.copy(x)
 			J = self.jacobian(p, d1, d2, x)
@@ -438,8 +439,8 @@ class Artery_Network(object):
 		self.x[ip] = self.newton(p, d1, d2, self.x[ip])
 		
 		p.U_out = [self.x[ip, 9], self.x[ip, 0]]
-		#d1.U_in = [(self.x[ip, 12], self.x[ip, 3]]
-		#d2.U_in = [(self.x[ip, 15], self.x[ip, 6]]
+		#d1.U_in = [self.x[ip, 12], self.x[ip, 3]]
+		#d2.U_in = [self.x[ip, 15], self.x[ip, 6]]
 		#p.A_out.assign(Constant(self.x[ip, 9]))
 		d1.q_in = self.x[ip, 3]
 		d2.q_in = self.x[ip, 6]
@@ -560,6 +561,7 @@ class Artery_Network(object):
 						if store_area:
 							xdmffile_area[i].write_checkpoint(area, 'area', t)
 						if store_pressure:
+							artery.update_pressure()
 							xdmffile_pressure[i].write_checkpoint(artery.pn, 'pressure', t)
 						xdmffile_flow[i].write_checkpoint(flow, 'flow', t)
 					
