@@ -172,8 +172,7 @@ class Artery(object):
 				  -(self.Un[0])*self.dfdr)*self.drdx*v2*dx
 
 		# Variational form
-		self.variational_form =\
-			  U_v_dx\
+		self.variational_form = U_v_dx\
 		 	- Un_v_dx\
 			+ self.dt*self.theta*dF_v_dx\
 			+ self.dt*(1-self.theta)*dFn_v_dx\
@@ -237,10 +236,10 @@ class Artery(object):
 		:param q: Value of flow at x
 		:return: True if condition is verified
 		"""
-		return self.dt/self.dex < self.CFL_term
+		return self.dt/self.dex < self.CFL_term(x, A, q)
 
 
-	def adjust_dex(self, x, A, q, margin=1.01):
+	def adjust_dex(self, x, A, q, margin=1.05):
 		"""Adjust boundary step-size so that the CFL condition is verified.
 		:param x: Point at which the condition is to be checked
 		:param A: Value of area at x
@@ -248,8 +247,8 @@ class Artery(object):
 		:param margin: A number greater than or equal to one
 		"""
 		M = self.CFL_term(x, A, q)
-		if self.dt/self.dex > M:	
-			self.dex = margin*self.dt/M
+		#if self.dt/self.dex > M:
+		self.dex = margin*self.dt/M
 
 		
 	@property
@@ -260,6 +259,7 @@ class Artery(object):
 	
 	@q_in.setter
 	def q_in(self, value):
+		print('setting_q_in.value')
 		self._q_in.value = value
 
 
@@ -283,6 +283,7 @@ class Artery(object):
 	
 	@A_out.setter
 	def A_out(self, value):
+		print('setting_A_out.value')
 		self._A_out.value = value
 
 

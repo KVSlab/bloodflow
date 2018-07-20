@@ -124,7 +124,7 @@ class Artery_Network(object):
 		return (U0+U1)/2 - a.dt/(x1-x0)*(F1-F0) + a.dt/4*(S0+S1) 
 		
 
-	def compute_A_out(self, a, k_max=100, tol=1.0e-7):
+	def compute_A_out(self, a, k_max=100, tol=1.0e-12):
 		"""Compute the outlet boundary condition.
 		:param a: Artery on which the outlet area is to be computed
 		:param k_max: Maximum number of iterations in Piccards scheme
@@ -169,7 +169,7 @@ class Artery_Network(object):
 			p = a.compute_outlet_pressure(Am0)
 			if abs(p-p_old) < tol:
 				break
-
+				
 		return Am0
 
 
@@ -442,17 +442,31 @@ class Artery_Network(object):
 		return x
 
 
+	def adjust_bifurcation_step(self, p, d1, d2, margin=1.05):
+		"""Set dex to respect CFL-condition for all arteries in a bifurcation.
+		:param p: Parent artery
+		:param d1: First daughter artery
+		:param d2: Second daughter artery
+		:param margin: Number greater than or equal to one
+		"""
+		Mp = p.CFL_term(p.L, p.Un(p.L)[0], p.Un(p.L)[1])
+		M1 = d1.CFL_term(0, d1.Un(0)[0], d1.Un(0)[1])
+		M2 = d2.CFL_term(0, d2.Un(0)[0], d2.Un(0)[1])
+		p.dex = d1.dex = d2.dex = margin*self.dt/min([Mp, M1, M2])
+		#assert(p.check_CFL(p.L, p.Un(p.L)[0], p.Un(p.L)[1]))
+		#assert(d1.check_CFL(0, d1.Un(0)[0], d1.Un(0)[1]))
+		#assert(d2.check_CFL(0, d2.Un(0)[0], d2.Un(0)[1]))
+
+
 	def set_inner_bc(self, ip, i1, i2):
-		""" Compute the inter-arterial boundary conditions for one bifurcation.
+		"""Compute the inter-arterial boundary conditions for one bifurcation.
 		:param ip: Parent artery index
 		:param i1: First daughter vessel index
 		:param i2: Second daughter vessel index
 		"""
 		p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
 		
-		p.adjust_dex(p.L, p.Un(p.L)[0], p.Un(p.L)[1])
-		d1.adjust_dex(0, d1.Un(0)[0], d1.Un(0)[1])
-		d2.adjust_dex(0, d2.Un(0)[0], d2.Un(0)[1])
+		self.adjust_bifurcation_step(p, d1, d2)
 		
 		self.x[ip] = self.newton(p, d1, d2, self.x[ip])
 		
@@ -587,13 +601,13 @@ class Artery_Network(object):
 
 				# Solve equation on each artery
 				for i, artery in enumerate(self.arteries):
-					
+
 					# Store solution at time t_n
 					cycle_store = (n_cycle >= self.N_cycles-self.N_cycles_store)
 					
 					if n % (self.Nt/self.Nt_store) == 0 and cycle_store:
 						
-						area, flow = artery.Un.split()[0], artery.Un.split()[1]
+						area, flow = artery.Un.split()
 						
 						if store_area:
 							xdmffile_area[i].write_checkpoint(area, 'area', t)
