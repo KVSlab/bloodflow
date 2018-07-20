@@ -53,12 +53,13 @@ def adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, R1, R2, CT, q_in
 
 
 def redimensionalise(rc, qc, rho, x, nature):
-	"""Give a quantity its unit back
+	"""Give a quantity its units back
 	:param rc: Characteristic radius
 	:param qc: Characteristic flow
 	:param rho: Density
 	:param x: Quantity to be redimensionalised
-	:param string nature: Nature of the quantity to be redimensionalised.
+	:param string nature: Nature of the quantity to be redimensionalised
+	:return: Redimensionalised quantity
 	"""
 	if nature == 'time':
 		x = x*rc**3/qc
@@ -72,6 +73,11 @@ def redimensionalise(rc, qc, rho, x, nature):
 
 
 def read_output(filename):
+	"""Read data file.
+	The cfg-file is supposed to have the format in artery_network.dump_metadata.
+	:param filename: Location of file to be read
+	:return: All variables stored in the file
+	"""
 	config = ConfigParser()
 	config.read(filename)
 	
@@ -83,14 +89,22 @@ def read_output(filename):
 	rc = config.getfloat('data', 'rc')
 	qc = config.getfloat('data', 'qc')
 	rho = config.getfloat('data', 'rho')
-	mesh_location = config.get('data', 'mesh_location')
+	mesh_locations = config.get('data', 'mesh_locations').split(',')
 	locations = config.get('data', 'locations').split(',')
 	names = config.get('data', 'names').split(',')
 	
-	return order, Nx, Nt, T, L, rc, qc, rho, mesh_location, locations, names
+	return order, Nx, Nt, T, L, rc, qc, rho, mesh_locations, locations, names
 
 
 def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
+	"""Read XDMFFile and store it in a matrix.
+	:param Nx: Number of spatial steps (number of nodes: Nx+1)
+	:param Nt: Number of time steps
+	:param mesh_location: Location of mesh to be loaded
+	:param location: Location of XDMF-file
+	:param name: Name of function within XDMF-file
+	"""
+	print('Loading %s to matrix.' % (location))
 	M = np.zeros([Nx+1, Nt])
 	f = XDMFFile(location)
 	mesh = Mesh(mesh_location)
@@ -117,9 +131,10 @@ def plot_matrix(t, x, M, label, output):
 	:param t: Vector containing time values
 	:param x: Vector containing space values
 	:param M: Matrix representing function to be plotted, with dimension t*x
-	:param string label: Name of the function
-	:param string output: Location (with filename) of output file
+	:param string label: Name of function
+	:param string output: Location of output file
 	"""
+	print('Making plot of %s-matrix.' % (label))
 	T, X = np.meshgrid(t, x)
 	fig = plt.figure(figsize=(8, 6))
 	ax = fig.gca(projection='3d')
@@ -130,4 +145,5 @@ def plot_matrix(t, x, M, label, output):
 	ax.set_zlabel(label)
 	ax.set_ylim(min(x), max(x))
 	ax.set_xlim(min(t), max(t))
+	print('Saving matrix to %s.' % (output))
 	plt.savefig(output)

@@ -4,8 +4,6 @@ from scipy.interpolate import interp1d
 
 from fenics import *
 import configparser
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 sys.path.insert(0, 'src/')
 
@@ -15,6 +13,7 @@ from artery_network import Artery_Network
 config = configparser.ConfigParser()
 config.read('test/config.cfg')
 
+# Parameters
 order = config.getint('Parameters', 'order')
 rc = config.getfloat('Parameters', 'rc')
 qc = config.getfloat('Parameters', 'qc')
@@ -31,19 +30,27 @@ R1 = config.getfloat('Parameters', 'R1')
 R2 = config.getfloat('Parameters', 'R2')
 CT = config.getfloat('Parameters', 'CT')
 
+# Geometry parameters
 Nt = config.getint('Geometry', 'Nt')
 Nx = config.getint('Geometry', 'Nx')
 N_cycles = config.getint('Geometry', 'N_cycles')
 
+# Solution parameters
+inlet_flow_location = config.get('Solution', 'inlet_flow_location')
+output_location = config.get('Solution', 'output_location')
 theta = config.getfloat('Solution', 'theta')
 Nt_store = config.getint('Solution', 'Nt_store')
 N_cycles_store = config.getint('Solution', 'N_cycles_store')
+store_area = config.getint('Solution', 'store_area')
+store_pressure = config.getint('Solution', 'store_pressure')
 
-# Import the inlet flow data
-data_q = np.genfromtxt('data/example_inlet.csv', delimiter = ',')
+# Import inlet flow data
+data_q = np.genfromtxt(inlet_flow_location, delimiter = ',')
 tt = data_q[:, 0]
 qq = data_q[:, 1]
 T = data_q[-1, 0]
+
+# Interpolate inlet flow
 q = interp1d(tt, qq)
 t = np.linspace(0, T, Nt)
 q_ins = q(t)
@@ -51,40 +58,12 @@ q_ins = q(t)
 
 # Adimensionalise
 Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q_ins, T  =\
-	adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, R1, R2, CT, q_ins, T)
+	adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3,
+					rho, nu, p0, R1, R2, CT, q_ins, T)
 
 # Create artery network
-an = Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT)
+an = Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2,
+					k3,	rho, Re, nu, p0, R1, R2, CT)
 an.define_geometry(Nx, Nt, T, N_cycles)
-an.define_solution(q_ins[0], theta)
-an.solve(q_ins, Nt_store, N_cycles_store)
-"""
-a = an.arteries[0]
-
-area = np.zeros([a.Nx+1, a.Nt])
-flow = np.zeros([a.Nx+1, a.Nt])
-pressure = np.zeros([a.Nx+1, a.Nt])
-
-t += (a.N_cycles-1)*a.T
-
-
-f = interpolate(a.f, a.V).vector().array()[::-1]
-A0 = interpolate(a.A0, a.V).vector().array()[::-1]
-
-
-for n in range(Nt):
-	area[:, n] = (a.solution[n].vector().array()[::2])[::-1]  # "U[0]"
-	flow[:, n] = (a.solution[n].vector().array()[1::2])[::-1]  # "U[1]"
-	pressure[:, n] = a.pressure(f, A0, area[:, n])
-
-x = np.linspace(0, a.L, a.Nx+1)
-
-# Area plot
-plot_matrix(t, x, area, 'area', '../output/r0/area.png')
-
-# Flow plot
-plot_matrix(t, x, flow, 'flow', '../output/r0/flow.png')
-
-# Pressure plot
-plot_matrix(t, x, unit_to_mmHg(pressure), 'pressure', '../output/r0/pressure.png')
-"""
+an.define_solution(output_location, q_ins[0], theta)
+an.solve(q_ins, Nt_store, N_cycles_store, store_area, store_pressure)

@@ -9,11 +9,19 @@ from scipy.interpolate import interp1d
 
 class Artery(object):
 	""" Represent an artery.
+	:param boolean root_vessel: True if the artery is an root-vessel (no parent)
+	:param boolean end_vessel: True if the artery is an end-vessel (no daughter)
+	:param rc: Characteristic radius (length)
+	:param qc: Characteristic flow
 	:param Ru: Upstream radius
 	:param Rd: Downstream radius
 	:param L: Vessel length
-	:param k: Vector containing k1, k2 and k3 from the relation Eh/R0
+	:param k1: First constant from the relation Eh/r0
+	:param k2: Second constant from the relation Eh/r0
+	:param k3: Third constant from the relation Eh/R0
+	:param rho: Density of blood
 	:param Re: Reynolds number
+	:param nu: Blood viscosity
 	:param p0: Diastolic pressure
 	"""
 	def __init__(self, root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3,
@@ -122,7 +130,7 @@ class Artery(object):
 			bc_inlet = DirichletBC(self.V2, self._U_in, inlet_bdry)
 			
 		# Outlet boundary conditions
-		if self.end_vessel:
+		if 1:#self.end_vessel:
 			self._A_out = Expression('value', degree=0, value=self.A0(self.L))
 			bc_outlet = DirichletBC(self.V2.sub(0), self._A_out, outlet_bdry)
 		else:
@@ -246,7 +254,7 @@ class Artery(object):
 		
 	@property
 	def q_in(self):
-		"""Inlet flow
+		"""Inlet flow (only for root-artery)
 		"""
 		return self._q_in
 	
@@ -257,7 +265,7 @@ class Artery(object):
 
 	@property
 	def U_in(self):
-		"""Inlet boundary conditions (only for non-root arteries)
+		"""Inlet boundary conditions (only for non-root arteries (daughters))
 		"""
 		return self._U_in
 	
