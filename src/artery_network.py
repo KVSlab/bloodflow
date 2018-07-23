@@ -3,9 +3,10 @@ __author__ = 'Syver Døving Agdestein'
 import sys
 import numpy as np
 import numpy.linalg as npl
-from fenics import *
 from scipy.interpolate import interp1d
+
 import configparser
+from fenics import *
 from mshr import *
 
 from artery import Artery
@@ -606,6 +607,8 @@ class Artery_Network(object):
 					cycle_store = (n_cycle >= self.N_cycles-self.N_cycles_store)
 					
 					if cycle_store and n % (self.Nt/self.Nt_store) == 0:
+
+						# Split solution for storing, with deepcopy
 						area, flow = artery.Un.split(True)
 
 						if store_area:

@@ -18,7 +18,7 @@ def main(config_location):
 	config = configparser.ConfigParser()
 	config.read(config_location)
 
-	# Parameters
+	# Constructor parameters
 	order = config.getint('Parameters', 'order')
 	rc = config.getfloat('Parameters', 'rc')
 	qc = config.getfloat('Parameters', 'qc')
@@ -61,7 +61,7 @@ def main(config_location):
 	q_ins = q(t)
 	#q_ins = np.zeros(Nt)
 
-	# Adimensionalise
+	# Adimensionalise data and compute Reynolds' number
 	Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q_ins, T  =\
 		adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3,
 						rho, nu, p0, R1, R2, CT, q_ins, T)
@@ -71,6 +71,8 @@ def main(config_location):
 						k3,	rho, Re, nu, p0, R1, R2, CT)
 	an.define_geometry(Nx, Nt, T, N_cycles)
 	an.define_solution(output_location, q_ins[0], theta)
+	
+	# Solve problem and store data
 	an.solve(q_ins, Nt_store, N_cycles_store, store_area, store_pressure)
 
 if __name__ == '__main__':
