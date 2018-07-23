@@ -12,6 +12,7 @@ authors:
 - name A. K. Diem
 date: 24 July 2018
 bibliography: paper.bib
+---
 
 # Summary
 
