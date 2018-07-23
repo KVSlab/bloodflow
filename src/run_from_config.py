@@ -73,6 +73,5 @@ def main(config_location):
 	an.define_solution(output_location, q_ins[0], theta)
 	an.solve(q_ins, Nt_store, N_cycles_store, store_area, store_pressure)
 
-
 if __name__ == '__main__':
 	main(sys.argv[1])

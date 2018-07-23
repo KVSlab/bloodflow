@@ -51,7 +51,6 @@ class Artery(object):
 		:param Nt: Number of temporal steps
 		:param T: Duration of one cardiac cycle
 		:param N_cycles: Number of cardiac cycles
-		:param q0: Initial flow value.
 		"""
 		self.Nx = Nx
 		self.Nt = Nt
@@ -121,7 +120,7 @@ class Artery(object):
 			return on_boundary and near(x[0], self.L, tol)
 
 		# Inlet boundary conditions
-		if 1:#self.root_vessel:
+		if self.root_vessel:
 			self._q_in = Expression('value', degree=0, value=self.q0)
 			bc_inlet = DirichletBC(self.V2.sub(1), self._q_in, inlet_bdry)
 		else:
@@ -130,7 +129,7 @@ class Artery(object):
 			bc_inlet = DirichletBC(self.V2, self._U_in, inlet_bdry)
 			
 		# Outlet boundary conditions
-		if 1:#self.end_vessel:
+		if self.end_vessel:
 			self._A_out = Expression('value', degree=0, value=self.A0(self.L))
 			bc_outlet = DirichletBC(self.V2.sub(0), self._A_out, outlet_bdry)
 		else:
@@ -254,18 +253,19 @@ class Artery(object):
 	@property
 	def q_in(self):
 		"""Inlet flow (only for root-artery)
+		:return: Expression-object
 		"""
 		return self._q_in
 	
 	@q_in.setter
 	def q_in(self, value):
-		print('setting_q_in.value')
 		self._q_in.value = value
 
 
 	@property
 	def U_in(self):
 		"""Inlet boundary conditions (only for non-root arteries (daughters))
+		:return: Expression-object
 		"""
 		return self._U_in
 	
@@ -278,18 +278,19 @@ class Artery(object):
 	@property
 	def A_out(self):
 		"""Outlet area (only in use for end arteries)
+		:return: Expression-object
 		"""
 		return self._A_out
 	
 	@A_out.setter
 	def A_out(self, value):
-		print('setting_A_out.value')
 		self._A_out.value = value
 
 
 	@property
 	def U_out(self):
 		"""Outlet boundary conditions (only for parent arteries)
+		:return: Expression-object
 		"""
 		return _U_out
 	

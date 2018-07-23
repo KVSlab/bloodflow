@@ -470,12 +470,12 @@ class Artery_Network(object):
 		
 		self.x[ip] = self.newton(p, d1, d2, self.x[ip])
 		
-		#p.U_out = [self.x[ip, 9], self.x[ip, 0]]
-		#d1.U_in = [self.x[ip, 12], self.x[ip, 3]]
-		#d2.U_in = [self.x[ip, 15], self.x[ip, 6]]
-		p.A_out = self.x[ip, 9]
-		d1.q_in = self.x[ip, 3]
-		d2.q_in = self.x[ip, 6]
+		p.U_out = [self.x[ip, 9], self.x[ip, 0]]
+		d1.U_in = [self.x[ip, 12], self.x[ip, 3]]
+		d2.U_in = [self.x[ip, 15], self.x[ip, 6]]
+		#p.A_out = self.x[ip, 9]
+		#d1.q_in = self.x[ip, 3]
+		#d2.q_in = self.x[ip, 6]
 	
 	
 	def set_bcs(self, q_in):
@@ -567,9 +567,9 @@ class Artery_Network(object):
 			xdmffile_pressure = [0] * len(self.range_arteries)
 		
 		xdmffile_flow = [0] * len(self.range_arteries)
-		
+
 		for i in self.range_arteries:
-			
+
 			if store_area:
 				xdmffile_area[i] = XDMFFile('%s/area/area_%i.xdmf'\
 											% (self.output_location, i))
@@ -586,10 +586,10 @@ class Artery_Network(object):
 
 		# Initialise time
 		t = 0
-		
+		diff = np.zeros(self.Nt)
 		# Cardiac cycle iteration
 		for n_cycle in range(self.N_cycles):
-			
+
 			# Time-stepping for one period
 			for n in range(self.Nt):
 
@@ -605,10 +605,9 @@ class Artery_Network(object):
 					# Store solution at time t_n
 					cycle_store = (n_cycle >= self.N_cycles-self.N_cycles_store)
 					
-					if n % (self.Nt/self.Nt_store) == 0 and cycle_store:
-						
-						area, flow = artery.Un.split()
-						
+					if cycle_store and n % (self.Nt/self.Nt_store) == 0:
+						area, flow = artery.Un.split(True)
+
 						if store_area:
 							xdmffile_area[i].write_checkpoint(area, 'area', t)
 						
@@ -629,7 +628,3 @@ class Artery_Network(object):
 
 				# Update progress bar
 				progress.update((t+self.dt)/self.N_cycles/self.T)
-		
-		# Show boundary stepsizes to verify that they stay reasonably small
-		for artery in self.arteries:
-			print(artery.dex)

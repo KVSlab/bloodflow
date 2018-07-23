@@ -74,7 +74,7 @@ def redimensionalise(rc, qc, rho, x, nature):
 
 def read_output(filename):
 	"""Read data file.
-	The cfg-file is supposed to have the format in artery_network.dump_metadata.
+	The cfg-file should have the format in artery_network.dump_metadata.
 	:param filename: Location of file to be read
 	:return: All variables stored in the file
 	"""
@@ -112,14 +112,6 @@ def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
 	u = Function(V)
 	for n in range(Nt):
 		f.read_checkpoint(u, name, n)
-		#fig = plt.figure()
-		#plot(u)
-		#if name == 'area':
-		#	plt.ylim(0, 0.7)
-		#else:
-		#	plt.ylim(0, 27)
-		#plt.savefig('output/plot/%s_%i' % (name, n))
-		#plt.close(fig)
 		M[:, n] = u.vector().get_local()[::-1]
 	f.close()
 	return M
