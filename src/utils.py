@@ -15,7 +15,8 @@ def mmHg_to_unit(p):
 	return 101325/76*p
 
 
-def adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, R1, R2, CT, q_ins, T):
+def adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho,
+					nu, p0, R1, R2, CT, q_ins, T):
 	"""Make quantities independent of units.
 	:param rc: Characteristic length (radius)
 	:param qc: Characteristic flow
@@ -118,7 +119,7 @@ def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
 
 
 def plot_matrix(t, x, M, label, output):
-	"""Create a plot of a matrix.
+	"""Create plot of a matrix.
 	Store it in a given location.
 	:param t: Vector containing time values
 	:param x: Vector containing space values

@@ -28,6 +28,7 @@ def main(data_location):
 				
 			M = redimensionalise(rc, qc, rho, M, name)
 			
+			# Convert pressure units
 			if name == 'pressure':
 				M = unit_to_mmHg(M)
 			
