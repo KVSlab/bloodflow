@@ -20,7 +20,7 @@ class Artery(object):
 	:param k2: Second constant from the relation Eh/r0
 	:param k3: Third constant from the relation Eh/R0
 	:param rho: Density of blood
-	:param Re: Reynolds number
+	:param Re: Reynolds' number
 	:param nu: Blood viscosity
 	:param p0: Diastolic pressure
 	"""
@@ -114,8 +114,10 @@ class Artery(object):
 		
 		# Boundary conditions (spatial)
 		tol = 1.e-14
+
 		def inlet_bdry(x, on_boundary):
 			return on_boundary and near(x[0], 0, tol)
+
 		def outlet_bdry(x, on_boundary):
 			return on_boundary and near(x[0], self.L, tol)
 
@@ -145,19 +147,23 @@ class Artery(object):
 		Un_v_dx = self.Un[0]*v1*dx + self.Un[1]*v2*dx
 
 
-		F_v_ds = (pow(q, 2)/(A+DOLFIN_EPS)\
-				 +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*v2*ds
+		F2_v2_ds = (pow(q, 2)/(A+DOLFIN_EPS)\
+				   +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*v2*ds
 		
-		F_dv_dx = -grad(q)[0]*v1*dx\
-				+ (pow(q, 2)/(A+DOLFIN_EPS)\
-				  +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx
-		dF_v_dx = F_v_ds - F_dv_dx
+		F2_dv2_dx = (pow(q, 2)/(A+DOLFIN_EPS)\
+					+self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx
 
-		Fn_v_ds = (pow(self.Un[1], 2)/(self.Un[0])\
+		dF_v_dx = grad(q)[0]*v1*dx + F2_v2_ds - F2_dv2_dx
+
+
+		Fn_v_ds = \
+				+ (pow(self.Un[1], 2)/(self.Un[0])\
 				  +self.f*sqrt(self.A0*(self.Un[0])))*v2*ds
+
 		Fn_dv_dx = -grad(self.Un[1])[0]*v1*dx\
 				 + (pow(self.Un[1], 2)/(self.Un[0])\
 				   +self.f*sqrt(self.A0*(self.Un[0])))*grad(v2)[0]*dx
+
 		dFn_v_dx = Fn_v_ds - Fn_dv_dx
 
 

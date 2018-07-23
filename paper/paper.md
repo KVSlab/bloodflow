@@ -9,7 +9,7 @@ tags:
 - ICA
 authors:
 - name: Syver Døving Agdestein
-- name A. K. Diem
+- name: A. K. Diem
 date: 24 July 2018
 bibliography: paper.bib
 ---
