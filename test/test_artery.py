@@ -149,22 +149,68 @@ def test_define_solution(a, q0, theta):
 	assert(type(a.Un) == '')
 	assert(type(a.pn == '')
 	
-	assert(near(a.Un(x)[0], np.pi*(Ru*(Rd/Ru)**(x/L))**2
+	assert(near(a.Un(x)[0], a.A0(x)))
 	assert(near(a.Un(x)[1], q0))
 
 
-def test_solve():
+def test_solve(a):
+	"""Solve equation on artery for one time-step.
+	:param a: Artery on which the equation is to be solved
+	"""
+	a.solve()
+
+
 def test_update_solution():
+	"""Update solution.
+	Test equality beween Un and U.
+	"""
+	a.update_solution()
+	Un = a.Un.vector().get_local()
+	U = a.U.vector().get_local()
+	for i in len(Un):
+		assert(near(Un[i], U[i]))
+
+
 def test_update_pressure():
+	"""Update pressure.
+	Test correct behaviour of pressure function.
+	"""
+	X = np.linspace(0, L, 100)
+	a.update_pressure()
+	
+	for x in X:
+		assert(near(a.pn(x), a.p0+a.f(x)*(1-np.sqrt(a.A0(x)/Un(x)[0]))))
+
+
 def test_compute_pressure():
+	"""Test correct value of pressure.
+	"""
+
+
 def test_compute_outlet_pressure():
+	"""Test correct value of outlet pressure.
+	"""
+
+
 def test_CFL_term():
+	"""Test correct value of CFL-term.
+	"""
+
+
 def test_check_CFL():
+	"""Test CFL-condition-checking.
+	"""
+
+
 def test_adjust_dex()
+	"""Test correct adjustment of dex.
+	"""
 
 
 def test_artery(config_location)
-	
+	"""Test artery class.
+	:param config_location: Location of config-file with test-parameters
+	"""
 	root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, Nt,
 		Nx, T, N_cycles, q0, theta = get_parameters(config_location)
 	
