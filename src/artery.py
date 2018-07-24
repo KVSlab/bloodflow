@@ -2,9 +2,10 @@ __author__ = 'Syver Døving Agdestein'
 
 import sys
 import numpy as np
-from fenics import *
+
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
+from fenics import *
 
 
 class Artery(object):
@@ -46,7 +47,8 @@ class Artery(object):
 
 
 	def define_geometry(self, Nx, Nt, T, N_cycles):
-		"""Define FEniCS parameters.
+		"""Initialise geometry.
+		Define FEniCS objects.
 		:param Nx: Number of spatial steps
 		:param Nt: Number of temporal steps
 		:param T: Duration of one cardiac cycle
@@ -185,7 +187,7 @@ class Artery(object):
 
 	def solve(self):
 		"""Solve problem for one iteration.
-		U_(n+1) is solution of variational_form == 0
+		U_(n+1) is solution of variational_form(U_n) == 0.
 		"""
 		solve(self.variational_form == 0, self.U, self.bcs)
 
@@ -222,7 +224,7 @@ class Artery(object):
 
 
 	def CFL_term(self, x, A, q):
-		"""Compute the term of the CFL condition.
+		"""Compute the term for the CFL condition.
 		:param x: Point at which the condition is to be checked
 		:param A: Value of area at x
 		:param q: Value of flow at x

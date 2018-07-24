@@ -7,11 +7,18 @@ from mpl_toolkits.mplot3d import Axes3D
 from configparser import ConfigParser
 
 
-# Pressure unit converting functions ('unit' = g cm-1 s-2)
 def unit_to_mmHg(p):
+	"""Convert pressure units. 
+	:param p: Pressure in g cm-1 s-2
+	:return: Pressure in mmHg
+	"""
 	return 76/101325*p
 	
 def mmHg_to_unit(p):
+	"""Convert pressure units.
+	:param p: Pressure in mmHg
+	:return: Pressure in g cm-1 s-2
+	"""
 	return 101325/76*p
 
 
@@ -54,7 +61,7 @@ def adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho,
 
 
 def redimensionalise(rc, qc, rho, x, nature):
-	"""Give a quantity its units back
+	"""Give a quantity its units back.
 	:param rc: Characteristic radius
 	:param qc: Characteristic flow
 	:param rho: Density
@@ -104,6 +111,7 @@ def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
 	:param mesh_location: Location of mesh to be loaded
 	:param location: Location of XDMF-file
 	:param name: Name of function within XDMF-file
+	:return: Matrix containing values from XDMFFile
 	"""
 	print('Loading %s to matrix.' % (location))
 	M = np.zeros([Nx+1, Nt])
@@ -120,7 +128,7 @@ def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
 
 def plot_matrix(t, x, M, label, output):
 	"""Create plot of a matrix.
-	Store it in a given location.
+	Store plot in a given location.
 	:param t: Vector containing time values
 	:param x: Vector containing space values
 	:param M: Matrix representing function to be plotted, with dimension t*x

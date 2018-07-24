@@ -9,7 +9,7 @@ def test_mmHg_to_unit():
 
 def test_adimensionalise():
 
-def test_redimentionalise():
+def test_redimensionalise():
 
 def test_read_output():
 

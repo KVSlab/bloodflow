@@ -6,7 +6,7 @@ sys.path.insert(0, 'src/')
 from artery import Artery
 
 def near(a, b, tol=1.e-15):
-	"""Check equality between two floats to a certain tolerance.
+	"""Check equality between two floats with a certain tolerance.
 	:param a: First number
 	:param b: Second number
 	:param tol: Tolerance for equality
@@ -16,8 +16,8 @@ def near(a, b, tol=1.e-15):
 
 
 def get_parameters(config_location):
-	"""Read parameters for the tests from file.
-	:param config_location: Location of config file.
+	"""Read parameters for tests from file.
+	:param config_location: Location of config file
 	:return: The parameters needed for testing
 	"""
 	config = configparser.ConfigParser()
@@ -121,11 +121,12 @@ def test_define_geometry(a, Nx, Nt, T, N_cycles):
 	assert(type(a.V) == ''))
 	assert(type(a.V2) == ''))
 	
-	assert([near(a.r0(x), Ru*(Rd/Ru)**(x/L)) for x in X])
-	assert([near(a.A0(x), np.pi*(Ru*(Rd/Ru)**(x/L))**2) for x in X])
-	assert([near(a.f(x), 4/3*(k1*np.exp(k2*Ru*(Rd/Ru)**(x/L))+k3)) for x in X])
-	assert([near(a.dfdr(x), 4/3*k1*k2*np.exp(k2*Ru*(Rd/Ru)**(x/L))) for x in X])
-	assert([near(a.drdx(x), np.ln(Rd/Ru)/L*Ru*(Rd/Ru)**(x[0]/L)) for x in X])
+	for x in X:
+		assert(near(a.r0(x), Ru*(Rd/Ru)**(x/L)))
+		assert(near(a.A0(x), np.pi*(Ru*(Rd/Ru)**(x/L))**2))
+		assert(near(a.f(x), 4/3*(k1*np.exp(k2*Ru*(Rd/Ru)**(x/L))+k3)))
+		assert(near(a.dfdr(x), 4/3*k1*k2*np.exp(k2*Ru*(Rd/Ru)**(x/L))))
+		assert(near(a.drdx(x), np.ln(Rd/Ru)/L*Ru*(Rd/Ru)**(x[0]/L)))
 
 
 def test_define_solution(a, q0, theta):
@@ -133,7 +134,7 @@ def test_define_solution(a, q0, theta):
 	Test correct assignment of parameters.
 	Test types of FEniCS objects.
 	Test correct behaviour of boundaries.
-	Test variational form? --------------------------------------------------------
+	Test variational form.
 	:param a: Artery on which define_solution is to be called and tested
 	"""
 	bc_tol = 1.e-14
