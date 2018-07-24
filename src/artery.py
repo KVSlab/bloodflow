@@ -9,8 +9,8 @@ from scipy.interpolate import interp1d
 
 class Artery(object):
 	""" Represent an artery.
-	:param boolean root_vessel: True if the artery is an root-vessel (no parent)
-	:param boolean end_vessel: True if the artery is an end-vessel (no daughter)
+	:param boolean root_vessel: True if the artery is root-vessel (no parent)
+	:param boolean end_vessel: True if the artery is end-vessel (no daughter)
 	:param rc: Characteristic radius (length)
 	:param qc: Characteristic flow
 	:param Ru: Upstream radius
@@ -57,8 +57,8 @@ class Artery(object):
 		self.T = T
 		self.N_cycles = N_cycles
 		
-		self.dt = self.T/self.Nt
 		self.dx = self.L/self.Nx
+		self.dt = self.T/self.Nt
 		
 		# Step for boundary condition computations, starting at normal size
 		self.dex = self.dx
@@ -82,18 +82,18 @@ class Artery(object):
 							   Ru=self.Ru, Rd=self.Rd, L=self.L)
 
 
-	def define_solution(self, q0, theta=0.5):
+	def define_solution(self, q0, theta=0.5, bc_tol=1.e-14):
 		"""Set up FEniCS solution objects.
 		Define boundary conditions.
 		Define variational form.
 		:param q0: Initial flow
 		:param theta: Crank-Nicolson parameter
 		"""
-		# Crank-Nicolson parameter
-		self.theta = theta
-		
 		# Initial flow
 		self.q0 = q0
+		
+		# Crank-Nicolson parameter
+		self.theta = theta
 		
 		# Trial function
 		self.U = Function(self.V2)
@@ -113,13 +113,11 @@ class Artery(object):
 								  f=self.f, A0=self.A0, A=self.Un.split()[0]))
 		
 		# Boundary conditions (spatial)
-		tol = 1.e-14
-
 		def inlet_bdry(x, on_boundary):
-			return on_boundary and near(x[0], 0, tol)
+			return on_boundary and near(x[0], 0, bc_tol)
 
 		def outlet_bdry(x, on_boundary):
-			return on_boundary and near(x[0], self.L, tol)
+			return on_boundary and near(x[0], self.L, bc_tol)
 
 		# Inlet boundary conditions
 		if self.root_vessel:
