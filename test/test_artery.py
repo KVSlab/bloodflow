@@ -1,5 +1,7 @@
 import sys
+import numpy as np
 
+from configparser import ConfigParser
 import fenics as fn
 
 sys.path.insert(0, 'src/')
@@ -20,7 +22,7 @@ def get_parameters(config_location):
 	:param config_location: Location of config file
 	:return: The parameters needed for testing
 	"""
-	config = configparser.ConfigParser()
+	config = ConfigParser()
 	config.read(config_location)
 
 	# Constructor parameters
@@ -49,12 +51,12 @@ def get_parameters(config_location):
 	q0 = config.getfloat('Solution', 'q0')
 	theta = config.getfloat('Solution', 'theta')
 	
-	return root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu,
+	return root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu,\
 		   p0, Nt, Nx, T, N_cycles, q0, theta
 
 
 def test_constructor(root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3,
-					 rho, nu, p0):
+					 rho, Re, nu, p0):
 	"""Construct artery.
 	Test correct assignment of parameters.
 	:param boolean root_vessel: True if the artery is root-vessel (no parent)
@@ -73,7 +75,8 @@ def test_constructor(root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3,
 	:param p0: Diastolic pressure
 	:return: Intitialised artery object
 	"""
-	a = Artery(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0)
+	a = Artery(root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re,
+			   nu, p0)
 	
 	assert(a.root_vessel == root_vessel)
 	assert(a.end_vessel == end_vessel)
@@ -100,7 +103,7 @@ def test_define_geometry(a, Nx, Nt, T, N_cycles):
 	Test correct behaviour of FEniCS expressions.
 	:param a: Artery on which define_geometry is to be called and tested
 	"""
-	X = np.linspace(0, L, 100)
+	X = np.linspace(0, a.L, 100)
 	
 	# Higher tolerance due to error from FEniCS Expression-interpolation
 	tol = 1.e-12
@@ -111,22 +114,24 @@ def test_define_geometry(a, Nx, Nt, T, N_cycles):
 	assert(a.Nt == Nt)
 	assert(near(a.T, T))
 	assert(a.N_cycles == N_cycles)
-	assert(near(a.dx, L/Nx))
+	assert(near(a.dx, a.L/Nx))
 	assert(near(a.dt, T/Nt))
-	assert(near(a.dex, L/Nx))
-	assert(near(a.db, np.sqrt(nu*T/2/np.pi)))
+	assert(near(a.dex, a.L/Nx))
+	assert(near(a.db, np.sqrt(a.nu*T/2/np.pi)))
 	
-	assert(type(a.mesh) == ''))
-	assert(type(a.elV) == ''))
-	assert(type(a.V) == ''))
-	assert(type(a.V2) == ''))
+	assert(type(a.mesh) == '')
+	assert(type(a.elV) == '')
+	assert(type(a.V) == '')
+	assert(type(a.V2) == '')
 	
 	for x in X:
-		assert(near(a.r0(x), Ru*(Rd/Ru)**(x/L)))
-		assert(near(a.A0(x), np.pi*(Ru*(Rd/Ru)**(x/L))**2))
-		assert(near(a.f(x), 4/3*(k1*np.exp(k2*Ru*(Rd/Ru)**(x/L))+k3)))
-		assert(near(a.dfdr(x), 4/3*k1*k2*np.exp(k2*Ru*(Rd/Ru)**(x/L))))
-		assert(near(a.drdx(x), np.ln(Rd/Ru)/L*Ru*(Rd/Ru)**(x[0]/L)))
+		assert(near(a.r0(x), a.Ru*(a.Rd/a.Ru)**(x/a.L)))
+		assert(near(a.A0(x), np.pi*(a.Ru*(a.Rd/a.Ru)**(x/a.L))**2))
+		assert(near(a.f(x),
+					4/3*(a.k1*np.exp(a.k2*a.Ru*(a.Rd/a.Ru)**(x/a.L))+a.k3), tol))
+		assert(near(a.dfdr(x),
+					4/3*a.k1*a.k2*np.exp(a.k2*a.Ru*(a.Rd/a.Ru)**(x/a.L))))
+		assert(near(a.drdx(x), np.ln(a.Rd/a.Ru)/a.L*a.Ru*(a.Rd/a.Ru)**(x/a.L)))
 
 
 def test_define_solution(a, q0, theta):
@@ -147,7 +152,7 @@ def test_define_solution(a, q0, theta):
 	assert(type(a.v1) == '')
 	assert(type(a.v2) == '')
 	assert(type(a.Un) == '')
-	assert(type(a.pn == '')
+	assert(type(a.pn) == '')
 	
 	assert(near(a.Un(x)[0], a.A0(x)))
 	assert(near(a.Un(x)[1], q0))
@@ -202,20 +207,20 @@ def test_check_CFL():
 	"""
 
 
-def test_adjust_dex()
+def test_adjust_dex():
 	"""Test correct adjustment of dex.
 	"""
 
 
-def test_artery(config_location)
+def test_artery(config_location):
 	"""Test artery class.
 	:param config_location: Location of config-file with test-parameters
 	"""
-	root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, Nt,
-		Nx, T, N_cycles, q0, theta = get_parameters(config_location)
+	root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,\
+		Nt,	Nx, T, N_cycles, q0, theta = get_parameters(config_location)
 	
 	a = test_constructor(root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3,
-						 rho, nu, p0)
+						 rho, Re, nu, p0)
 	test_define_geometry(a, Nx, Nt, T, N_cycles)
 	test_define_solution(a, q0, theta)
 	test_solve()

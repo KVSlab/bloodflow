@@ -90,8 +90,9 @@ class Artery(object):
 		Define variational form.
 		:param q0: Initial flow
 		:param theta: Crank-Nicolson parameter
+		:param bc_tol: Inlet and outlet boundary thickness (tolerance)
 		"""
-		# Initial flow
+		# Initial flow value
 		self.q0 = q0
 		
 		# Crank-Nicolson parameter
@@ -104,7 +105,7 @@ class Artery(object):
 		# Test functions
 		v1, v2 = TestFunctions(self.V2)
  
-		# Initial value
+		# Initial solution
 		self.Un = Function(self.V2)
 		self.Un.assign(Expression(('A0', 'q0'), degree=2,
 								  A0=self.A0, q0=self.q0))
@@ -156,15 +157,13 @@ class Artery(object):
 		dF_v_dx = grad(q)[0]*v1*dx + F2_v2_ds - F2_dv2_dx
 
 
-		Fn_v_ds = \
-				+ (pow(self.Un[1], 2)/(self.Un[0])\
+		Fn_v_ds = (pow(self.Un[1], 2)/(self.Un[0])\
 				  +self.f*sqrt(self.A0*(self.Un[0])))*v2*ds
 
-		Fn_dv_dx = -grad(self.Un[1])[0]*v1*dx\
-				 + (pow(self.Un[1], 2)/(self.Un[0])\
+		Fn_dv_dx = (pow(self.Un[1], 2)/(self.Un[0])\
 				   +self.f*sqrt(self.A0*(self.Un[0])))*grad(v2)[0]*dx
 
-		dFn_v_dx = Fn_v_ds - Fn_dv_dx
+		dFn_v_dx = grad(self.Un[1])[0]*v1*dx + Fn_v_ds - Fn_dv_dx
 
 
 		S_v_dx = - 2*sqrt(pi)/self.db/self.Re*q/sqrt(A+DOLFIN_EPS)*v2*dx\
@@ -259,7 +258,7 @@ class Artery(object):
 	@property
 	def q_in(self):
 		"""Inlet flow (only for root-artery)
-		:return: Expression-object
+		:return: Inlet flow Expression-object
 		"""
 		return self._q_in
 	
@@ -271,7 +270,7 @@ class Artery(object):
 	@property
 	def U_in(self):
 		"""Inlet boundary conditions (only for non-root arteries (daughters))
-		:return: Expression-object
+		:return: Inlet solution Expression-object
 		"""
 		return self._U_in
 	
@@ -284,7 +283,7 @@ class Artery(object):
 	@property
 	def A_out(self):
 		"""Outlet area (only in use for end arteries)
-		:return: Expression-object
+		:return: Outlet flow Expression-object
 		"""
 		return self._A_out
 	
@@ -296,7 +295,7 @@ class Artery(object):
 	@property
 	def U_out(self):
 		"""Outlet boundary conditions (only for parent arteries)
-		:return: Expression-object
+		:return: Outlet solution Expression-object
 		"""
 		return _U_out
 	
