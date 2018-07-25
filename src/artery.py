@@ -9,7 +9,7 @@ from fenics import *
 
 
 class Artery(object):
-	""" Represent an artery.
+	"""Represent an artery.
 	:param boolean root_vessel: True if the artery is root-vessel (no parent)
 	:param boolean end_vessel: True if the artery is end-vessel (no daughter)
 	:param rc: Characteristic radius (length)
@@ -76,9 +76,9 @@ class Artery(object):
 		self.r0 = Expression('Ru*pow(Rd/Ru, x[0]/L)',
 							degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L)
 		self.A0 = Expression('pi*pow(r0, 2)', degree=2, r0=self.r0)
-		self.f = Expression('4/3*(k1*exp(k2*r0) + k3)', degree=2,
+		self.f = Expression('4.0/3.0*(k1*exp(k2*r0) + k3)', degree=2,
 							k1=self.k1, k2=self.k2, k3=self.k3, r0=self.r0)
-		self.dfdr = Expression('4/3*k1*k2*exp(k2*r0)', degree=2,
+		self.dfdr = Expression('4.0/3.0*k1*k2*exp(k2*r0)', degree=2,
 						 	   k1=self.k1, k2=self.k2, r0=self.r0)
 		self.drdx = Expression('log(Rd/Ru)/L*Ru*pow(Rd/Ru, x[0]/L)', degree=2,
 							   Ru=self.Ru, Rd=self.Rd, L=self.L)

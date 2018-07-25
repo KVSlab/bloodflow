@@ -118,11 +118,11 @@ def test_define_geometry(a, Nx, Nt, T, N_cycles):
 	assert(near(a.dt, T/Nt))
 	assert(near(a.dex, a.L/Nx))
 	assert(near(a.db, np.sqrt(a.nu*T/2/np.pi)))
-	
-	assert(type(a.mesh) == '')
-	assert(type(a.elV) == '')
-	assert(type(a.V) == '')
-	assert(type(a.V2) == '')
+
+	assert(isinstance(a.mesh, fn.IntervalMesh))
+	assert(isinstance(a.elV, fn.FiniteElement))
+	assert(isinstance(a.V, fn.FunctionSpace))
+	assert(isinstance(a.V2, fn.FunctionSpace))
 	
 	for x in X:
 		assert(near(a.r0(x), a.Ru*(a.Rd/a.Ru)**(x/a.L)))
