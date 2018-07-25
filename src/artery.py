@@ -201,7 +201,7 @@ class Artery(object):
 		"""Assign new values to pn.
 		"""
 		self.pn.assign(Expression('p0 + f*(1-sqrt(A0/A))', degree=2, p0=self.p0,
-								  f=self.f, A0=self.A0, A=self.Un.split()[0]))
+								  f=self.f, A0=self.A0, A=self.Un.split(True)[0]))
 
 
 	def compute_pressure(self, f, A0, A):
@@ -243,7 +243,7 @@ class Artery(object):
 		return self.dt/self.dex < self.CFL_term(x, A, q)
 
 
-	def adjust_dex(self, x, A, q, margin=1.05):
+	def adjust_dex(self, x, A, q, margin=0.05):
 		"""Adjust boundary step-size so that the CFL condition is verified.
 		:param x: Point at which the condition is to be checked
 		:param A: Value of area at x
@@ -252,7 +252,7 @@ class Artery(object):
 		"""
 		M = self.CFL_term(x, A, q)
 		#if self.dt/self.dex > M:
-		self.dex = margin*self.dt/M
+		self.dex = (1+margin)*self.dt/M
 
 		
 	@property

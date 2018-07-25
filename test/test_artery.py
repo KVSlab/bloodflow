@@ -7,14 +7,14 @@ import fenics as fn
 sys.path.insert(0, 'src/')
 from artery import Artery
 
-def near(a, b, tol=1.e-15):
+def near(a, b, tol=1.e-14, reltol=1.e-14):
 	"""Check equality between two floats with a certain tolerance.
 	:param a: First number
 	:param b: Second number
 	:param tol: Tolerance for equality
 	:return: True if the two numbers are to be considered equal
 	"""
-	return np.abs(a-b) < tol
+	return np.abs(a-b) < tol or np.abs(a/b-1) < reltol
 
 
 def get_parameters(config_location):
@@ -102,6 +102,10 @@ def test_define_geometry(a, Nx, Nt, T, N_cycles):
 	Test types of FEniCS objects.
 	Test correct behaviour of FEniCS expressions.
 	:param a: Artery on which define_geometry is to be called and tested
+	:param Nx: Number of spatial steps
+	:param Nt: Number of temporal steps
+	:param T: Duration of one cardiac cycle
+	:param N_cycles: Number of cardiac cycles
 	"""
 	X = np.linspace(0, a.L, 100)
 	
@@ -123,39 +127,45 @@ def test_define_geometry(a, Nx, Nt, T, N_cycles):
 	assert(isinstance(a.elV, fn.FiniteElement))
 	assert(isinstance(a.V, fn.FunctionSpace))
 	assert(isinstance(a.V2, fn.FunctionSpace))
-	
+
 	for x in X:
-		assert(near(a.r0(x), a.Ru*(a.Rd/a.Ru)**(x/a.L)))
-		assert(near(a.A0(x), np.pi*(a.Ru*(a.Rd/a.Ru)**(x/a.L))**2))
-		assert(near(a.f(x),
-					4/3*(a.k1*np.exp(a.k2*a.Ru*(a.Rd/a.Ru)**(x/a.L))+a.k3), tol))
-		assert(near(a.dfdr(x),
-					4/3*a.k1*a.k2*np.exp(a.k2*a.Ru*(a.Rd/a.Ru)**(x/a.L))))
-		assert(near(a.drdx(x), np.ln(a.Rd/a.Ru)/a.L*a.Ru*(a.Rd/a.Ru)**(x/a.L)))
+		r0 = a.Ru*(a.Rd/a.Ru)**(x/a.L)
+		A0 = np.pi*(a.Ru*(a.Rd/a.Ru)**(x/a.L))**2
+		f = 4/3*(a.k1*np.exp(a.k2*a.Ru*(a.Rd/a.Ru)**(x/a.L))+a.k3)
+		dfdr = 4/3*a.k1*a.k2*np.exp(a.k2*a.Ru*(a.Rd/a.Ru)**(x/a.L))
+		drdx = np.log(a.Rd/a.Ru)/a.L*a.Ru*(a.Rd/a.Ru)**(x/a.L)
+		assert(near(a.r0(x), r0))
+		assert(near(a.A0(x), A0))
+		assert(near(a.f(x), f))
+		assert(near(a.dfdr(x), dfdr))
+		assert(near(a.drdx(x), drdx))
 
 
-def test_define_solution(a, q0, theta):
+def test_define_solution(a, q0, theta, bc_tol=1.e-14):
 	"""Define solution on artery.
 	Test correct assignment of parameters.
 	Test types of FEniCS objects.
 	Test correct behaviour of boundaries.
 	Test variational form.
 	:param a: Artery on which define_solution is to be called and tested
+	:param q0: Initial flow
+	:param theta: Crank-Nicolson parameter
+	:param bc_tol: Inlet and outlet boundary thickness (tolerance)
 	"""
-	bc_tol = 1.e-14
+	X = np.linspace(0, a.L, 100)
+	
 	a.define_solution(q0, theta, bc_tol)
 	
 	assert(near(a.q0, q0))
 	assert(near(a.theta, theta))
 	
-	assert(type(a.U) == type(fn.Function(a.V2)))
-	assert(type(a.v1) == '')
-	assert(type(a.v2) == '')
-	assert(type(a.Un) == '')
-	assert(type(a.pn) == '')
+	assert(type(a.U) == fn.Function)
+	assert(type(a.Un) == fn.Function)
+	assert(type(a.pn) == fn.Function)
 	
-	assert(near(a.Un(x)[0], a.A0(x)))
-	assert(near(a.Un(x)[1], q0))
+	for x in X:
+		assert(near(a.Un(x)[0], a.A0(x)))
+		assert(near(a.Un(x)[1], q0))
 
 
 def test_solve(a):
@@ -165,51 +175,79 @@ def test_solve(a):
 	a.solve()
 
 
-def test_update_solution():
+def test_update_solution(a):
 	"""Update solution.
 	Test equality beween Un and U.
 	"""
 	a.update_solution()
 	Un = a.Un.vector().get_local()
 	U = a.U.vector().get_local()
-	for i in len(Un):
+	for i in range(len(Un)):
 		assert(near(Un[i], U[i]))
 
 
-def test_update_pressure():
+def test_update_pressure(a):
 	"""Update pressure.
 	Test correct behaviour of pressure function.
 	"""
-	X = np.linspace(0, L, 100)
+	X = np.linspace(0, a.L, 100)
 	a.update_pressure()
+	reltol = 1.e-12
 	
 	for x in X:
-		assert(near(a.pn(x), a.p0+a.f(x)*(1-np.sqrt(a.A0(x)/Un(x)[0]))))
+		p = a.p0 + a.f(x)*(1-np.sqrt(a.A0(x)/a.Un(x)[0]))
+		assert(near(a.pn(x), p, reltol=reltol))
 
 
-def test_compute_pressure():
-	"""Test correct value of pressure.
+def test_compute_pressure(a):
+	"""Test correct value of computed pressure.
 	"""
+	for x in np.linspace(0, a.L, 100):
+		f, A0, A = a.f(x), a.A0(x), a.Un(x)[0]
+		p = a.compute_pressure(f, A0, A)
+		assert(near(p, a.p0+f*(1-np.sqrt(A0/A))))
 
 
-def test_compute_outlet_pressure():
+def test_compute_outlet_pressure(a):
 	"""Test correct value of outlet pressure.
 	"""
+	A = a.Un(a.L)[0]
+	p = a.compute_outlet_pressure(A)
+	assert(near(p, a.p0+a.f(a.L)*(1-np.sqrt(a.A0(a.L)/A))))
 
 
-def test_CFL_term():
+def test_CFL_term(a):
 	"""Test correct value of CFL-term.
 	"""
+	for x in [0, a.L]:
+		A, q = a.Un(x)
+		CFL = 1/np.abs(q/A+np.sqrt(a.f(x)/2/a.rho*np.sqrt(a.A0(x)/A)))
+		assert(near(a.CFL_term(x, A, q), CFL))
 
 
-def test_check_CFL():
+def test_check_CFL(a):
 	"""Test CFL-condition-checking.
 	"""
+	margin = 1.e-10
+	
+	for x in [0, a.L]:
+		A, q = a.Un(x)
+		M = a.dt/a.CFL_term(x, A, q)
+		a.dex = (1-margin)*M
+		assert(not a.check_CFL(x, A, q))
+		a.dex = (1+margin)*M
+		assert(a.check_CFL(x, A, q))
 
 
-def test_adjust_dex():
+def test_adjust_dex(a):
 	"""Test correct adjustment of dex.
 	"""
+	for margin in [0.1, 0.05, 1.e-4, 1.e-8, 1.e-10]:
+		for x in [0, a.L]:
+			A, q = a.Un(x)
+			a.adjust_dex(x, A, q, margin)
+			assert(near(a.dex, (1+margin)*a.dt/a.CFL_term(x, A, q)))
+			assert(a.check_CFL(x, A, q))
 
 
 def test_artery(config_location):
@@ -221,16 +259,26 @@ def test_artery(config_location):
 	
 	a = test_constructor(root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3,
 						 rho, Re, nu, p0)
+						 
 	test_define_geometry(a, Nx, Nt, T, N_cycles)
+	
 	test_define_solution(a, q0, theta)
-	test_solve()
-	test_update_solution()
-	test_update_pressure()
-	test_compute_pressure()
-	test_compute_outlet_pressure()
-	test_CFL_term()
-	test_check_CFL()
-	test_adjust_dex()
+	
+	test_solve(a)
+	
+	test_update_solution(a)
+	
+	test_update_pressure(a)
+
+	test_compute_pressure(a)
+	
+	test_compute_outlet_pressure(a)
+	
+	test_CFL_term(a)
+	
+	test_check_CFL(a)
+	
+	test_adjust_dex(a)
 
 if __name__ == '__main__':
 	test_artery(sys.argv[1])
