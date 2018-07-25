@@ -182,27 +182,55 @@ def test_source(an):
 
 
 def test_compute_U_half(an):
+	"""Test correct behaviour of compute_U_half.
 	"""
-	"""
+	for a in an.arteries:
+		for x in [[0, a.dex], [a.L-a.dex, a.L]]
+			U0, U1 = a.Un(x[0]), a.Un(x[1])
+			an_U_half = an.compute_U_half(a, U0, U1, x[0], x[1]
+			F0, S0 = an.flux(a, U0, x[0]), an.source(a, U0, x[0])
+			F1, S1 = an.flux(a, U1, x[1]), an.source(a, U1, x[1])
+			U_half = (U0+U1)/2 - a.dt/a.dex*(F1-F0) + a.dt/4*(S0+S1)
+			assert(near(an_U_half[0], U_half[0]))
+			assert(near(an_U_half[1], U_half[1]))
 
 
 def test_compute_A_out(an):
+	"""Test correct behaviour of compute_A_out.
 	"""
-	"""
+	for a in an.arteries:
+		A_out = an.compute_A_out(a)
 
 
 def test_initial_x(an):
+	"""Test correct assignment of parameters.
 	"""
-	"""
+	for ip in an.range_parent_arteries:
+		i1, i2 = an.daughter_arteries(ip)
+		p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
+		x = an.initial_x(p, d1, d2)
+		for xi in x[:3] assert(near(xi, p.q0))
+		for xi in x[3:6] assert(near(xi, d1.q0))
+		for xi in x[6:9] assert(near(xi, d2.q0))
+		for xi in x[9:12] assert(near(xi, p.A0(p.L)))
+		for xi in x[12:15] assert(near(xi, d1.A0(0)))
+		for xi in x[15:] assert(near(xi, d2.A0(0)))
 
 
 def test_define_x(an):
+	"""Test correct value for x.
 	"""
-	"""
+	an.define_x()
+	for ip in an.range_parent_arteries:
+		i1, i2 = an.daughter_arteries(ip)
+		p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
+		x = an.initial_x(p, d1, d2)
+		for i in range(18):
+			assert(near(an.x[ip, i], x[i]))
 
 
 def test_problem_function(an):
-	"""
+	"""Test correct behaviour of problem_function.
 	"""
 
 
@@ -228,13 +256,28 @@ def test_jacobian(an):
 			he[j] = 0
 
 def test_newton(an):
+	"""Test correct results from newton function.
 	"""
-	"""
+	for ip in an.range_parent_arteries:
+		i1, i2 = an.daughter_arteries(ip)
+		p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
+		x = np.ones(18)
+		x = an.newton(p, d1, d2, x)
+		assert(near(an.problem_function(p, d1, d2, x), 0))
+		for xi in x assert(xi > 0)
 
 
 def test_adjust_bifurcation_step(an):
+	"""Test correct behaviour of adjust_bifurcation_step function.
 	"""
-	"""
+	for ip in an.range_parent_arteries:
+		i1, i2 = an.daughter_arteries(ip)
+		p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
+		for margin in [0.1, 0.05, 1.e-4, 1.e-8]:
+			an.adjust_bifurcation_step(p, d1, d2, margin
+			assert(p.check_CFL(p.L, p.Un(p.L)[0], p.Un(p.L)[1]))
+			assert(d1.check_CFL(0, d1.Un(0)[0], d1.Un(0)[1]))
+			assert(d2.check_CFL(0, d2.Un(0)[0], d2.Un(0)[1]))
 
 
 def test_set_inner_bc(an):

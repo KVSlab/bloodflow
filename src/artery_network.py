@@ -145,7 +145,8 @@ class Artery_Network(object):
 							  +np.sqrt(a.A0(x))*a.dfdr(x))\
 			 -U[0]*a.dfdr(x))*a.drdx(x)
 		return np.array([S1, S2])
-	
+
+
 	def compute_U_half(self, a, U0, U1, x0, x1):
 		"""Compute a half step.
 		:param a: Current artery
@@ -409,13 +410,12 @@ class Artery_Network(object):
 				x -= npl.solve(J, func)
 
 			if npl.norm(x-x_old) < tol:
-				#print('Finishing NewtonSolver after %i iterations.' % (k))
 				break
 
 		return x
 
 
-	def adjust_bifurcation_step(self, p, d1, d2, margin=1.05):
+	def adjust_bifurcation_step(self, p, d1, d2, margin=0.05):
 		"""Set dex to respect CFL-condition for all arteries in a bifurcation.
 		:param p: Parent artery
 		:param d1: First daughter artery
@@ -425,10 +425,7 @@ class Artery_Network(object):
 		Mp = p.CFL_term(p.L, p.Un(p.L)[0], p.Un(p.L)[1])
 		M1 = d1.CFL_term(0, d1.Un(0)[0], d1.Un(0)[1])
 		M2 = d2.CFL_term(0, d2.Un(0)[0], d2.Un(0)[1])
-		p.dex = d1.dex = d2.dex = margin*self.dt/min([Mp, M1, M2])
-		#assert(p.check_CFL(p.L, p.Un(p.L)[0], p.Un(p.L)[1]))
-		#assert(d1.check_CFL(0, d1.Un(0)[0], d1.Un(0)[1]))
-		#assert(d2.check_CFL(0, d2.Un(0)[0], d2.Un(0)[1]))
+		p.dex = d1.dex = d2.dex = (1+margin)*self.dt/min([Mp, M1, M2])
 
 
 	def set_inner_bc(self, ip, i1, i2):
@@ -446,9 +443,6 @@ class Artery_Network(object):
 		p.U_out = [self.x[ip, 9], self.x[ip, 0]]
 		d1.U_in = [self.x[ip, 12], self.x[ip, 3]]
 		d2.U_in = [self.x[ip, 15], self.x[ip, 6]]
-		#p.A_out = self.x[ip, 9]
-		#d1.q_in = self.x[ip, 3]
-		#d2.q_in = self.x[ip, 6]
 	
 	
 	def set_bcs(self, q_in):
@@ -583,10 +577,6 @@ class Artery_Network(object):
 			xdmffile_flow[i] = XDMFFile('%s/flow/flow_%i.xdmf'\
 										% (self.output_location, i))
 
-		# Progress bar
-		progress = Progress('Time-stepping')
-		set_log_level(PROGRESS)
-
 		# Initialise time
 		t = 0
 
@@ -630,6 +620,3 @@ class Artery_Network(object):
 					artery.update_solution()
 
 				t += self.dt
-
-				# Update progress bar
-				progress.update((t+self.dt)/self.N_cycles/self.T)
