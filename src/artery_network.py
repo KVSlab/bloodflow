@@ -212,6 +212,34 @@ class Artery_Network(object):
 		return Am0
 
 
+	def initial_x(self, p, d1, d2):
+		""" Make an initial guess for x at a bifurcation point.
+		Set same value at time t_(n+1) and t_(n+1/2) as time t_n.
+		At point M+-1/2, set same value as in point M.
+		:param p: Parent artery
+		:param d1: First daughter artery
+		:param d2: Second daughter artery
+		:return: x, an 18-dimensional vector containing guess values
+		"""
+		x = np.zeros(18)
+		x[:3] = p.q0*np.ones(3)
+		x[3:6] = d1.q0*np.ones(3)
+		x[6:9] = d2.q0*np.ones(3)
+		x[9:12] = p.A0(p.L)*np.ones(3)
+		x[12:15] = d1.A0(0)*np.ones(3)
+		x[15:] = d2.A0(0)*np.ones(3)
+		return x
+
+
+	def define_x(self):
+		"""Make an initial guess for the solutions to the systems of equations.
+		"""
+		for ip in self.range_parent_arteries:
+			i1, i2 = self.daughter_arteries(ip)
+			p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
+			self.x[ip] = self.initial_x(p, d1, d2)
+
+
 	def problem_function(self, p, d1, d2, x):
 		"""Function representing the system of equations.
 		If x is the solution to the problem, then function(x) = 0.
@@ -392,25 +420,23 @@ class Artery_Network(object):
 		:param tol: Tolerance for difference between two steps
 		:return: Solution to the system of equations
 		"""
-		# Perturbation value in the case of a singular matrix
-		eps = 1.e-6
-
 		for k in range(k_max):
-
-			x_old = np.copy(x)
+		
 			J = self.jacobian(p, d1, d2, x)
 			func = self.problem_function(p, d1, d2, x)
+
+			if npl.norm(func) < tol:
+				break
 
 			try:
 				x -= npl.solve(J, func)
 			except npl.LinAlgError:
 				print('Singular')
+				# Perturbation value
+				eps = 1.e-6
 				J += eps*np.eye(18)
 				func[0] += eps
 				x -= npl.solve(J, func)
-
-			if npl.norm(x-x_old) < tol:
-				break
 
 		return x
 
@@ -460,34 +486,6 @@ class Artery_Network(object):
 		# Update outlet boundary condition
 		for i in self.range_end_arteries:
 			self.arteries[i].A_out = self.compute_A_out(self.arteries[i])
-
-
-	def initial_x(self, p, d1, d2):
-		""" Make an initial guess for x at a bifurcation point.
-		Set same value at time t_(n+1) and t_(n+1/2) as time t_n.
-		At point M+-1/2, set same value as in point M.
-		:param p: Parent artery
-		:param d1: First daughter artery
-		:param d2: Second daughter artery
-		:return: x, an 18-dimensional vector containing guess values
-		"""
-		x = np.zeros(18)
-		x[:3] = p.q0*np.ones(3)
-		x[3:6] = d1.q0*np.ones(3)
-		x[6:9] = d2.q0*np.ones(3)
-		x[9:12] = p.A0(p.L)*np.ones(3)
-		x[12:15] = d1.A0(0)*np.ones(3)
-		x[15:] = d2.A0(0)*np.ones(3)
-		return x
-
-
-	def define_x(self):
-		"""Make an initial guess for the solutions to the systems of equations.
-		"""
-		for ip in self.range_parent_arteries:
-			i1, i2 = self.daughter_arteries(ip)
-			p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
-			self.x[ip] = self.initial_x(p, d1, d2)
 
 
 	def dump_metadata(self, store_area, store_pressure):

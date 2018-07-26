@@ -5,16 +5,21 @@ from configparser import ConfigParser
 import fenics as fn
 
 sys.path.insert(0, 'src/')
+from utils import *
 from artery import Artery
 
-def near(a, b, tol=1.e-14, reltol=1.e-14):
+def near(a, b, tol=1.e-14, reltol=1.e-10):
 	"""Check equality between two floats with a certain tolerance.
 	:param a: First number
 	:param b: Second number
 	:param tol: Tolerance for equality
 	:return: True if the two numbers are to be considered equal
 	"""
-	return np.abs(a-b) < tol or np.abs(a/b-1) < reltol
+	# Neglect relative error if numbers are close to zero
+	if np.abs(b) > 1.e-10:
+		return np.abs(a-b) < tol or np.abs(a/b-1) < reltol
+	else:
+		return np.abs(a-b) < tol
 
 
 def get_parameters(config_location):
@@ -37,7 +42,6 @@ def get_parameters(config_location):
 	k2 = config.getfloat('Parameters', 'k2')
 	k3 = config.getfloat('Parameters', 'k3')
 	rho = config.getfloat('Parameters', 'rho')
-	Re = config.getfloat('Parameters', 'Re')
 	nu = config.getfloat('Parameters', 'nu')
 	p0 = config.getfloat('Parameters', 'p0')
 
@@ -50,6 +54,10 @@ def get_parameters(config_location):
 	# Solution parameters
 	q0 = config.getfloat('Solution', 'q0')
 	theta = config.getfloat('Solution', 'theta')
+	
+	# Adimensionalise parameters
+	Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q0, T = adimensionalise(
+		rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, R1, R2, CT, q0, T)
 	
 	return root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu,\
 		   p0, Nt, Nx, T, N_cycles, q0, theta

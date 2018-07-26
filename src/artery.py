@@ -260,7 +260,7 @@ class Artery(object):
 		"""Inlet flow (only for root-artery)
 		:return: Inlet flow Expression-object
 		"""
-		return self._q_in
+		return self._q_in.value
 	
 	@q_in.setter
 	def q_in(self, value):
@@ -270,9 +270,9 @@ class Artery(object):
 	@property
 	def U_in(self):
 		"""Inlet boundary conditions (only for non-root arteries (daughters))
-		:return: Inlet solution Expression-object
+		:return: Inlet solution value
 		"""
-		return self._U_in
+		return np.array([self._U_in.A, self._U_in.q])
 	
 	@U_in.setter
 	def U_in(self, U):
@@ -283,9 +283,9 @@ class Artery(object):
 	@property
 	def A_out(self):
 		"""Outlet area (only in use for end arteries)
-		:return: Outlet flow Expression-object
+		:return: Outlet flow value
 		"""
-		return self._A_out
+		return self._A_out.value
 	
 	@A_out.setter
 	def A_out(self, value):
@@ -297,7 +297,7 @@ class Artery(object):
 		"""Outlet boundary conditions (only for parent arteries)
 		:return: Outlet solution Expression-object
 		"""
-		return _U_out
+		return np.array([self._U_out.A, self._U_out.q])
 	
 	@U_out.setter
 	def U_out(self, U):

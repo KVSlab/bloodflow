@@ -7,8 +7,9 @@ sys.path.insert(0, 'src/')
 sys.path.insert(0, 'test/')
 
 import test_artery as ta
-from test_artery import near
 from artery_network import Artery_Network
+from utils import *
+from test_artery import near
 
 
 def get_parameters(config_location):
@@ -30,7 +31,6 @@ def get_parameters(config_location):
 	k2 = config.getfloat('Parameters', 'k2')
 	k3 = config.getfloat('Parameters', 'k3')
 	rho = config.getfloat('Parameters', 'rho')
-	Re = config.getfloat('Parameters', 'Re')
 	nu = config.getfloat('Parameters', 'nu')
 	p0 = config.getfloat('Parameters', 'p0')
 	R1 = config.getfloat('Parameters', 'R1')
@@ -52,6 +52,10 @@ def get_parameters(config_location):
 	store_area = config.getint('Solution', 'store_area')
 	store_pressure = config.getint('Solution', 'store_pressure')
 	q0 = config.getfloat('Solution', 'q0')
+	
+	# Adimensionalise parameters
+	Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q0, T = adimensionalise(
+		rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, R1, R2, CT, q0, T)
 	
 	return order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT, Nt, Nx, T, N_cycles, output_location, theta, Nt_store, N_cycles_store, store_area, store_pressure, q0
 
@@ -185,9 +189,9 @@ def test_compute_U_half(an):
 	"""Test correct behaviour of compute_U_half.
 	"""
 	for a in an.arteries:
-		for x in [[0, a.dex], [a.L-a.dex, a.L]]
+		for x in [[0, a.dex], [a.L-a.dex, a.L]]:
 			U0, U1 = a.Un(x[0]), a.Un(x[1])
-			an_U_half = an.compute_U_half(a, U0, U1, x[0], x[1]
+			an_U_half = an.compute_U_half(a, U0, U1, x[0], x[1])
 			F0, S0 = an.flux(a, U0, x[0]), an.source(a, U0, x[0])
 			F1, S1 = an.flux(a, U1, x[1]), an.source(a, U1, x[1])
 			U_half = (U0+U1)/2 - a.dt/a.dex*(F1-F0) + a.dt/4*(S0+S1)
@@ -209,12 +213,12 @@ def test_initial_x(an):
 		i1, i2 = an.daughter_arteries(ip)
 		p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
 		x = an.initial_x(p, d1, d2)
-		for xi in x[:3] assert(near(xi, p.q0))
-		for xi in x[3:6] assert(near(xi, d1.q0))
-		for xi in x[6:9] assert(near(xi, d2.q0))
-		for xi in x[9:12] assert(near(xi, p.A0(p.L)))
-		for xi in x[12:15] assert(near(xi, d1.A0(0)))
-		for xi in x[15:] assert(near(xi, d2.A0(0)))
+		for xi in x[:3]: assert(near(xi, p.q0))
+		for xi in x[3:6]: assert(near(xi, d1.q0))
+		for xi in x[6:9]: assert(near(xi, d2.q0))
+		for xi in x[9:12]: assert(near(xi, p.A0(p.L)))
+		for xi in x[12:15]: assert(near(xi, d1.A0(0)))
+		for xi in x[15:]: assert(near(xi, d2.A0(0)))
 
 
 def test_define_x(an):
@@ -231,29 +235,89 @@ def test_define_x(an):
 
 def test_problem_function(an):
 	"""Test correct behaviour of problem_function.
+	For the right (analytical) value of x, the function should take zero-values.
+	By perturbing a given x, certain components should be zero.
 	"""
+	x = np.ones(18)
+	for ip in an.range_parent_arteries:
+		i1, i2 = an.daughter_arteries(ip)
+		p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
+		
+		Um1p, Um0p = p.Un(p.L-p.dex), p.Un(p.L)
+		U0d1, U1d1 = d1.Un(0), d1.Un(d1.dex)
+		U0d2, U1d2 = d2.Un(0), d2.Un(d2.dex)
+
+		U_half_p = an.compute_U_half(p, Um1p, Um0p, p.L-p.dex, p.L)
+		U_half_d1 = an.compute_U_half(d1, U0d1, U1d1, 0, d1.dex)
+		U_half_d2 = an.compute_U_half(d2, U0d2, U1d2, 0, d2.dex)
+		
+		F_half_p = an.flux(p, U_half_p, p.L-p.dex/2)
+		F_half_d1 = an.flux(d1, U_half_d1, d1.dex/2)
+		F_half_d2 = an.flux(d2, U_half_d2, d2.dex/2)
+		S_half_p = an.source(p, U_half_p, p.L-p.dex/2)
+		S_half_d1 = an.source(d1, U_half_d1, d1.dex/2)
+		S_half_d2 = an.source(d2, U_half_d2, d2.dex/2)
+		
+		# Abbreviation
+		def F(x):
+			return an.problem_function(p, d1, d2, x)
+		
+		# 0
+		x[1] = (U_half_p[1] + x[2])/2
+		assert(near(F(x)[0], 0))
+		x[1] = 1
+
+		# 1
+		x[4] = (x[5] + U_half_d1[1])/2
+		assert(near(F(x)[1], 0))
+		x[4] = 1
+
+		# 2 
+		x[7] = (x[8] + U_half_d2[1])/2
+		assert(near(F(x)[2], 0))
+		x[7] = 1
+
+		# 3
+		x[10] = (U_half_p[0] + x[11])/2
+		assert(near(F(x)[3], 0))
+		x[10] = 1
+
+		# 4
+		x[13] = (x[14] + U_half_d1[0])/2
+		assert(near(F(x)[4], 0))
+		x[13] = 1
+
+		# 5 
+		x[16] = (x[17] + U_half_d2[0])/2
+		assert(near(F(x)[5], 0))
+		x[16] = 1
 
 
 def test_jacobian(an):
 	"""Test that the analytical expression for the jacobian matrix is close to a numerically computed jacobian.
 	"""
-	tol = 1.e-4
-	reltol = 1.e-4
+	# Higher tolerance since the numerical jacobian is inaccurate
+	tol = 1.e-3
+	reltol = 1.e-3
+	
+	# h gets absorbed in x if it is too small
+	h = 1.e-8
+	
 	for ip in an.range_parent_arteries:
 		i1, i2 = an.daughter_arteries(ip)
 		p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
 		x = np.ones(18)
-		h = 1.e-10
 		he = np.zeros(18)
 		J = an.jacobian(p, d1, d2, x)
 		F = an.problem_function(p, d1, d2, x)
 		for j in range(18):
-			he[j] += h
+			he[j] = h
 			Fph = an.problem_function(p, d1, d2, x+he)
 			dF = (Fph-F)/h
 			for i in range(18):
 				assert(near(J[i, j], dF[i], tol, reltol))
 			he[j] = 0
+
 
 def test_newton(an):
 	"""Test correct results from newton function.
@@ -261,10 +325,15 @@ def test_newton(an):
 	for ip in an.range_parent_arteries:
 		i1, i2 = an.daughter_arteries(ip)
 		p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
-		x = np.ones(18)
-		x = an.newton(p, d1, d2, x)
-		assert(near(an.problem_function(p, d1, d2, x), 0))
-		for xi in x assert(xi > 0)
+		x = an.initial_x(p, d1, d2)
+		x = an.newton(p, d1, d2, x, 1000, 1.e-14)
+		FF = an.problem_function(p, d1, d2, x)
+		
+		# After solving, all components of FF should be zero
+		for F in FF: assert(near(F, 0, 1.e-11))
+		
+		# x represents areas and flows, that should be strictly positive
+		for xi in x: assert(xi > 1.e-12)
 
 
 def test_adjust_bifurcation_step(an):
@@ -274,20 +343,46 @@ def test_adjust_bifurcation_step(an):
 		i1, i2 = an.daughter_arteries(ip)
 		p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
 		for margin in [0.1, 0.05, 1.e-4, 1.e-8]:
-			an.adjust_bifurcation_step(p, d1, d2, margin
+			an.adjust_bifurcation_step(p, d1, d2, margin)
 			assert(p.check_CFL(p.L, p.Un(p.L)[0], p.Un(p.L)[1]))
 			assert(d1.check_CFL(0, d1.Un(0)[0], d1.Un(0)[1]))
 			assert(d2.check_CFL(0, d2.Un(0)[0], d2.Un(0)[1]))
 
 
 def test_set_inner_bc(an):
+	"""Test correct assignment of inner boundary conditions.
+	Test that the CFL condition is verified.
 	"""
-	"""
+	for ip in an.range_parent_arteries:
+		i1, i2 = an.daughter_arteries(ip)
+		p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
+		
+		an.define_x()
+		an.set_inner_bc(ip, i1, i2)
+		
+		# Test that the CFL-condition is verified
+		assert(p.check_CFL(p.L, p.Un(p.L)[0], p.Un(p.L)[1]))
+		assert(d1.check_CFL(0, d1.Un(0)[0], d1.Un(0)[1]))
+		assert(d2.check_CFL(0, d2.Un(0)[0], d2.Un(0)[1]))
+
+		x = an.initial_x(p, d1, d2)
+		x = an.newton(p, d1, d2, x, 1000, 1.e-14)
+		
+		assert(near(p.U_out[0], x[9]))
+		assert(near(p.U_out[1], x[0]))
+		assert(near(d1.U_in[0], x[12]))
+		assert(near(d1.U_in[1], x[3]))
+		assert(near(d2.U_in[0], x[15]))
+		assert(near(d2.U_in[1], x[6]))
 
 
 def test_set_bcs(an):
+	"""Test correct assignment of boundary conditions.
 	"""
-	"""
+	q_in = an.arteries[0].q0
+	an.set_bcs(q_in)
+	
+	assert(near(an.arteries[0].q_in, q_in)) 
 
 
 def test_dump_metadata(an):
@@ -325,6 +420,10 @@ def test_artery_network(config_location):
 
 	test_compute_A_out(an)
 
+	test_initial_x(an)
+
+	test_define_x(an)
+
 	test_problem_function(an)
 
 	test_jacobian(an)
@@ -336,10 +435,6 @@ def test_artery_network(config_location):
 	test_set_inner_bc(an)
 
 	test_set_bcs(an)
-
-	test_initial_x(an)
-
-	test_define_x(an)
 
 	test_dump_metadata(an)
 
