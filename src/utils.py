@@ -22,7 +22,7 @@ def mmHg_to_unit(p):
 	return 101325/76*p
 
 
-def adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho,
+def adimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3, rho,
 					nu, p0, R1, R2, CT, q_ins, T):
 	"""Make quantities independent of units.
 	:param rc: Characteristic length (radius)
@@ -58,6 +58,26 @@ def adimensionalise(rc, qc, Ru, Rd, L, k1, k2, k3, rho,
 	q_ins = q_ins/qc
 	T = T*qc/rc**3
 	return Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q_ins, T
+
+
+def adimensionalise(rc, qc, rho, x, nature):
+	"""Adimensionalise a quantity.
+	:param rc: Characteristic radius
+	:param qc: Characteristic flow
+	:param rho: Density
+	:param x: Quantity to be adimensionalised
+	:param string nature: Nature of the quantity to be adimensionalised
+	:return: adimensionalised quantity
+	"""
+	if nature == 'time':
+		x = x*qc/rc**3
+	elif nature == 'area':
+		x = x/rc**2
+	elif nature == 'flow':
+		x = x/qc
+	elif nature == 'pressure':
+		x = x*rc**4/rho/qc**2
+	return x
 
 
 def redimensionalise(rc, qc, rho, x, nature):
@@ -99,11 +119,11 @@ def read_output(filename):
 	qc = config.getfloat('data', 'qc')
 	rho = config.getfloat('data', 'rho')
 	mesh_locations = config.get('data', 'mesh_locations').split(',')
-	locations = config.get('data', 'locations').split(',')
 	names = config.get('data', 'names').split(',')
+	locations = config.get('data', 'locations').split(',')
 	
 	return order, Nx, Nt, T0, T, L, rc, qc, rho, mesh_locations,\
-		   locations, names
+		   names, locations
 
 
 def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):

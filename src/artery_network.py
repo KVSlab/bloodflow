@@ -410,7 +410,7 @@ class Artery_Network(object):
 		return J
 
 
-	def newton(self, p, d1, d2, x=np.ones(18), k_max=100, tol=1.e-12):
+	def newton(self, p, d1, d2, x=np.ones(18), k_max=30, tol=1.e-10):
 		"""Compute solution to the system of equations.
 		:param p: Parent artery
 		:param d1: First daughter vessel
@@ -507,16 +507,16 @@ class Artery_Network(object):
 		for artery in self.arteries[:-1]:
 			L += str(artery.L)+','
 		L += str(self.arteries[-1].L)
-		locations = ''
 		names = ''
-		locations += self.output_location + '/flow'
+		locations = ''
 		names += 'flow'
+		locations += self.output_location + '/flow'
 		if store_area:
-			locations += ',' + self.output_location + '/area'
 			names += ',area'
+			locations += ',' + self.output_location + '/area'
 		if store_pressure:
-			locations += ',' + self.output_location + '/pressure'
 			names += ',pressure'
+			locations += ',' + self.output_location + '/pressure'
 		
 		# Save metadata
 		config = configparser.RawConfigParser()
@@ -531,8 +531,8 @@ class Artery_Network(object):
 		config.set('data', 'qc', str(self.qc))
 		config.set('data', 'rho', str(self.rho))
 		config.set('data', 'mesh_locations', mesh_locations)
-		config.set('data', 'locations', locations)
 		config.set('data', 'names', names)
+		config.set('data', 'locations', locations)
 		with open(self.output_location+'/data.cfg', 'w') as configfile:
 			config.write(configfile)
 
@@ -552,25 +552,24 @@ class Artery_Network(object):
 		self.dump_metadata(Nt_store, N_cycles_store, store_area, store_pressure)
 
 		# Setup storage files
+		xdmffile_flow = [0] * len(self.range_arteries)
+
 		if store_area:
 			xdmffile_area = [0] * len(self.range_arteries)
 		
 		if store_pressure:
-			xdmffile_pressure = [0] * len(self.range_arteries)
-		
-		xdmffile_flow = [0] * len(self.range_arteries)
+			xdmffile_pressure = [0] * len(self.range_arteries)		
 
 		for i in self.range_arteries:
-
+			
+			xdmffile_flow[i] = XDMFFile('%s/flow/flow_%i.xdmf'\
+										% (self.output_location, i))
 			if store_area:
 				xdmffile_area[i] = XDMFFile('%s/area/area_%i.xdmf'\
 											% (self.output_location, i))
 			if store_pressure:
 				xdmffile_pressure[i] = XDMFFile('%s/pressure/pressure_%i.xdmf'\
 												% (self.output_location, i))
-			
-			xdmffile_flow[i] = XDMFFile('%s/flow/flow_%i.xdmf'\
-										% (self.output_location, i))
 
 		# Initialise time
 		t = 0
@@ -598,6 +597,8 @@ class Artery_Network(object):
 						# Split solution for storing, with deepcopy
 						area, flow = artery.Un.split(True)
 
+						xdmffile_flow[i].write_checkpoint(flow, 'flow', t)
+
 						if store_area:
 							xdmffile_area[i].write_checkpoint(area, 'area', t)
 						
@@ -605,8 +606,6 @@ class Artery_Network(object):
 							artery.update_pressure()
 							xdmffile_pressure[i].write_checkpoint(artery.pn,
 																  'pressure', t)
-						
-						xdmffile_flow[i].write_checkpoint(flow, 'flow', t)
 					
 					# Solve problem on artery for time t_(n+1)
 					artery.solve()

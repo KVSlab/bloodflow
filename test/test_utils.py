@@ -5,7 +5,8 @@ from utils import *
 
 
 def test_unit_to_mmHg():
-
+	for p in range(50, 200, 5):
+	assert(unit_to_mmHg(p)
 
 def test_mmHg_to_unit():
 

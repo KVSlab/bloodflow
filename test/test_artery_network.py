@@ -51,12 +51,15 @@ def get_parameters(config_location):
 	store_area = config.getint('Solution', 'store_area')
 	store_pressure = config.getint('Solution', 'store_pressure')
 	q0 = config.getfloat('Solution', 'q0')
+	q_half = config.getfloat('Solution', 'q_half')
 	
 	# Adimensionalise parameters
-	Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q0, T = adimensionalise(
-		rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, R1, R2, CT, q0, T)
+	Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q0, T =\
+		adimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3,
+								   rho, nu, p0, R1, R2, CT, q0, T)
+	q_half = adimensionalise(rc, qc, rho, q_half, 'flow')
 	
-	return order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT, Nt, Nx, T, N_cycles, output_location, theta, Nt_store, N_cycles_store, store_area, store_pressure, q0
+	return order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT, Nt, Nx, T, N_cycles, output_location, theta, Nt_store, N_cycles_store, store_area, store_pressure, q0, q_half
 
 
 
@@ -389,28 +392,46 @@ def test_dump_metadata(an, Nt_store, N_cycles_store, store_area, store_pressure)
 	"""
 	an.dump_metadata(Nt_store, N_cycles_store, store_area, store_pressure)
 	
-	order, Nx, Nt, T0, T, L, rc, qc, rho, mesh_locations, locations, names = \
+	order, Nx, Nt, T0, T, L, rc, qc, rho, mesh_locations, names, locations = \
 		read_output(an.output_location+'/data.cfg')
 	
 	assert(order == an.order)
 	assert(Nx == an.Nx)
 	assert(Nt == Nt_store*N_cycles_store)
-	assert(near(T0, an.T*(N_cycles-N_cycles_store))
-	assert(near(T, an.T*N_cycles))
-	for i in len(L): assert(near(L[i], an.arteries[i].L))
+	assert(near(T0, an.T*(an.N_cycles-N_cycles_store)))
+	assert(near(T, an.T*an.N_cycles))
+	for i in range(len(L)): assert(near(L[i], an.arteries[i].L))
 	assert(near(rc, an.rc))
 	assert(near(qc, an.qc))
 	assert(near(rho, an.rho))
-	for i in len(mesh_locations):
+	for i in range(len(mesh_locations)):
 		assert(mesh_locations[i] ==\
-			   ('%s/mesh_%i.xml.gz' % (an.output_location, i))
-	for i in len(locations):
-		assert(locations[i] == ('%s/%s' % (an.ouput_location, names))
+			   ('%s/mesh_%i.xml.gz' % (an.output_location, i)))
+
+	i = 0
+	assert(names[i] == 'flow')
+	if store_area:
+		i += 1
+		assert(names[i] == 'area')
+	if store_pressure:
+		i += 1
+		assert(names[i] == 'pressure')
+
+	for i in range(len(locations)):
+		assert(locations[i] == ('%s/%s' % (an.output_location, names[i])))
 
 
-def test_solve(an):
+def test_solve(an, q0, q_half, Nt_store, N_cycles_store, store_area,
+			   store_pressure):
 	"""
 	"""
+	q_first = np.linspace(q0, q_half, an.Nt//2)
+	q_second = np.linspace(q_half, q0, an.Nt//2)
+	print(len(q_first), type(q_first))
+	print(len(q_second), type(q_second))
+
+	q_ins = np.concatenate([q_first, q_second])
+	an.solve(q_ins, Nt_store, N_cycles_store, store_area, store_pressure)
 
 
 def test_artery_network(config_location):
@@ -418,7 +439,7 @@ def test_artery_network(config_location):
 	"""
 	order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT, Nt, Nx,\
 		T, N_cycles, output_location, theta, Nt_store, N_cycles_store,\
-		store_area, store_pressure, q0 = get_parameters(config_location)
+		store_area, store_pressure, q0, q_half = get_parameters(config_location)
 	
 	an = test_constructor(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu,\
 						  p0, R1, R2, CT)
@@ -457,9 +478,10 @@ def test_artery_network(config_location):
 
 	test_set_bcs(an)
 
-	test_dump_metadata(an)
+	test_dump_metadata(an, Nt_store, N_cycles_store, store_area, store_pressure)
 
-	test_solve(an)
+	test_solve(an, q0, q_half, Nt_store, N_cycles_store, store_area,
+			   store_pressure)
 
 
 if __name__ == '__main__':
