@@ -488,22 +488,21 @@ class Artery_Network(object):
 			self.arteries[i].A_out = self.compute_A_out(self.arteries[i])
 
 
-	def dump_metadata(self, store_area, store_pressure):
+	def dump_metadata(self, Nt_store, N_cycles_store, store_area,
+					  store_pressure):
 		"""Save mesh.
 		Dump metadata necessary for interpretation of xdmf-files.
 		:param boolean store_area: Store area if true
 		:param boolean store_pressure: Store pressure if true
 		"""
-		# Save mesh
+		# Assemble strings
 		mesh_locations = ''
 		for i in self.range_arteries:
 			mesh_location = self.output_location + '/mesh_%i.xml.gz' % (i)
-			File(mesh_location) << self.arteries[i].mesh
+			File(mesh_location) << self.arteries[i].mesh  # Save mesh
 			if i > 0:
 				mesh_locations += ','
-			mesh_locations += mesh_location
-		
-		# Assemble strings
+			mesh_locations += mesh_location		
 		L = ''
 		for artery in self.arteries[:-1]:
 			L += str(artery.L)+','
@@ -524,8 +523,9 @@ class Artery_Network(object):
 		config.add_section('data')
 		config.set('data', 'order', str(self.order))
 		config.set('data', 'Nx', str(self.Nx))
-		config.set('data', 'Nt', str(self.Nt_store*self.N_cycles_store))
-		config.set('data', 'T', str(self.T*self.N_cycles_store))
+		config.set('data', 'Nt', str(Nt_store*N_cycles_store))
+		config.set('data', 'T0', str(self.T*(self.N_cycles-N_cycles_store)))
+		config.set('data', 'T', str(self.T*self.N_cycles))
 		config.set('data', 'L', L)
 		config.set('data', 'rc', str(self.rc))
 		config.set('data', 'qc', str(self.qc))
@@ -546,13 +546,10 @@ class Artery_Network(object):
 		:param boolean store_area: Store area if true
 		:param boolean store_pressure: Store pressure if true
 		"""
-		self.Nt_store = Nt_store
-		self.N_cycles_store = N_cycles_store
-
 		self.define_x()
 
 		# Store parameters necessary for postprocessing
-		self.dump_metadata(store_area, store_pressure)
+		self.dump_metadata(Nt_store, N_cycles_store, store_area, store_pressure)
 
 		# Setup storage files
 		if store_area:
@@ -594,9 +591,9 @@ class Artery_Network(object):
 				for i, artery in enumerate(self.arteries):
 
 					# Store solution at time t_n
-					cycle_store = (n_cycle >= self.N_cycles-self.N_cycles_store)
+					cycle_store = (n_cycle >= self.N_cycles-N_cycles_store)
 					
-					if cycle_store and n % (self.Nt/self.Nt_store) == 0:
+					if cycle_store and n % (self.Nt/Nt_store) == 0:
 
 						# Split solution for storing, with deepcopy
 						area, flow = artery.Un.split(True)

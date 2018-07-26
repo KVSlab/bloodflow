@@ -4,12 +4,11 @@ import numpy as np
 from configparser import ConfigParser
 
 sys.path.insert(0, 'src/')
-sys.path.insert(0, 'test/')
 
 import test_artery as ta
 from artery_network import Artery_Network
 from utils import *
-from test_artery import near
+from utils import is_near as near
 
 
 def get_parameters(config_location):
@@ -385,9 +384,28 @@ def test_set_bcs(an):
 	assert(near(an.arteries[0].q_in, q_in)) 
 
 
-def test_dump_metadata(an):
+def test_dump_metadata(an, Nt_store, N_cycles_store, store_area, store_pressure):
+	"""Test correct execution of dump_metadata.
 	"""
-	"""
+	an.dump_metadata(Nt_store, N_cycles_store, store_area, store_pressure)
+	
+	order, Nx, Nt, T0, T, L, rc, qc, rho, mesh_locations, locations, names = \
+		read_output(an.output_location+'/data.cfg')
+	
+	assert(order == an.order)
+	assert(Nx == an.Nx)
+	assert(Nt == Nt_store*N_cycles_store)
+	assert(near(T0, an.T*(N_cycles-N_cycles_store))
+	assert(near(T, an.T*N_cycles))
+	for i in len(L): assert(near(L[i], an.arteries[i].L))
+	assert(near(rc, an.rc))
+	assert(near(qc, an.qc))
+	assert(near(rho, an.rho))
+	for i in len(mesh_locations):
+		assert(mesh_locations[i] ==\
+			   ('%s/mesh_%i.xml.gz' % (an.output_location, i))
+	for i in len(locations):
+		assert(locations[i] == ('%s/%s' % (an.ouput_location, names))
 
 
 def test_solve(an):
@@ -398,9 +416,12 @@ def test_solve(an):
 def test_artery_network(config_location):
 	"""Test correct functionality of the methods from the artery_network class.
 	"""
-	order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT, Nt, Nx, T, N_cycles, output_location, theta, Nt_store, N_cycles_store, store_area, store_pressure, q0 = get_parameters(config_location)
+	order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT, Nt, Nx,\
+		T, N_cycles, output_location, theta, Nt_store, N_cycles_store,\
+		store_area, store_pressure, q0 = get_parameters(config_location)
 	
-	an = test_constructor(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT)
+	an = test_constructor(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu,\
+						  p0, R1, R2, CT)
 
 	test_daughter_arteries(an)
 

@@ -6,20 +6,8 @@ import fenics as fn
 
 sys.path.insert(0, 'src/')
 from utils import *
+from utils import is_near as near
 from artery import Artery
-
-def near(a, b, tol=1.e-14, reltol=1.e-10):
-	"""Check equality between two floats with a certain tolerance.
-	:param a: First number
-	:param b: Second number
-	:param tol: Tolerance for equality
-	:return: True if the two numbers are to be considered equal
-	"""
-	# Neglect relative error if numbers are close to zero
-	if np.abs(b) > 1.e-10:
-		return np.abs(a-b) < tol or np.abs(a/b-1) < reltol
-	else:
-		return np.abs(a-b) < tol
 
 
 def get_parameters(config_location):

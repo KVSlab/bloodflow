@@ -15,9 +15,10 @@ def main(data_location):
 	order, Nx, Nt, T, L, rc, qc, rho, mesh_locations, locations, names =\
 		read_output(data_location)
 
+	T0 = redimensionalise(rc, qc, rho, T0, 'time')
 	T = redimensionalise(rc, qc, rho, T, 'time')
 
-	t = np.linspace(0, T, Nt)
+	t = np.linspace(T0, T, Nt)
 
 	for i, name in enumerate(names):
 

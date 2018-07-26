@@ -92,6 +92,7 @@ def read_output(filename):
 	order = config.getint('data', 'order')
 	Nx = config.getint('data', 'Nx')
 	Nt = config.getint('data', 'Nt')
+	T0 = config.getfloat('data', 'T0')
 	T = config.getfloat('data', 'T')
 	L = [float(f) for f in config.get('data', 'L').split(',')]
 	rc = config.getfloat('data', 'rc')
@@ -101,7 +102,8 @@ def read_output(filename):
 	locations = config.get('data', 'locations').split(',')
 	names = config.get('data', 'names').split(',')
 	
-	return order, Nx, Nt, T, L, rc, qc, rho, mesh_locations, locations, names
+	return order, Nx, Nt, T0, T, L, rc, qc, rho, mesh_locations,\
+		   locations, names
 
 
 def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
@@ -148,3 +150,18 @@ def plot_matrix(t, x, M, label, output):
 	ax.set_xlim(min(t), max(t))
 	print('Saving matrix to %s.' % (output))
 	plt.savefig(output)
+
+
+def is_near(a, b, tol=1.e-14, reltol=1.e-10):
+	"""Check equality between two floats with a certain tolerance.
+	Name contains 'is_' to differentiate it from FEniCS near.
+	:param a: First number
+	:param b: Second number
+	:param tol: Tolerance for equality
+	:return: True if the two numbers are to be considered equal
+	"""
+	# Neglect relative error if numbers are close to zero
+	if np.abs(b) > 1.e-10:
+		return np.abs(a-b) < tol or np.abs(a/b-1) < reltol
+	else:
+		return np.abs(a-b) < tol
