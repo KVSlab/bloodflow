@@ -36,12 +36,12 @@ $$
 
 where $U = (A, q)$, $F(U) = (q, \frac{q^2}{A} + f(r_0) \sqrt{A_0 A})$, $S(U) = (0, -\frac{2\sqrt{\pi}}{\delta_b Re} \frac{q}{\sqrt{A}} + (2 \sqrt{A} (\sqrt{\pi} f(r_0) + \sqrt{A_0} \frac{df}{dr_0}(r_0)) - A \frac{df}{dr_0}(r_0))\frac{dr_0}{dx})$. A is the cross-sectional area, q is the flow.
 
-The above equation governs the blood flow on one artery. The associated boundary conditions are as follows: The initial radii respect the relation $r_0(x) = Ru (\frac{Rd}{Ru})^{x/L}$. For the root artery, the inlet flow is provided as input. For each artery, the initial flow is computed according to the artery's share of the cross-sectional area at the bifurcation. At each bifurcation point, the area and the flow is computed using Richtmyer's two-step Lax-Wendroff method, by solving a system of equations with 18 unknowns. At the end arteries, the pressure is computed using a Windkessel model. When the pressure is known, the area can be computed from the state equation: $p - p_0 = f(r_0) (1 - \sqrt{\frac{A_0}{A}})$. A more detailed explanation is elaborated in Olufssen:2000, Kolachalama:2007.
+The above equation governs the blood flow on one artery. The associated boundary conditions are as follows: The initial radii respect the relation $r_0(x) = Ru (\frac{Rd}{Ru})^{x/L}$. For the root artery, the inlet flow is provided as input. For each artery, the initial flow is computed according to the artery's share of the cross-sectional area at the bifurcation. At each bifurcation point, the area and the flow is computed using Richtmyer's two-step Lax-Wendroff method, by solving a system of equations with 18 unknowns. At the end arteries, the pressure is computed using a Windkessel model. When the pressure is known, the area can be computed from the state equation: $p - p_0 = f(r_0) (1 - \sqrt{\frac{A_0}{A}})$. A more detailed explanation is elaborated in Olufssen:2000, Kolachalama:2007 and Diem:2016.
 
 
 # Acknowlegdments
 
-The author would like to thank the Simula Research laboratory for its contributions to this package.
+The author would like to thank the Simula Research Laboratory for its contributions to this package.
 
 
 # References
