@@ -1,8 +1,7 @@
 import sys
+
 import numpy as np
 from scipy.interpolate import interp1d
-
-from fenics import *
 import configparser
 
 sys.path.insert(0, 'src/')
@@ -12,7 +11,8 @@ from artery_network import Artery_Network
 
 
 def main(config_location):
-	"""
+	"""Read config-file.
+	Run the necessary functions to compute the solution.
 	:param string config_location: Location of config file
 	"""
 	config = configparser.ConfigParser()
@@ -71,9 +71,10 @@ def main(config_location):
 						k3,	rho, Re, nu, p0, R1, R2, CT)
 	an.define_geometry(Nx, Nt, T, N_cycles)
 	an.define_solution(output_location, q_ins[0], theta)
-	
+
 	# Solve problem and store data
 	an.solve(q_ins, Nt_store, N_cycles_store, store_area, store_pressure)
+
 
 if __name__ == '__main__':
 	main(sys.argv[1])

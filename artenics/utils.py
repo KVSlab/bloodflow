@@ -13,7 +13,8 @@ def unit_to_mmHg(p):
 	:return: Pressure in mmHg
 	"""
 	return 76/101325*p
-	
+
+
 def mmHg_to_unit(p):
 	"""Convert pressure units.
 	:param p: Pressure in mmHg
@@ -23,7 +24,7 @@ def mmHg_to_unit(p):
 
 
 def adimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3, rho,
-					nu, p0, R1, R2, CT, q_ins, T):
+							   nu, p0, R1, R2, CT, q_ins, T):
 	"""Make quantities independent of units.
 	:param rc: Characteristic length (radius)
 	:param qc: Characteristic flow
@@ -108,7 +109,7 @@ def read_output(filename):
 	"""
 	config = ConfigParser()
 	config.read(filename)
-	
+
 	order = config.getint('data', 'order')
 	Nx = config.getint('data', 'Nx')
 	Nt = config.getint('data', 'Nt')
@@ -121,13 +122,13 @@ def read_output(filename):
 	mesh_locations = config.get('data', 'mesh_locations').split(',')
 	names = config.get('data', 'names').split(',')
 	locations = config.get('data', 'locations').split(',')
-	
+
 	return order, Nx, Nt, T0, T, L, rc, qc, rho, mesh_locations,\
 		   names, locations
 
 
 def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
-	"""Read XDMFFile and store it in a matrix.
+	"""Read XDMF-file and store it in a matrix.
 	:param Nx: Number of spatial steps (number of nodes: Nx+1)
 	:param Nt: Number of time steps
 	:param mesh_location: Location of mesh to be loaded
@@ -173,11 +174,12 @@ def plot_matrix(t, x, M, label, output):
 
 
 def is_near(a, b, tol=1.e-14, reltol=1.e-10):
-	"""Check equality between two floats with a certain tolerance.
-	Name contains 'is_' to differentiate it from FEniCS near.
+	"""Check equality between two floats to a certain tolerance.
+	Name contains 'is_' to differentiate it from FEniCS near-function.
 	:param a: First number
 	:param b: Second number
 	:param tol: Tolerance for equality
+	:param reltol: Relative tolerance for equality
 	:return: True if the two numbers are to be considered equal
 	"""
 	# Neglect relative error if numbers are close to zero

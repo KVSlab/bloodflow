@@ -35,7 +35,6 @@ def get_parameters(config_location):
 	R1 = config.getfloat('Parameters', 'R1')
 	R2 = config.getfloat('Parameters', 'R2')
 	CT = config.getfloat('Parameters', 'CT')
-	
 
 	# Geometry parameters
 	Nt = config.getint('Geometry', 'Nt')
@@ -52,19 +51,22 @@ def get_parameters(config_location):
 	store_pressure = config.getint('Solution', 'store_pressure')
 	q0 = config.getfloat('Solution', 'q0')
 	q_half = config.getfloat('Solution', 'q_half')
-	
+
 	# Adimensionalise parameters
 	Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q0, T =\
 		adimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3,
 								   rho, nu, p0, R1, R2, CT, q0, T)
 	q_half = adimensionalise(rc, qc, rho, q_half, 'flow')
 	
-	return order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT, Nt, Nx, T, N_cycles, output_location, theta, Nt_store, N_cycles_store, store_area, store_pressure, q0, q_half
+	return order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,
+		   Nt, Nx, T, N_cycles, output_location, theta, Nt_store,
+		   N_cycles_store, store_area, store_pressure, q0, q_half
 
 
 
 
-def test_constructor(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT):
+def test_constructor(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,
+					 R1, R2, CT):
 	"""Construct artery network.
 	Test correct assignment of parameters.
 	Test correct structure of network.
@@ -86,7 +88,8 @@ def test_constructor(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, 
 	:param CT: Compliance from Windkessel model
 	:return: Constructed artery network
 	"""
-	an = Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT)
+	an = Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,
+						R1, R2, CT)
 	
 	assert(an.order == order)
 	assert(len(an.arteries) == 2**order-1)
@@ -193,7 +196,7 @@ def test_compute_U_half(an):
 	for a in an.arteries:
 		for x in [[0, a.dex], [a.L-a.dex, a.L]]:
 			U0, U1 = a.Un(x[0]), a.Un(x[1])
-			an_U_half = an.compute_U_half(a, U0, U1, x[0], x[1])
+			an_U_half = an.compute_U_half(a, x[0], x[1], U0, U1)
 			F0, S0 = an.flux(a, U0, x[0]), an.source(a, U0, x[0])
 			F1, S1 = an.flux(a, U1, x[1]), an.source(a, U1, x[1])
 			U_half = (U0+U1)/2 - a.dt/a.dex*(F1-F0) + a.dt/4*(S0+S1)
@@ -249,9 +252,9 @@ def test_problem_function(an):
 		U0d1, U1d1 = d1.Un(0), d1.Un(d1.dex)
 		U0d2, U1d2 = d2.Un(0), d2.Un(d2.dex)
 
-		U_half_p = an.compute_U_half(p, Um1p, Um0p, p.L-p.dex, p.L)
-		U_half_d1 = an.compute_U_half(d1, U0d1, U1d1, 0, d1.dex)
-		U_half_d2 = an.compute_U_half(d2, U0d2, U1d2, 0, d2.dex)
+		U_half_p = an.compute_U_half(p, p.L-p.dex, p.L, Um1p, Um0p)
+		U_half_d1 = an.compute_U_half(d1, 0, d1.dex, U0d1, U1d1)
+		U_half_d2 = an.compute_U_half(d2, 0, d2.dex, U0d2, U1d2)
 		
 		F_half_p = an.flux(p, U_half_p, p.L-p.dex/2)
 		F_half_d1 = an.flux(d1, U_half_d1, d1.dex/2)

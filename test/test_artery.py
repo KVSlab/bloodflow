@@ -98,7 +98,7 @@ def test_define_geometry(a, Nx, Nt, T, N_cycles):
 	Test types of FEniCS objects.
 	Test correct behaviour of FEniCS expressions.
 	:param a: Artery on which define_geometry is to be called and tested
-	:param Nx: Number of spatial steps
+	:param Nx: Spatial refinement
 	:param Nt: Number of temporal steps
 	:param T: Duration of one cardiac cycle
 	:param N_cycles: Number of cardiac cycles

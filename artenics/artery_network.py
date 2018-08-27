@@ -3,7 +3,6 @@ __author__ = 'Syver Døving Agdestein'
 import sys
 import numpy as np
 import numpy.linalg as npl
-from scipy.interpolate import interp1d
 
 import configparser
 from fenics import *
@@ -55,9 +54,9 @@ class Artery_Network(object):
 		:param i: Parent vessel index
 		:return: Daughter vessel indices
 		"""
-		if i < 0 or i >= 2**(self.order-1):
-			raise Exception('Vessel index out of range')
-			
+		#if i < 0 or i >= 2**(self.order-1):
+		#	raise Exception('Vessel index out of range')
+
 		return 2*i+1, 2*i+2
 
 
@@ -66,12 +65,11 @@ class Artery_Network(object):
 		:param i: Daughter vessel index
 		:return: Parent vessel index
 		"""
-		if i <= 0 or i >= 2**self.order:
-			raise Exception('Vessel index out of range')
-			
-		# d1 is odd, d2=d1+1 is pair
-		return (i-1)//2
-		
+		#if i <= 0 or i >= 2**self.order:
+		#	raise Exception('Vessel index out of range')
+
+		return (i-1)//2  # d1 is odd, d2=d1+1 is pair
+
 	def sister_artery(self, i):
 		"""Find sister vessel.
 		:param i: Vessel index
@@ -84,9 +82,9 @@ class Artery_Network(object):
 
 
 	def define_geometry(self, Nx, Nt, T, N_cycles):
-		"""Define the FEniCS geometry for the entire arterial network.
-		:param Nx: Number of spatial steps
-		:param Nt: Number of temporal steps
+		"""Define FEniCS geometry on the entire arterial network.
+		:param Nx: Spatial discretisation number
+		:param Nt: Number of time-steps
 		:param T: Duration of one cardiac cycle
 		:param N_cycles: Number of cardiac cycles
 		"""
@@ -102,8 +100,8 @@ class Artery_Network(object):
 	def define_solution(self, output_location, q0, theta=0.5):
 		"""Computes q0 on each artery, before calling define_solution.
 		The daughter vessel gets a flow proportional to its share of the area.
-		:param string output_location: Directory for ouput
-		:param q0: Initial flow of the first vessel
+		:param string output_location: Output location
+		:param q0: Initial flow of the root vessel
 		:param theta: Crank-Nicolson weight parameter, in the interval [0, 1]
 		"""
 		self.output_location = output_location
@@ -147,13 +145,13 @@ class Artery_Network(object):
 		return np.array([S1, S2])
 
 
-	def compute_U_half(self, a, U0, U1, x0, x1):
-		"""Compute a half step.
+	def compute_U_half(self, a, x0, x1, U0, U1):
+		"""Compute solution at half step.
 		:param a: Current artery
-		:param U0: Left point
-		:param U1: Right point
-		:param x0: x-value at which U0 is the solution
-		:param x1: x-value at which U1 is the solution
+		:param x0: Left point
+		:param x1: Right point
+		:param U0: Solution at right point
+		:param U1: Solution at left point
 		:return: Middle point, half a time step later
 		"""
 		# Value of terms at time t_n
@@ -171,7 +169,7 @@ class Artery_Network(object):
 		:return: Outlet boundary value of A at time step t_(n+1)
 		"""
 		a.adjust_dex(a.L, a.Un(a.L)[0], a.Un(a.L)[1])
-		
+
 		# Spatial step, scaled to satisfy the CFL condition
 		x2, x1, x0 = a.L-2*a.dex, a.L-a.dex, a.L
 		x21, x10 = a.L-1.5*a.dex, a.L-0.5*a.dex
@@ -183,8 +181,8 @@ class Artery_Network(object):
 		Fm0, Sm0 = self.flux(a, Um0, x0), self.source(a, Um0, x0)
 
 		# Values at time step n+1/2
-		U_half_21 = self.compute_U_half(a, Um2, Um1, x2, x1)
-		U_half_10 = self.compute_U_half(a, Um1, Um0, x1, x0)
+		U_half_21 = self.compute_U_half(a, x2, x1, Um2, Um1)
+		U_half_10 = self.compute_U_half(a, x1, x0, Um1, Um0)
 		F_half_21 = self.flux(a, U_half_21, x21)
 		S_half_21 = self.source(a, U_half_21, x21)
 		F_half_10 = self.flux(a, U_half_10, x10)
@@ -208,7 +206,7 @@ class Artery_Network(object):
 			p = a.compute_outlet_pressure(Am0)
 			if abs(p-p_old) < tol:
 				break
-				
+
 		return Am0
 
 
@@ -271,9 +269,9 @@ class Artery_Network(object):
 		U0d1, U1d1 = d1.Un(0), d1.Un(d1.dex)
 		U0d2, U1d2 = d2.Un(0), d2.Un(d2.dex)
 
-		U_half_p = self.compute_U_half(p, Um1p, Um0p, p.L-p.dex, p.L)
-		U_half_1 = self.compute_U_half(d1, U0d1, U1d1, 0, d1.dex)
-		U_half_2 = self.compute_U_half(d2, U0d2, U1d2, 0, d2.dex)
+		U_half_p = self.compute_U_half(p, p.L-p.dex, p.L, Um1p, Um0p)
+		U_half_1 = self.compute_U_half(d1, 0, d1.dex, U0d1, U1d1)
+		U_half_2 = self.compute_U_half(d2, 0, d2.dex, U0d2, U1d2)
 		
 		F_half_p = self.flux(p, U_half_p, p.L-p.dex/2)
 		S_half_p = self.source(p, U_half_p, p.L-p.dex/2)
@@ -282,7 +280,7 @@ class Artery_Network(object):
 		F_half_2 = self.flux(d2, U_half_2, d2.dex/2)
 		S_half_2 = self.source(d2, U_half_2, d2.dex/2)
 		
-		# Function return variable
+		# Function return array
 		y = np.zeros(18)
 		
 		# Entries from equation (20)
@@ -322,7 +320,7 @@ class Artery_Network(object):
 
 
 	def jacobian(self, p, d1, d2, x):
-		"""Compute the jacobian matrix for the system of equations.
+		"""Compute the analytical jacobian matrix for the system of equations.
 		:param p: Parent artery
 		:param d1: First daughter vessel
 		:param d2: Second daughter vessel
@@ -341,10 +339,10 @@ class Artery_Network(object):
 		drdxp, drdx1, drdx2 = p.drdx(p.L+p.dex),\
 							  d1.drdx(-d1.dex), d2.drdx(-d2.dex)
 		rpi = np.sqrt(np.pi)
-		
+
 		# Jacobian matrix
 		J = np.zeros([18, 18])
-		
+
 		# Entries from equation (20)
 		J[0, 1] = 2
 		J[0, 2] = -1
@@ -352,7 +350,7 @@ class Artery_Network(object):
 		J[1, 5] = -1
 		J[2, 7] = 2
 		J[2, 8] = -1
-		
+
 		# Entries from equation (21)
 		J[3, 10] = 2
 		J[3, 11] = -1
@@ -360,7 +358,7 @@ class Artery_Network(object):
 		J[4, 14] = -1
 		J[5, 16] = 2
 		J[5, 17] = -1
-		
+
 		# Entries from equation (22)
 		J[6, 0] = 1
 		J[6, 3] = -1
@@ -368,7 +366,7 @@ class Artery_Network(object):
 		J[7, 1] = 1
 		J[7, 4] = -1
 		J[7, 7] = -1
-		
+
 		# Entries from equation (23)
 		J[8, 10] = fp*np.sqrt(A0p)/2/x[10]**(3/2)
 		J[8, 13] = -f1*np.sqrt(A01)/2/x[13]**(3/2)
@@ -398,7 +396,7 @@ class Artery_Network(object):
 				  - d2.dt/2*(rpi/db2/Re2*x[8]/x[17]**(3/2)\
 							+ (1/np.sqrt(x[17])*(rpi*fh2+np.sqrt(A0h2)*dfdr2)\
 												- dfdr2)*drdx2)
-		
+
 		# Entries from equation (27)
 		J[15, 2] = p.dt/p.dex
 		J[15, 9] = 1
@@ -406,7 +404,7 @@ class Artery_Network(object):
 		J[16, 12] = 1
 		J[17, 8] = - d1.dt/d1.dex
 		J[17, 15] = 1
-		
+
 		return J
 
 
@@ -432,8 +430,7 @@ class Artery_Network(object):
 				x -= npl.solve(J, func)
 			except npl.LinAlgError:
 				print('Singular')
-				# Perturbation value
-				eps = 1.e-6
+				eps = 1.e-6  # Perturbation value
 				J += eps*np.eye(18)
 				func[0] += eps
 				x -= npl.solve(J, func)
@@ -451,6 +448,8 @@ class Artery_Network(object):
 		Mp = p.CFL_term(p.L, p.Un(p.L)[0], p.Un(p.L)[1])
 		M1 = d1.CFL_term(0, d1.Un(0)[0], d1.Un(0)[1])
 		M2 = d2.CFL_term(0, d2.Un(0)[0], d2.Un(0)[1])
+
+		# dex is chosen to respect all three CFL-conditions
 		p.dex = d1.dex = d2.dex = (1+margin)*self.dt/min([Mp, M1, M2])
 
 
@@ -461,19 +460,19 @@ class Artery_Network(object):
 		:param i2: Second daughter vessel index
 		"""
 		p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
-		
+
 		self.adjust_bifurcation_step(p, d1, d2)
-		
+
 		self.x[ip] = self.newton(p, d1, d2, self.x[ip])
-		
+
 		p.U_out = [self.x[ip, 9], self.x[ip, 0]]
 		d1.U_in = [self.x[ip, 12], self.x[ip, 3]]
 		d2.U_in = [self.x[ip, 15], self.x[ip, 6]]
-	
-	
+
+
 	def set_bcs(self, q_in):
 		""" Update boundary conditions for time t_(n+1) at all boundaries.
-		:param q_in_value: Value of inflow of root artery at time t_(n+1)
+		:param q_in: Value of inflow for root artery at time t_(n+1)
 		"""
 		# Update inlet boundary conditions
 		self.arteries[0].q_in = q_in
@@ -482,8 +481,8 @@ class Artery_Network(object):
 		for ip in self.range_parent_arteries:
 			i1, i2 = self.daughter_arteries(ip)
 			self.set_inner_bc(ip, i1, i2)
-		
-		# Update outlet boundary condition
+
+		# Update outlet boundary conditions
 		for i in self.range_end_arteries:
 			self.arteries[i].A_out = self.compute_A_out(self.arteries[i])
 
@@ -492,8 +491,8 @@ class Artery_Network(object):
 					  store_pressure):
 		"""Save mesh.
 		Dump metadata necessary for interpretation of xdmf-files.
-		:param boolean store_area: Store area if true
-		:param boolean store_pressure: Store pressure if true
+		:param boolean store_area: Store area if True
+		:param boolean store_pressure: Store pressure if True
 		"""
 		# Assemble strings
 		mesh_locations = ''
@@ -517,7 +516,7 @@ class Artery_Network(object):
 		if store_pressure:
 			names += ',pressure'
 			locations += ',' + self.output_location + '/pressure'
-		
+
 		# Save metadata
 		config = configparser.RawConfigParser()
 		config.add_section('data')
@@ -553,15 +552,11 @@ class Artery_Network(object):
 
 		# Setup storage files
 		xdmffile_flow = [0] * len(self.range_arteries)
-
 		if store_area:
 			xdmffile_area = [0] * len(self.range_arteries)
-		
 		if store_pressure:
 			xdmffile_pressure = [0] * len(self.range_arteries)		
-
 		for i in self.range_arteries:
-			
 			xdmffile_flow[i] = XDMFFile('%s/flow/flow_%i.xdmf'\
 										% (self.output_location, i))
 			if store_area:
@@ -582,7 +577,7 @@ class Artery_Network(object):
 
 				print('Current cycle: %i\nCycle iteration: %i\nTime-step t_%i'\
 					  % (n_cycle, n, n_cycle*self.Nt+n))
-				
+
 				# Apply boundary conditions for time t_(n+1)
 				self.set_bcs(q_ins[(n+1) % (self.Nt)])
 
@@ -591,7 +586,7 @@ class Artery_Network(object):
 
 					# Store solution at time t_n
 					cycle_store = (n_cycle >= self.N_cycles-N_cycles_store)
-					
+
 					if cycle_store and n % (self.Nt/Nt_store) == 0:
 
 						# Split solution for storing, with deepcopy
@@ -601,12 +596,12 @@ class Artery_Network(object):
 
 						if store_area:
 							xdmffile_area[i].write_checkpoint(area, 'area', t)
-						
+
 						if store_pressure:
 							artery.update_pressure()
 							xdmffile_pressure[i].write_checkpoint(artery.pn,
 																  'pressure', t)
-					
+
 					# Solve problem on artery for time t_(n+1)
 					artery.solve()
 

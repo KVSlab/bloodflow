@@ -3,13 +3,11 @@ __author__ = 'Syver Døving Agdestein'
 import sys
 import numpy as np
 
-import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
 from fenics import *
 
 
 class Artery(object):
-	"""Represent an artery.
+	"""Represent an artery, as well as the solution on the artery.
 	:param boolean root_vessel: True if the artery is root-vessel (no parent)
 	:param boolean end_vessel: True if the artery is end-vessel (no daughter)
 	:param rc: Characteristic radius (length)
@@ -49,7 +47,7 @@ class Artery(object):
 	def define_geometry(self, Nx, Nt, T, N_cycles):
 		"""Initialise geometry.
 		Define FEniCS objects.
-		:param Nx: Number of spatial steps
+		:param Nx: Spatial refinement
 		:param Nt: Number of temporal steps
 		:param T: Duration of one cardiac cycle
 		:param N_cycles: Number of cardiac cycles
@@ -58,15 +56,15 @@ class Artery(object):
 		self.Nt = Nt
 		self.T = T
 		self.N_cycles = N_cycles
-		
+
 		self.dx = self.L/self.Nx
 		self.dt = self.T/self.Nt
-		
+
 		# Step for boundary condition computations, starting at normal size
 		self.dex = self.dx
-		
+
 		self.db = np.sqrt(self.nu*self.T/2/np.pi)
-		
+
 		self.mesh = IntervalMesh(self.Nx, 0, self.L)
 		self.elV = FiniteElement('CG', self.mesh.ufl_cell(), 1)
 		self.V = FunctionSpace(self.mesh, self.elV)
@@ -74,18 +72,18 @@ class Artery(object):
 
 		# Initial vessel-radius and deduced quantities
 		self.r0 = Expression('Ru*pow(Rd/Ru, x[0]/L)',
-							degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L)
+							 degree=2, Ru=self.Ru, Rd=self.Rd, L=self.L)
 		self.A0 = Expression('pi*pow(r0, 2)', degree=2, r0=self.r0)
 		self.f = Expression('4.0/3.0*(k1*exp(k2*r0) + k3)', degree=2,
 							k1=self.k1, k2=self.k2, k3=self.k3, r0=self.r0)
 		self.dfdr = Expression('4.0/3.0*k1*k2*exp(k2*r0)', degree=2,
 						 	   k1=self.k1, k2=self.k2, r0=self.r0)
-		self.drdx = Expression('log(Rd/Ru)/L*Ru*pow(Rd/Ru, x[0]/L)', degree=2,
-							   Ru=self.Ru, Rd=self.Rd, L=self.L)
+		self.drdx = Expression('log(Rd/Ru)/L*r0', degree=2,
+							   Ru=self.Ru, Rd=self.Rd, L=self.L, r0=self.r0)
 
 
 	def define_solution(self, q0, theta=0.5, bc_tol=1.e-14):
-		"""Set up FEniCS solution objects.
+		"""Define FEniCS solution objects.
 		Define boundary conditions.
 		Define variational form.
 		:param q0: Initial flow
@@ -94,27 +92,26 @@ class Artery(object):
 		"""
 		# Initial flow value
 		self.q0 = q0
-		
+
 		# Crank-Nicolson parameter
 		self.theta = theta
-		
+
 		# Trial function
 		self.U = Function(self.V2)
 		A, q = split(self.U)
 
 		# Test functions
 		v1, v2 = TestFunctions(self.V2)
- 
-		# Initial solution
+
+		# Current solution, initialised
 		self.Un = Function(self.V2)
 		self.Un.assign(Expression(('A0', 'q0'), degree=2,
 								  A0=self.A0, q0=self.q0))
-		
-		# Initial pressure
+
+		# Current pressure, initialised
 		self.pn = Function(self.V)
-		self.pn.assign(Expression('f*(1-sqrt(A0/A))', degree=2,
-								  f=self.f, A0=self.A0, A=self.Un.split()[0]))
-		
+		self.pn.assign(Expression('p0', degree=2, p0=self.p0]))
+
 		# Boundary conditions (spatial)
 		def inlet_bdry(x, on_boundary):
 			return on_boundary and near(x[0], 0, bc_tol)
@@ -127,10 +124,10 @@ class Artery(object):
 			self._q_in = Expression('value', degree=0, value=self.q0)
 			bc_inlet = DirichletBC(self.V2.sub(1), self._q_in, inlet_bdry)
 		else:
-			self._U_in = Expression(('A', 'q'), degree = 0,
+			self._U_in = Expression(('A', 'q'), degree=0,
 									A=self.A0(0), q=self.q0)
 			bc_inlet = DirichletBC(self.V2, self._U_in, inlet_bdry)
-			
+
 		# Outlet boundary conditions
 		if self.end_vessel:
 			self._A_out = Expression('value', degree=0, value=self.A0(self.L))
@@ -141,7 +138,7 @@ class Artery(object):
 			bc_outlet = DirichletBC(self.V2, self._U_out, outlet_bdry)
 
 		self.bcs = [bc_inlet, bc_outlet]
-		
+
 		# Terms for variational form
 		U_v_dx = A*v1*dx + q*v2*dx
 
@@ -150,7 +147,7 @@ class Artery(object):
 
 		F2_v2_ds = (pow(q, 2)/(A+DOLFIN_EPS)\
 				   +self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*v2*ds
-		
+
 		F2_dv2_dx = (pow(q, 2)/(A+DOLFIN_EPS)\
 					+self.f*sqrt(self.A0*(A+DOLFIN_EPS)))*grad(v2)[0]*dx
 
@@ -251,17 +248,16 @@ class Artery(object):
 		:param margin: A number greater than or equal to one
 		"""
 		M = self.CFL_term(x, A, q)
-		#if self.dt/self.dex > M:
 		self.dex = (1+margin)*self.dt/M
 
-		
+
 	@property
 	def q_in(self):
 		"""Inlet flow (only for root-artery)
 		:return: Inlet flow Expression-object
 		"""
 		return self._q_in.value
-	
+
 	@q_in.setter
 	def q_in(self, value):
 		self._q_in.value = value
@@ -273,20 +269,20 @@ class Artery(object):
 		:return: Inlet solution value
 		"""
 		return np.array([self._U_in.A, self._U_in.q])
-	
+
 	@U_in.setter
 	def U_in(self, U):
 		self._U_in.A = U[0]
 		self._U_in.q = U[1]
 
-	
+
 	@property
 	def A_out(self):
 		"""Outlet area (only in use for end arteries)
 		:return: Outlet flow value
 		"""
 		return self._A_out.value
-	
+
 	@A_out.setter
 	def A_out(self, value):
 		self._A_out.value = value
@@ -298,7 +294,7 @@ class Artery(object):
 		:return: Outlet solution Expression-object
 		"""
 		return np.array([self._U_out.A, self._U_out.q])
-	
+
 	@U_out.setter
 	def U_out(self, U):
 		self._U_out.A = U[0]
