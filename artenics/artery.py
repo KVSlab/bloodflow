@@ -110,7 +110,7 @@ class Artery(object):
 
 		# Current pressure, initialised
 		self.pn = Function(self.V)
-		self.pn.assign(Expression('p0', degree=2, p0=self.p0]))
+		self.pn.assign(Expression('p0', degree=2, p0=self.p0))
 
 		# Boundary conditions (spatial)
 		def inlet_bdry(x, on_boundary):
