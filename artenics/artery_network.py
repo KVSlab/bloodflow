@@ -9,6 +9,7 @@ from fenics import *
 from mshr import *
 
 from artery import Artery
+from utils import *
 
 
 set_log_level(30)
@@ -595,15 +596,18 @@ class Artery_Network(object):
 						# Split solution for storing, with deepcopy
 						area, flow = artery.Un.split(True)
 
-						xdmffile_flow[i].write_checkpoint(flow, 'flow', t)
+						#xdmffile_flow[i].write_checkpoint(flow, 'flow', t)
+						write_file(xdmffile_flow[i], flow, 'flow', t)
 
 						if store_area:
-							xdmffile_area[i].write_checkpoint(area, 'area', t)
+							#xdmffile_area[i].write_checkpoint(area, 'area', t)
+							write_file(xdmffile_area[i], area, 'area', t)
 
 						if store_pressure:
 							artery.update_pressure()
-							xdmffile_pressure[i].write_checkpoint(artery.pn,
-																  'pressure', t)
+							#xdmffile_pressure[i].write_checkpoint(artery.pn,
+							#									  'pressure', t)
+							write_file(xdmffile_pressure[i], artery.pn, 'pressure', t)
 
 					# Solve problem on artery for time t_(n+1)
 					artery.solve()

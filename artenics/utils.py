@@ -8,7 +8,7 @@ from configparser import ConfigParser
 
 
 def unit_to_mmHg(p):
-	"""Convert pressure units. 
+	"""Convert pressure units.
 	:param p: Pressure in g cm-1 s-2
 	:return: Pressure in mmHg
 	"""
@@ -187,3 +187,16 @@ def is_near(a, b, tol=1.e-14, reltol=1.e-10):
 		return np.abs(a-b) < tol or np.abs(a/b-1) < reltol
 	else:
 		return np.abs(a-b) < tol
+
+
+def write_file(f, u, label, t):
+    set_log_level(40)
+    f.write_checkpoint(u, label, t)
+    set_log_level(30)
+
+
+def read_file(f, u, label, i):
+    set_log_level(40)
+    f.read_checkpoint(u, label, i)
+    set_log_level(30)
+    return u
