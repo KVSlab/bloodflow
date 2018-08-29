@@ -185,7 +185,9 @@ class Artery(object):
 		"""Solve problem for one iteration.
 		U_(n+1) is solution of variational_form(U_n) == 0.
 		"""
-		solve(self.variational_form == 0, self.U, self.bcs)
+		F = self.variational_form
+		J = derivative(F, self.U)
+		solve(F == 0, self.U, self.bcs, J=J)
 
 
 	def update_solution(self):
