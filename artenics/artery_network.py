@@ -579,8 +579,7 @@ class Artery_Network(object):
 			# Time-stepping for one period
 			for n in range(self.Nt):
 
-				print('Current cycle: %i\nCycle iteration: %i\nTime-step t_%i'\
-					  % (n_cycle, n, n_cycle*self.Nt+n))
+				print_progress(n_cycle, n, n_cycle*self.Nt+n)
 
 				# Apply boundary conditions for time t_(n+1)
 				self.set_bcs(q_ins[(n+1) % (self.Nt)])

@@ -200,3 +200,8 @@ def read_file(f, u, label, i):
     f.read_checkpoint(u, label, i)
     set_log_level(30)
     return u
+
+
+def print_progress(n_cycle, n, dt):
+    print('Current cycle: %i, Cycle iteration: %i, Time-step %i'\
+		  % (n_cycle, n, dt), end='\r')
