@@ -11,6 +11,9 @@ from mshr import *
 from artery import Artery
 
 
+set_log_level(30)
+
+
 class Artery_Network(object):
 	"""
 	:param order: Number of arterial levels
@@ -95,7 +98,7 @@ class Artery_Network(object):
 		self.dt = T/Nt
 		for i in self.range_arteries:
 			self.arteries[i].define_geometry(Nx, Nt, T, N_cycles)
-	
+
 
 	def define_solution(self, output_location, q0, theta=0.5):
 		"""Computes q0 on each artery, before calling define_solution.
@@ -114,7 +117,7 @@ class Artery_Network(object):
 										+self.arteries[s].A0(0))\
 			   * self.arteries[p].q0
 			self.arteries[i].define_solution(q0, theta)
-			
+
 		self.x = np.ones([len(self.range_parent_arteries), 18])
 
 
@@ -157,9 +160,9 @@ class Artery_Network(object):
 		# Value of terms at time t_n
 		F0, S0 = self.flux(a, U0, x0), self.source(a, U0, x0)
 		F1, S1 = self.flux(a, U1, x1), self.source(a, U1, x1)
-		
-		return (U0+U1)/2 - a.dt/(x1-x0)*(F1-F0) + a.dt/4*(S0+S1) 
-		
+
+		return (U0+U1)/2 - a.dt/(x1-x0)*(F1-F0) + a.dt/4*(S0+S1)
+
 
 	def compute_A_out(self, a, k_max=100, tol=1.0e-12):
 		"""Compute the outlet boundary condition.
@@ -255,7 +258,7 @@ class Artery_Network(object):
 		dfdrp, dfdr1, dfdr2 = p.dfdr(p.L), d1.dfdr(0), d2.dfdr(0)
 		drdxp, drdx1, drdx2 = p.drdx(p.L), d1.drdx(0), d2.drdx(0)
 		rpi = sqrt(np.pi)
-		
+
 		# Ghost half terms
 		Fp = self.flux(p, np.array([x[11], x[2]]), p.L+p.dex/2)
 		F1 = self.flux(d1, np.array([x[14], x[5]]), -d1.dex/2)
@@ -263,7 +266,7 @@ class Artery_Network(object):
 		Sp = self.source(p, np.array([x[11], x[2]]), p.L+p.dex/2)
 		S1 = self.source(d1, np.array([x[14], x[5]]), -d1.dex/2)
 		S2 = self.source(d2, np.array([x[17], x[8]]), -d2.dex/2)
-		
+
 		# Compute half-time-step-values in M-1/2 for p and 1/2 for d1 and d2
 		Um1p, Um0p = p.Un(p.L-p.dex), p.Un(p.L)
 		U0d1, U1d1 = d1.Un(0), d1.Un(d1.dex)
@@ -272,50 +275,50 @@ class Artery_Network(object):
 		U_half_p = self.compute_U_half(p, p.L-p.dex, p.L, Um1p, Um0p)
 		U_half_1 = self.compute_U_half(d1, 0, d1.dex, U0d1, U1d1)
 		U_half_2 = self.compute_U_half(d2, 0, d2.dex, U0d2, U1d2)
-		
+
 		F_half_p = self.flux(p, U_half_p, p.L-p.dex/2)
 		S_half_p = self.source(p, U_half_p, p.L-p.dex/2)
 		F_half_1 = self.flux(d1, U_half_1, d1.dex/2)
 		S_half_1 = self.source(d1, U_half_1, d1.dex/2)
 		F_half_2 = self.flux(d2, U_half_2, d2.dex/2)
 		S_half_2 = self.source(d2, U_half_2, d2.dex/2)
-		
+
 		# Function return array
 		y = np.zeros(18)
-		
+
 		# Entries from equation (20)
 		y[0] = 2*x[1] - U_half_p[1] - x[2]
 		y[1] = 2*x[4] - x[5] - U_half_1[1]
 		y[2] = 2*x[7] - x[8] - U_half_2[1]
-		
+
 		# Entries from equation (21)
 		y[3] = 2*x[10] - U_half_p[0] - x[11]
 		y[4] = 2*x[13] - x[14] - U_half_1[0]
 		y[5] = 2*x[16] - x[17] - U_half_2[0]
-		
+
 		# Entries from equation (22)
 		y[6] = x[0] - x[3] - x[6]
 		y[7] = x[1] - x[4] - x[7]
-		
+
 		# Entries from equation (23)
 		y[8] = fp*(1-np.sqrt(A0p/x[10])) - f1*(1-np.sqrt(A01/x[13]))
 		y[9] = fp*(1-np.sqrt(A0p/x[10])) - f2*(1-np.sqrt(A02/x[16]))
 		y[10] = fp*(1-np.sqrt(A0p/x[9])) - f1*(1-np.sqrt(A01/x[12]))
 		y[11] = fp*(1-np.sqrt(A0p/x[9])) - f2*(1-np.sqrt(A02/x[15]))
 
-		# Entries from equation (26) 
+		# Entries from equation (26)
 		y[12] = x[0] - Um0p[1] + p.dt/p.dex*(Fp[1] - F_half_p[1])\
 			  - p.dt/2*(Sp[1] + S_half_p[1])
 		y[13] = x[3] - U0d1[1] + d1.dt/d1.dex*(F_half_1[1] - F1[1])\
 			  - d1.dt/2*(S_half_1[1] + S1[1])
 		y[14] = x[6] - U0d2[1] + d2.dt/d2.dex*(F_half_2[1] - F2[1])\
 			  - d2.dt/2*(S_half_2[1] + S2[1])
-		
+
 		# Entries from equation (27)
 		y[15] = x[9] - Um0p[0] + p.dt/p.dex*(Fp[0] - F_half_p[0])
 		y[16] = x[12] - U0d1[0] + d1.dt/d1.dex*(F_half_1[0] - F1[0])
 		y[17] = x[15] - U0d2[0] + d2.dt/d2.dex*(F_half_2[0] - F2[0])
-		
+
 		return y
 
 
@@ -419,7 +422,7 @@ class Artery_Network(object):
 		:return: Solution to the system of equations
 		"""
 		for k in range(k_max):
-		
+
 			J = self.jacobian(p, d1, d2, x)
 			func = self.problem_function(p, d1, d2, x)
 
@@ -501,7 +504,7 @@ class Artery_Network(object):
 			File(mesh_location) << self.arteries[i].mesh  # Save mesh
 			if i > 0:
 				mesh_locations += ','
-			mesh_locations += mesh_location		
+			mesh_locations += mesh_location
 		L = ''
 		for artery in self.arteries[:-1]:
 			L += str(artery.L)+','
@@ -555,7 +558,7 @@ class Artery_Network(object):
 		if store_area:
 			xdmffile_area = [0] * len(self.range_arteries)
 		if store_pressure:
-			xdmffile_pressure = [0] * len(self.range_arteries)		
+			xdmffile_pressure = [0] * len(self.range_arteries)
 		for i in self.range_arteries:
 			xdmffile_flow[i] = XDMFFile('%s/flow/flow_%i.xdmf'\
 										% (self.output_location, i))
