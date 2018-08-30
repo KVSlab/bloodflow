@@ -44,8 +44,10 @@ def get_parameters(config_location):
 	theta = config.getfloat('Solution', 'theta')
 	
 	# Adimensionalise parameters
-	Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q0, T = adimensionalise(
-		rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0, R1, R2, CT, q0, T)
+	R1 = R2 = CT = 0
+	Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q0, T = \
+		adimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0,
+								   R1, R2, CT, q0, T)
 	
 	return root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu,\
 		   p0, Nt, Nx, T, N_cycles, q0, theta

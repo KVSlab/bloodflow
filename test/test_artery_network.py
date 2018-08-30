@@ -58,8 +58,8 @@ def get_parameters(config_location):
 								   rho, nu, p0, R1, R2, CT, q0, T)
 	q_half = adimensionalise(rc, qc, rho, q_half, 'flow')
 	
-	return order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,
-		   Nt, Nx, T, N_cycles, output_location, theta, Nt_store,
+	return order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
+		   Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
 		   N_cycles_store, store_area, store_pressure, q0, q_half
 
 
@@ -430,8 +430,6 @@ def test_solve(an, q0, q_half, Nt_store, N_cycles_store, store_area,
 	"""
 	q_first = np.linspace(q0, q_half, an.Nt//2)
 	q_second = np.linspace(q_half, q0, an.Nt//2)
-	print(len(q_first), type(q_first))
-	print(len(q_second), type(q_second))
 
 	q_ins = np.concatenate([q_first, q_second])
 	an.solve(q_ins, Nt_store, N_cycles_store, store_area, store_pressure)
