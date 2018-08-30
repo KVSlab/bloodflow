@@ -3,7 +3,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-sys.path.insert(0, 'artenics/')
+sys.path.insert(0, 'src/')
 
 from utils import *
 

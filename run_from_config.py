@@ -4,7 +4,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 import configparser
 
-sys.path.insert(0, 'artenics/')
+sys.path.insert(0, 'src/')
 
 from utils import *
 from artery_network import Artery_Network
