@@ -3,6 +3,8 @@ import sys
 import numpy as np
 from configparser import ConfigParser
 
+import pytest
+
 sys.path.insert(0, 'src/')
 
 import test_artery as ta
@@ -57,7 +59,7 @@ def get_parameters(config_location):
 		adimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3,
 								   rho, nu, p0, R1, R2, CT, q0, T)
 	q_half = adimensionalise(rc, qc, rho, q_half, 'flow')
-	
+
 	return order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
 		   Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
 		   N_cycles_store, store_area, store_pressure, q0, q_half
@@ -65,8 +67,7 @@ def get_parameters(config_location):
 
 
 
-def test_constructor(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,
-					 R1, R2, CT):
+def test_constructor(an):
 	"""Construct artery network.
 	Test correct assignment of parameters.
 	Test correct structure of network.
@@ -90,7 +91,7 @@ def test_constructor(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,
 	"""
 	an = Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,
 						R1, R2, CT)
-	
+
 	assert(an.order == order)
 	assert(len(an.arteries) == 2**order-1)
 	assert(an.range_arteries == range(2**order-1))
@@ -103,12 +104,12 @@ def test_constructor(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,
 	assert(an.R1 == R1)
 	assert(an.R2 == R2)
 	assert(an.CT == CT)
-	
+
 	for i, artery in enumerate(an.arteries):
 		assert(artery.root_vessel if i==0 else not artery.root_vessel)
 		assert(artery.end_vessel if i in an.range_end_arteries\
 			   else not artery.end_vessel)
-	
+
 	return(an)
 
 
@@ -129,7 +130,7 @@ def test_define_solution(an, output_location, q0, theta):
 	Test correct assignment of parameters.
 	"""
 	an.define_solution(output_location, q0, theta)
-	
+
 	assert(an.output_location == output_location)
 	assert(an.theta == theta)
 
@@ -247,7 +248,7 @@ def test_problem_function(an):
 	for ip in an.range_parent_arteries:
 		i1, i2 = an.daughter_arteries(ip)
 		p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
-		
+
 		Um1p, Um0p = p.Un(p.L-p.dex), p.Un(p.L)
 		U0d1, U1d1 = d1.Un(0), d1.Un(d1.dex)
 		U0d2, U1d2 = d2.Un(0), d2.Un(d2.dex)
@@ -255,18 +256,18 @@ def test_problem_function(an):
 		U_half_p = an.compute_U_half(p, p.L-p.dex, p.L, Um1p, Um0p)
 		U_half_d1 = an.compute_U_half(d1, 0, d1.dex, U0d1, U1d1)
 		U_half_d2 = an.compute_U_half(d2, 0, d2.dex, U0d2, U1d2)
-		
+
 		F_half_p = an.flux(p, U_half_p, p.L-p.dex/2)
 		F_half_d1 = an.flux(d1, U_half_d1, d1.dex/2)
 		F_half_d2 = an.flux(d2, U_half_d2, d2.dex/2)
 		S_half_p = an.source(p, U_half_p, p.L-p.dex/2)
 		S_half_d1 = an.source(d1, U_half_d1, d1.dex/2)
 		S_half_d2 = an.source(d2, U_half_d2, d2.dex/2)
-		
+
 		# Abbreviation
 		def F(x):
 			return an.problem_function(p, d1, d2, x)
-		
+
 		# 0
 		x[1] = (U_half_p[1] + x[2])/2
 		assert(near(F(x)[0], 0))
@@ -277,7 +278,7 @@ def test_problem_function(an):
 		assert(near(F(x)[1], 0))
 		x[4] = 1
 
-		# 2 
+		# 2
 		x[7] = (x[8] + U_half_d2[1])/2
 		assert(near(F(x)[2], 0))
 		x[7] = 1
@@ -292,7 +293,7 @@ def test_problem_function(an):
 		assert(near(F(x)[4], 0))
 		x[13] = 1
 
-		# 5 
+		# 5
 		x[16] = (x[17] + U_half_d2[0])/2
 		assert(near(F(x)[5], 0))
 		x[16] = 1
@@ -304,10 +305,10 @@ def test_jacobian(an):
 	# Higher tolerance since the numerical jacobian is inaccurate
 	tol = 1.e-3
 	reltol = 1.e-3
-	
+
 	# h gets absorbed in x if it is too small
 	h = 1.e-8
-	
+
 	for ip in an.range_parent_arteries:
 		i1, i2 = an.daughter_arteries(ip)
 		p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
@@ -333,10 +334,10 @@ def test_newton(an):
 		x = an.initial_x(p, d1, d2)
 		x = an.newton(p, d1, d2, x, 1000, 1.e-14)
 		FF = an.problem_function(p, d1, d2, x)
-		
+
 		# After solving, all components of FF should be zero
 		for F in FF: assert(near(F, 0, 1.e-11))
-		
+
 		# x represents areas and flows, that should be strictly positive
 		for xi in x: assert(xi > 1.e-12)
 
@@ -361,10 +362,10 @@ def test_set_inner_bc(an):
 	for ip in an.range_parent_arteries:
 		i1, i2 = an.daughter_arteries(ip)
 		p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
-		
+
 		an.define_x()
 		an.set_inner_bc(ip, i1, i2)
-		
+
 		# Test that the CFL-condition is verified
 		assert(p.check_CFL(p.L, p.Un(p.L)[0], p.Un(p.L)[1]))
 		assert(d1.check_CFL(0, d1.Un(0)[0], d1.Un(0)[1]))
@@ -372,7 +373,7 @@ def test_set_inner_bc(an):
 
 		x = an.initial_x(p, d1, d2)
 		x = an.newton(p, d1, d2, x, 1000, 1.e-14)
-		
+
 		assert(near(p.U_out[0], x[9]))
 		assert(near(p.U_out[1], x[0]))
 		assert(near(d1.U_in[0], x[12]))
@@ -386,18 +387,18 @@ def test_set_bcs(an):
 	"""
 	q_in = an.arteries[0].q0
 	an.set_bcs(q_in)
-	
-	assert(near(an.arteries[0].q_in, q_in)) 
+
+	assert(near(an.arteries[0].q_in, q_in))
 
 
 def test_dump_metadata(an, Nt_store, N_cycles_store, store_area, store_pressure):
 	"""Test correct execution of dump_metadata.
 	"""
 	an.dump_metadata(Nt_store, N_cycles_store, store_area, store_pressure)
-	
+
 	order, Nx, Nt, T0, T, L, rc, qc, rho, mesh_locations, names, locations = \
 		read_output(an.output_location+'/data.cfg')
-	
+
 	assert(order == an.order)
 	assert(Nx == an.Nx)
 	assert(Nt == Nt_store*N_cycles_store)
@@ -435,55 +436,111 @@ def test_solve(an, q0, q_half, Nt_store, N_cycles_store, store_area,
 	an.solve(q_ins, Nt_store, N_cycles_store, store_area, store_pressure)
 
 
-def test_artery_network(config_location):
-	"""Test correct functionality of the methods from the artery_network class.
-	"""
-	order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT, Nt, Nx,\
-		T, N_cycles, output_location, theta, Nt_store, N_cycles_store,\
-		store_area, store_pressure, q0, q_half = get_parameters(config_location)
-	
-	an = test_constructor(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu,\
-						  p0, R1, R2, CT)
-
-	test_daughter_arteries(an)
-
-	test_parent_artery(an)
-
-	test_sister_artery(an)
-
-	test_define_geometry(an, Nx, Nt, T, N_cycles)
-
-	test_define_solution(an, output_location, q0, theta)
-
-	test_flux(an)
-
-	test_source(an)
-
-	test_compute_U_half(an)
-
-	test_compute_A_out(an)
-
-	test_initial_x(an)
-
-	test_define_x(an)
-
-	test_problem_function(an)
-
-	test_jacobian(an)
-
-	test_newton(an)
-
-	test_adjust_bifurcation_step(an)
-
-	test_set_inner_bc(an)
-
-	test_set_bcs(an)
-
-	test_dump_metadata(an, Nt_store, N_cycles_store, store_area, store_pressure)
-
-	test_solve(an, q0, q_half, Nt_store, N_cycles_store, store_area,
-			   store_pressure)
+@pytest.fixture
+def an(param):
+	order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT = param
+	an = Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,
+						R1, R2, CT)
+	return an
 
 
-if __name__ == '__main__':
-	test_artery_network(sys.argv[1])
+@pytest.fixture
+def param(config_location):
+	return get_parameters(config_location)
+
+
+@pytest.fixture
+def config_location():
+    fconfig = '/tmp/config.cfg'
+    f = open(fconfig, 'w')
+    f.write(FCONF)
+    f.close()
+    return fconfig
+
+
+FCONF = """
+[Parameters]
+order = 2
+rc = 1.0
+qc = 10.0
+Ru = 0.37,0.177,0.177
+Rd = 0.37,0.17,0.17
+L = 20.8,17.7,17.6
+k1 = 2.0e7
+k2 = -22.53
+k3 = 8.65e5
+rho = 1.06
+nu = 0.046
+p0 = 119990.0
+R1 = 25300.0
+R2 = 13900.0
+CT = 1.3384e-6
+
+[Geometry]
+Nx = 200
+Nt = 2000
+N_cycles = 1
+
+[Solution]
+inlet_flow_location = data/example_inlet.csv
+output_location = output/1cycle
+theta = 0.55
+Nt_store = 200
+N_cycles_store = 1
+store_area = 1
+store_pressure = 1
+"""
+
+
+# def test_artery_network(config_location):
+# 	"""Test correct functionality of the methods from the artery_network class.
+# 	"""
+# 	order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT, Nt, Nx,\
+# 		T, N_cycles, output_location, theta, Nt_store, N_cycles_store,\
+# 		store_area, store_pressure, q0, q_half = get_parameters(config_location)
+#
+# 	an = test_constructor(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu,\
+# 						  p0, R1, R2, CT)
+#
+# 	test_daughter_arteries(an)
+#
+# 	test_parent_artery(an)
+#
+# 	test_sister_artery(an)
+#
+# 	test_define_geometry(an, Nx, Nt, T, N_cycles)
+#
+# 	test_define_solution(an, output_location, q0, theta)
+#
+# 	test_flux(an)
+#
+# 	test_source(an)
+#
+# 	test_compute_U_half(an)
+#
+# 	test_compute_A_out(an)
+#
+# 	test_initial_x(an)
+#
+# 	test_define_x(an)
+#
+# 	test_problem_function(an)
+#
+# 	test_jacobian(an)
+#
+# 	test_newton(an)
+#
+# 	test_adjust_bifurcation_step(an)
+#
+# 	test_set_inner_bc(an)
+#
+# 	test_set_bcs(an)
+#
+# 	test_dump_metadata(an, Nt_store, N_cycles_store, store_area, store_pressure)
+#
+# 	test_solve(an, q0, q_half, Nt_store, N_cycles_store, store_area,
+# 			   store_pressure)
+#
+#
+# if __name__ == '__main__':
+# 	test_artery_network(sys.argv[1])
