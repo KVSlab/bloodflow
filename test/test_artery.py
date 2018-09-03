@@ -1,6 +1,8 @@
 import sys
 import numpy as np
 
+import pytest
+
 from configparser import ConfigParser
 import fenics as fn
 
@@ -42,13 +44,13 @@ def get_parameters(config_location):
 	# Solution parameters
 	q0 = config.getfloat('Solution', 'q0')
 	theta = config.getfloat('Solution', 'theta')
-	
+
 	# Adimensionalise parameters
 	R1 = R2 = CT = 0
 	Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q0, T = \
 		adimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0,
 								   R1, R2, CT, q0, T)
-	
+
 	return root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu,\
 		   p0, Nt, Nx, T, N_cycles, q0, theta
 
@@ -75,7 +77,7 @@ def test_constructor(root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3,
 	"""
 	a = Artery(root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re,
 			   nu, p0)
-	
+
 	assert(a.root_vessel == root_vessel)
 	assert(a.end_vessel == end_vessel)
 	assert(near(a.rc, rc))
@@ -90,7 +92,7 @@ def test_constructor(root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3,
 	assert(near(a.Re, Re))
 	assert(near(a.nu, nu))
 	assert(near(a.p0, p0))
-	
+
 	return a
 
 
@@ -106,12 +108,12 @@ def test_define_geometry(a, Nx, Nt, T, N_cycles):
 	:param N_cycles: Number of cardiac cycles
 	"""
 	X = np.linspace(0, a.L, 100)
-	
+
 	# Higher tolerance due to error from FEniCS Expression-interpolation
 	tol = 1.e-12
-	
+
 	a.define_geometry(Nx, Nt, T, N_cycles)
-	
+
 	assert(a.Nx == Nx)
 	assert(a.Nt == Nt)
 	assert(near(a.T, T))
@@ -151,16 +153,16 @@ def test_define_solution(a, q0, theta, bc_tol=1.e-14):
 	:param bc_tol: Inlet and outlet boundary thickness (tolerance)
 	"""
 	X = np.linspace(0, a.L, 100)
-	
+
 	a.define_solution(q0, theta, bc_tol)
-	
+
 	assert(near(a.q0, q0))
 	assert(near(a.theta, theta))
-	
+
 	assert(type(a.U) == fn.Function)
 	assert(type(a.Un) == fn.Function)
 	assert(type(a.pn) == fn.Function)
-	
+
 	for x in X:
 		assert(near(a.Un(x)[0], a.A0(x)))
 		assert(near(a.Un(x)[1], q0))
@@ -191,7 +193,7 @@ def test_update_pressure(a):
 	X = np.linspace(0, a.L, 100)
 	a.update_pressure()
 	reltol = 1.e-12
-	
+
 	for x in X:
 		p = a.p0 + a.f(x)*(1-np.sqrt(a.A0(x)/a.Un(x)[0]))
 		assert(near(a.pn(x), p, reltol=reltol))
@@ -227,7 +229,7 @@ def test_check_CFL(a):
 	"""Test CFL-condition-checking.
 	"""
 	margin = 1.e-10
-	
+
 	for x in [0, a.L]:
 		A, q = a.Un(x)
 		M = a.dt/a.CFL_term(x, A, q)
@@ -248,36 +250,92 @@ def test_adjust_dex(a):
 			assert(a.check_CFL(x, A, q))
 
 
-def test_artery(config_location):
-	"""Test artery class.
-	:param config_location: Location of config-file with test-parameters
-	"""
+@pytest.fixture
+def config_location():
+    fconfig = '/tmp/config.cfg'
+    f = open(fconfig, 'w')
+    f.write(FCONF)
+    f.close()
+    return fconfig
+
+
+@pytest.fixture
+def param(config_location):
+	return get_parameters(config_location)
+
+
+@pytest.fixture
+def a(param):
 	root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,\
-		Nt,	Nx, T, N_cycles, q0, theta = get_parameters(config_location)
-	
-	a = test_constructor(root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3,
-						 rho, Re, nu, p0)
-						 
-	test_define_geometry(a, Nx, Nt, T, N_cycles)
-	
-	test_define_solution(a, q0, theta)
-	
-	test_solve(a)
-	
-	test_update_solution(a)
-	
-	test_update_pressure(a)
+		Nt,	Nx, T, N_cycles, q0, theta = param
+	a = Artery(root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re,
+			   nu, p0)
+	return a
 
-	test_compute_pressure(a)
-	
-	test_compute_outlet_pressure(a)
-	
-	test_CFL_term(a)
-	
-	test_check_CFL(a)
-	
-	test_adjust_dex(a)
 
-if __name__ == '__main__':
-	test_artery(sys.argv[1])
-	
+FCONF = """
+[Parameters]
+order = 2
+rc = 1.0
+qc = 10.0
+Ru = 0.37,0.177,0.177
+Rd = 0.37,0.17,0.17
+L = 20.8,17.7,17.6
+k1 = 2.0e7
+k2 = -22.53
+k3 = 8.65e5
+rho = 1.06
+nu = 0.046
+p0 = 119990.0
+R1 = 25300.0
+R2 = 13900.0
+CT = 1.3384e-6
+
+[Geometry]
+Nx = 200
+Nt = 2000
+N_cycles = 1
+
+[Solution]
+inlet_flow_location = data/example_inlet.csv
+output_location = output/1cycle
+theta = 0.55
+Nt_store = 200
+N_cycles_store = 1
+store_area = 1
+store_pressure = 1
+"""
+
+
+# def test_artery(config_location):
+# 	"""Test artery class.
+# 	:param config_location: Location of config-file with test-parameters
+# 	"""
+# 	root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,\
+# 		Nt,	Nx, T, N_cycles, q0, theta = get_parameters(config_location)
+#
+# 	a = test_constructor(root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3,
+# 						 rho, Re, nu, p0)
+#
+# 	test_define_geometry(a, Nx, Nt, T, N_cycles)
+#
+# 	test_define_solution(a, q0, theta)
+#
+# 	test_solve(a)
+#
+# 	test_update_solution(a)
+#
+# 	test_update_pressure(a)
+#
+# 	test_compute_pressure(a)
+#
+# 	test_compute_outlet_pressure(a)
+#
+# 	test_CFL_term(a)
+#
+# 	test_check_CFL(a)
+#
+# 	test_adjust_dex(a)
+#
+# if __name__ == '__main__':
+# 	test_artery(sys.argv[1])
