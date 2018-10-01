@@ -206,7 +206,13 @@ def test_compute_A_out(arterynetwork_def, param):
         N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     for a in an.arteries:
+        pn = a.compute_outlet_pressure(a.Un(a.L)[0])
         A_out = an.compute_A_out(a)
+        p = a.compute_outlet_pressure(A_out)
+        assert(a.check_CFL(a.x, a.Un(a.L)[0], a.Un(a.L)[1]))
+
+        # Relative pressure variation for one iteration should be reasonable
+        assert(near(p, pn, reltol=5.e-1))
 
 
 def test_initial_x(arterynetwork_def, param):
