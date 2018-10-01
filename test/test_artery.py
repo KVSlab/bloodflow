@@ -15,23 +15,9 @@ from artery import Artery
 def test_constructor(artery, param):
 	"""Construct artery.
 	Test correct assignment of parameters.
-	:param boolean root_vessel: True if the artery is root-vessel (no parent)
-	:param boolean end_vessel: True if the artery is end-vessel (no daughter)
-	:param rc: Characteristic radius (length)
-	:param qc: Characteristic flow
-	:param Ru: Upstream radius
-	:param Rd: Downstream radius
-	:param L: Vessel length
-	:param k1: First constant from the relation Eh/r0
-	:param k2: Second constant from the relation Eh/r0
-	:param k3: Third constant from the relation Eh/R0
-	:param rho: Density of blood
-	:param Re: Reynolds' number
-	:param nu: Blood viscosity
-	:param p0: Diastolic pressure
-	:return: Intitialised artery object
+	:param artery: Initialised artery object
+	:param param: Config parameters
 	"""
-
 	root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,\
 		Nt,	Nx, T, N_cycles, q0, theta = param
 
@@ -56,19 +42,13 @@ def test_define_geometry(artery, param):
 	Test correct assignment of parameters.
 	Test types of FEniCS objects.
 	Test correct behaviour of FEniCS expressions.
-	:param a: Artery on which define_geometry is to be called and tested
-	:param Nx: Spatial refinement
-	:param Nt: Number of temporal steps
-	:param T: Duration of one cardiac cycle
-	:param N_cycles: Number of cardiac cycles
+	:param artery: Artery on which define_geometry is to be called and tested
+	:param param: Config parameters
 	"""
 	root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,\
 		Nt,	Nx, T, N_cycles, q0, theta = param
 
 	X = np.linspace(0, artery.L, 100)
-
-	# Higher tolerance due to error from FEniCS Expression-interpolation
-	tol = 1.e-12
 
 	artery.define_geometry(Nx, Nt, T, N_cycles)
 
@@ -107,9 +87,8 @@ def test_define_solution(artery, param, bc_tol=1.e-14):
 	Test types of FEniCS objects.
 	Test correct behaviour of boundaries.
 	Test variational form.
-	:param a: Artery on which define_solution is to be called and tested
-	:param q0: Initial flow
-	:param theta: Crank-Nicolson parameter
+	:param artery: Artery on which define_solution is to be called and tested
+	:param param: Config parameters
 	:param bc_tol: Inlet and outlet boundary thickness (tolerance)
 	"""
 	root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,\
@@ -134,14 +113,18 @@ def test_define_solution(artery, param, bc_tol=1.e-14):
 
 def test_solve(artery_def):
 	"""Solve equation on artery for one time-step.
-	:param a: Artery on which the equation is to be solved
+	:param artery_def: Initialised artery on which the equation is to be solved
 	"""
-	artery_def.solve()
+	a = artery_def
+	a.solve()
+	assert(near(a.U(0), a.q_in))
+	assert(near(a.U(a.L), a.A_out))
 
 
 def test_update_solution(artery_def):
 	"""Update solution.
-	Test equality beween Un and U.
+	Test equality between Un and U.
+	:param artery_def: Artery on which the solution is to be updated
 	"""
 	a = artery_def
 	a.update_solution()
@@ -154,6 +137,7 @@ def test_update_solution(artery_def):
 def test_update_pressure(artery_def):
 	"""Update pressure.
 	Test correct behaviour of pressure function.
+	:param artery_def: Artery on which the pressure is to be updated
 	"""
 	a = artery_def
 	X = np.linspace(0, a.L, 100)
@@ -167,6 +151,7 @@ def test_update_pressure(artery_def):
 
 def test_compute_pressure(artery_def):
 	"""Test correct value of computed pressure.
+	:param artery_def: Artery on which the pressure is to be computed
 	"""
 	a = artery_def
 	for x in np.linspace(0, a.L, 100):
@@ -177,6 +162,7 @@ def test_compute_pressure(artery_def):
 
 def test_compute_outlet_pressure(artery_def):
 	"""Test correct value of outlet pressure.
+	:param artery_def: Artery on which the outlet pressure is to be computed
 	"""
 	a = artery_def
 	A = a.Un(a.L)[0]
@@ -186,6 +172,7 @@ def test_compute_outlet_pressure(artery_def):
 
 def test_CFL_term(artery_def):
 	"""Test correct value of CFL-term.
+	:param artery_def: Artery
 	"""
 	a = artery_def
 	for x in [0, a.L]:
@@ -196,6 +183,7 @@ def test_CFL_term(artery_def):
 
 def test_check_CFL(artery_def):
 	"""Test CFL-condition-checking.
+	:param artery_def: Artery
 	"""
 	margin = 1.e-10
 
@@ -212,6 +200,7 @@ def test_check_CFL(artery_def):
 
 def test_adjust_dex(artery_def):
 	"""Test correct adjustment of dex.
+	:param artery_def: Artery
 	"""
 	a = artery_def
 	for margin in [0.1, 0.05, 1.e-4, 1.e-8, 1.e-10]:
@@ -274,8 +263,8 @@ def param(config_location):
 def artery(param):
 	root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,\
 		Nt,	Nx, T, N_cycles, q0, theta = param
-	artery = Artery(root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re,
-			   nu, p0)
+	artery = Artery(root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho,
+                    Re, nu, p0)
 	return artery
 
 

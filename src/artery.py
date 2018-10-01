@@ -1,5 +1,3 @@
-__author__ = 'Syver Døving Agdestein'
-
 import sys
 import numpy as np
 
@@ -200,7 +198,8 @@ class Artery(object):
 		"""Assign new values to pn.
 		"""
 		self.pn.assign(Expression('p0 + f*(1-sqrt(A0/A))', degree=2, p0=self.p0,
-								  f=self.f, A0=self.A0, A=self.Un.split(True)[0]))
+								  f=self.f, A0=self.A0, A=self.Un.split(True)[0]
+                                  ))
 
 
 	def compute_pressure(self, f, A0, A):
@@ -256,7 +255,7 @@ class Artery(object):
 	@property
 	def q_in(self):
 		"""Inlet flow (only for root-artery)
-		:return: Inlet flow Expression-object
+		:return: Inlet flow value
 		"""
 		return self._q_in.value
 
@@ -293,7 +292,7 @@ class Artery(object):
 	@property
 	def U_out(self):
 		"""Outlet boundary conditions (only for parent arteries)
-		:return: Outlet solution Expression-object
+		:return: Outlet solution value
 		"""
 		return np.array([self._U_out.A, self._U_out.q])
 
