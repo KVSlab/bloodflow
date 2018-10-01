@@ -6,7 +6,7 @@ import pytest
 from configparser import ConfigParser
 import fenics as fn
 
-sys.path.insert(0, 'src/')
+sys.path.insert(0, 'bloodflow/')
 from utils import *
 from utils import is_near as near
 from artery import Artery
@@ -117,8 +117,8 @@ def test_solve(artery_def):
     """
     a = artery_def
     a.solve()
-    assert(near(a.U(0), a.q_in))
-    assert(near(a.U(a.L), a.A_out))
+    assert(near(a.U(0)[1], a.q_in))
+    assert(near(a.U(a.L)[0], a.A_out))
 
 
 def test_update_solution(artery_def):

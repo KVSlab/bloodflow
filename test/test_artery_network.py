@@ -5,7 +5,7 @@ from configparser import ConfigParser
 
 import pytest
 
-sys.path.insert(0, 'src/')
+sys.path.insert(0, 'bloodflow/')
 
 import test_artery as ta
 from artery_network import Artery_Network
@@ -17,23 +17,8 @@ def test_constructor(arterynetwork, param):
     """Construct artery network.
     Test correct assignment of parameters.
     Test correct structure of network.
-    :param order: Number of arterial levels
-    :param rc: Characteristic radius (length)
-    :param qc: Characteristic flow
-    :param Ru: Upstream radii
-    :param Rd: Downstream radii
-    :param L: Vessel lengths
-    :param k1: First constant from the relation Eh/r0
-    :param k2: Second constant from the relation Eh/r0
-    :param k3: Third constant from the relation Eh/R0
-    :param rho: Density of blood
-    :param Re: Reynolds' number
-    :param nu: Viscosity of blood
-    :param p0: Diastolic pressure
-    :param R1: First resistance from Windkessel model
-    :param R2: Second resistance from Windkessel model
-    :param CT: Compliance from Windkessel model
-    :return: Constructed artery network
+    :param arterynetwork: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -64,6 +49,8 @@ def test_constructor(arterynetwork, param):
 def test_define_geometry(arterynetwork, param):
     """Define geometry on artery network.
     Test correct assignment of parameters.
+    :param arterynetwork: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -81,6 +68,8 @@ def test_define_geometry(arterynetwork, param):
 def test_define_solution(arterynetwork, param):
     """Define solution on artery network.
     Test correct assignment of parameters.
+    :param arterynetwork: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -96,6 +85,8 @@ def test_define_solution(arterynetwork, param):
 
 def test_daughter_arteries(arterynetwork_def, param):
     """Test correct finding of daughter vessels.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -110,6 +101,8 @@ def test_daughter_arteries(arterynetwork_def, param):
 
 def test_parent_artery(arterynetwork_def, param):
     """Test correct indices for parent vessels.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -126,6 +119,8 @@ def test_parent_artery(arterynetwork_def, param):
 
 def test_sister_artery(arterynetwork_def, param):
     """Test correct indices for sister vessel.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -142,6 +137,8 @@ def test_sister_artery(arterynetwork_def, param):
 
 def test_flux(arterynetwork_def, param):
     """Test correct behaviour of flux function.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -160,6 +157,8 @@ def test_flux(arterynetwork_def, param):
 
 def test_source(arterynetwork_def, param):
     """Test correct behaviour of source function.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -177,6 +176,8 @@ def test_source(arterynetwork_def, param):
 
 def test_compute_U_half(arterynetwork_def, param):
     """Test correct behaviour of compute_U_half.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -196,6 +197,8 @@ def test_compute_U_half(arterynetwork_def, param):
 
 def test_compute_A_out(arterynetwork_def, param):
     """Test correct behaviour of compute_A_out.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -208,6 +211,8 @@ def test_compute_A_out(arterynetwork_def, param):
 
 def test_initial_x(arterynetwork_def, param):
     """Test correct assignment of parameters.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -228,6 +233,8 @@ def test_initial_x(arterynetwork_def, param):
 
 def test_define_x(arterynetwork_def, param):
     """Test correct value for x.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -247,6 +254,8 @@ def test_problem_function(arterynetwork_def, param):
     """Test correct behaviour of problem_function.
     For the right (analytical) value of x, the function should take zero-values.
     By perturbing a given x, certain components should be zero.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -310,6 +319,8 @@ def test_problem_function(arterynetwork_def, param):
 
 def test_jacobian(arterynetwork_def, param):
     """Test that the analytical expression for the jacobian matrix is close to a numerically computed jacobian.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -341,6 +352,8 @@ def test_jacobian(arterynetwork_def, param):
 
 def test_newton(arterynetwork_def, param):
     """Test correct results from newton function.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -363,6 +376,8 @@ def test_newton(arterynetwork_def, param):
 
 def test_adjust_bifurcation_step(arterynetwork_def, param):
     """Test correct behaviour of adjust_bifurcation_step function.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -382,6 +397,8 @@ def test_adjust_bifurcation_step(arterynetwork_def, param):
 def test_set_inner_bc(arterynetwork_def, param):
     """Test correct assignment of inner boundary conditions.
     Test that the CFL condition is verified.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -413,6 +430,8 @@ def test_set_inner_bc(arterynetwork_def, param):
 
 def test_set_bcs(arterynetwork_def, param):
     """Test correct assignment of boundary conditions.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -427,6 +446,8 @@ def test_set_bcs(arterynetwork_def, param):
 
 def test_dump_metadata(arterynetwork_def, param):
     """Test correct execution of dump_metadata.
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -466,6 +487,8 @@ def test_dump_metadata(arterynetwork_def, param):
 
 def test_solve(arterynetwork_def, param):
     """
+    :param arterynetwork_def: Artery network object
+    :param param: Config parameters
     """
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
@@ -477,6 +500,18 @@ def test_solve(arterynetwork_def, param):
 
     q_ins = np.concatenate([q_first, q_second])
     an.solve(q_ins, Nt_store, N_cycles_store, store_area, store_pressure)
+
+    for artery in arterynetwork_def.arteries:
+        if artery.root_vessel:
+            assert(near(artery.U(0)[1], artery.q_in))
+        else:
+            assert(near(artery.U(0)[0], artery.U_in[0]))
+            assert(near(artery.U(0)[1], artery.U_in[1]))
+        if artery.end_vessel:
+            assert(near(artery.U(0)[0], artery.A_out))
+        else:
+            assert(near(artery.U(artery.L)[0], artery.U_out[0]))
+            assert(near(artery.U(artery.L)[1], artery.U_out[1]))
 
 
 @pytest.fixture
