@@ -12,7 +12,7 @@ def main(data_location):
     """
     :param string data_location: Location of data file.
     """
-    order, Nx, Nt, T, L, rc, qc, rho, mesh_locations, names, locations =\
+    order, Nx, Nt, T0, T, L, rc, qc, rho, mesh_locations, names, locations =\
         read_output(data_location)
 
     T0 = redimensionalise(rc, qc, rho, T0, 'time')

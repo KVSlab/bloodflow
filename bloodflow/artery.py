@@ -76,8 +76,8 @@ class Artery(object):
                             k1=self.k1, k2=self.k2, k3=self.k3, r0=self.r0)
         self.dfdr = Expression('4.0/3.0*k1*k2*exp(k2*r0)', degree=2,
                                k1=self.k1, k2=self.k2, r0=self.r0)
-        self.drdx = Expression('log(Rd/Ru)/L*r0', degree=2,
-                               Ru=self.Ru, Rd=self.Rd, L=self.L, r0=self.r0)
+        self.drdx = Expression('logRdRu/L*r0', degree=2,
+                               logRdRu=np.log(self.Rd/self.Ru), L=self.L, r0=self.r0)
 
 
     def define_solution(self, q0, theta=0.5, bc_tol=1.e-14):

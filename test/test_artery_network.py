@@ -209,10 +209,9 @@ def test_compute_A_out(arterynetwork_def, param):
         pn = a.compute_outlet_pressure(a.Un(a.L)[0])
         A_out = an.compute_A_out(a)
         p = a.compute_outlet_pressure(A_out)
-        assert(a.check_CFL(a.x, a.Un(a.L)[0], a.Un(a.L)[1]))
 
         # Relative pressure variation for one iteration should be reasonable
-        assert(near(p, pn, reltol=5.e-1))
+        assert(near(p, pn, reltol=1.e-1))
 
 
 def test_initial_x(arterynetwork_def, param):
@@ -514,7 +513,7 @@ def test_solve(arterynetwork_def, param):
             assert(near(artery.U(0)[0], artery.U_in[0]))
             assert(near(artery.U(0)[1], artery.U_in[1]))
         if artery.end_vessel:
-            assert(near(artery.U(0)[0], artery.A_out))
+            assert(near(artery.U(artery.L)[0], artery.A_out))
         else:
             assert(near(artery.U(artery.L)[0], artery.U_out[0]))
             assert(near(artery.U(artery.L)[1], artery.U_out[1]))
