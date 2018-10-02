@@ -10,15 +10,15 @@ Setup documentation. Also include usage in documentation.
 
 We recommend installing artery.fe using the provided Dockerfile. This ensures all dependencies are correctly installed. Build the Docker image by running
 
-``docker build .``
+`docker build .`
 
 To create and enter a Docker container run
 
-``docker run -ti -p 127.0.0.1:8000:8000 -v $(pwd):/home/fenics/shared -w /home/fenics/shared "artery.fe:2017.2.0"``
+`docker run -ti -p 127.0.0.1:8000:8000 -v $(pwd):/home/fenics/shared -w /home/fenics/shared "artery.fe:2017.2.0"`
 
 Alternatively, artery.fe can be installed using the provided ``setup.py`` file by running
 
-``python setup.py install``
+`python setup.py install`
 
 This requires FEniCS version 2017.2.0 or higher.
 
