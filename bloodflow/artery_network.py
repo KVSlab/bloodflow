@@ -8,8 +8,8 @@ import configparser
 from fenics import *
 from mshr import *
 
-from artery import Artery
-from utils import *
+from bloodflow.artery import Artery
+from bloodflow.utils import *
 
 
 set_log_level(30)
