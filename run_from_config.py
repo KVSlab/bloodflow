@@ -1,7 +1,6 @@
 import sys
 
 import numpy as np
-from scipy.interpolate import interp1d
 import configparser
 
 sys.path.insert(0, 'bloodflow/')
@@ -50,19 +49,10 @@ def main(config_location):
     store_pressure = config.getint('Solution', 'store_pressure')
 
     # Import inlet flow data
-    data_q = np.genfromtxt(inlet_flow_location, delimiter = ',')
-    tt = data_q[:, 0]
-    qq = data_q[:, 1]
-    T = data_q[-1, 0]
-
-    # Interpolate inlet flow
-    q = interp1d(tt, qq)
-    t = np.linspace(0, T, Nt)
-    q_ins = q(t)
-    #q_ins = np.zeros(Nt)
+    T, q_ins = read_inlet(inlet_flow_location, Nt)
 
     # Adimensionalise data and compute Reynolds' number
-    Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q_ins, T  =\
+    Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q_ins, T =\
         adimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3,
                                    rho, nu, p0, R1, R2, CT, q_ins, T)
 

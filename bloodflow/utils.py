@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.interpolate import interp1d
 
 from fenics import *
 from mshr import *
@@ -99,6 +100,28 @@ def redimensionalise(rc, qc, rho, x, nature):
     elif nature == 'pressure':
         x = x*rho*qc**2/rc**4
     return x
+
+
+def read_inlet(data_location, Nt):
+    """Read inlet flow data.
+    Read final time.
+    Interpolate data with desired temporal discretisation.
+    :param data_location: Location of inlet flow data
+    :param Nt: Number of time steps
+    :return: Final time and inlet flow
+    """
+    # Import inlet flow data
+    data_q = np.genfromtxt(data_location, delimiter=',')
+    tt = data_q[:, 0]
+    qq = data_q[:, 1]
+    T = data_q[-1, 0]
+
+    # Interpolate inlet flow
+    q = interp1d(tt, qq)
+    t = np.linspace(0, T, Nt)
+    q_ins = q(t)
+
+    return T, q_ins
 
 
 def read_output(filename):
