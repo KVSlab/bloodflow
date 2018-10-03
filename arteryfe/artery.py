@@ -3,31 +3,52 @@ __author__ = 'Syver Døving Agdestein'
 import sys
 import numpy as np
 
-from fenics import *
+from dolfin import *
 
 
 class Artery(object):
-	"""Represent an artery, as well as the solution on the artery.
-	:param boolean root_vessel: True if the artery is root-vessel (no parent)
-	:param boolean end_vessel: True if the artery is end-vessel (no daughter)
-	:param rc: Characteristic radius (length)
-	:param qc: Characteristic flow
-	:param Ru: Upstream radius
-	:param Rd: Downstream radius
-	:param L: Vessel length
-	:param k1: First constant from the relation Eh/r0
-	:param k2: Second constant from the relation Eh/r0
-	:param k3: Third constant from the relation Eh/R0
-	:param rho: Density of blood
-	:param Re: Reynolds' number
-	:param nu: Blood viscosity
-	:param p0: Diastolic pressure
 	"""
+	Represents an artery whose flow rate and area are calculated using the
+	1D system of blood flow equations in conservation form.
+
+	Arguments
+	---------
+
+	root_vessel : boolean
+		True if the artery is a root vessel in the artery network (has no
+		parent)
+	end_vessel : boolean
+		True if the artery is a terminal vessel in the artery network (has no
+		daughters)
+	rc : float
+		Characteristic radius (length)
+	qc : float
+		Characteristic flow
+	Ru : float
+		Upstream radius
+	Rd : float
+		Downstream radius
+	L : float
+		Vessel length
+	k1 : float
+	 	First constant from the relation Eh/r0
+	k2 : float
+		Second constant from the relation Eh/r0
+	k3 : float
+		Third constant from the relation Eh/R0
+	rho : float
+		Density of blood
+	Re : float
+		Reynolds' number
+	nu : float
+		Viscosity of blood
+	p0 : float
+		Diastolic pressure
+	"""
+
+
 	def __init__(self, root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3,
 				 rho, Re, nu, p0):
-		""" Construct artery.
-		Add its intrinsic characteristics.
-		"""
 		self.root_vessel = root_vessel
 		self.end_vessel = end_vessel
 		self.rc = rc
@@ -45,12 +66,20 @@ class Artery(object):
 
 
 	def define_geometry(self, Nx, Nt, T, N_cycles):
-		"""Initialise geometry.
-		Define FEniCS objects.
-		:param Nx: Spatial refinement
-		:param Nt: Number of temporal steps
-		:param T: Duration of one cardiac cycle
-		:param N_cycles: Number of cardiac cycles
+		"""
+		Initialises the artery geometry by creating the spatial refinement,
+		temporal refinement and FEniCS objects.
+
+		Arguments
+    	---------
+    	Nx : int
+			Number of spatial points per artery
+		Nt : int
+			Number of time steps per cardiac cycle
+		T : float
+			Duration of one cardiac cycle
+		N_cycles: int
+			Number of cardiac cycles in the simulation
 		"""
 		self.Nx = Nx
 		self.Nt = Nt
@@ -83,12 +112,19 @@ class Artery(object):
 
 
 	def define_solution(self, q0, theta=0.5, bc_tol=1.e-14):
-		"""Define FEniCS solution objects.
-		Define boundary conditions.
-		Define variational form.
-		:param q0: Initial flow
-		:param theta: Crank-Nicolson parameter
-		:param bc_tol: Inlet and outlet boundary thickness (tolerance)
+		"""
+		Defines FEniCS Function objects, boundary conditions and variational
+		form of the problem.
+
+		Arguments
+    	---------
+		q0 : float
+			Initial flow rate in the root vessel
+		theta : float
+			Weighting parameter for the Crank-Nicolson method, in the interval
+			[0, 1]
+		bc_tol : float
+			Inlet and outlet boundary thickness (tolerance)
 		"""
 		# Initial flow value
 		self.q0 = q0
@@ -182,8 +218,8 @@ class Artery(object):
 
 
 	def solve(self):
-		"""Solve problem for one iteration.
-		U_(n+1) is solution of variational_form(U_n) == 0.
+		"""
+		Calls FEniCS's solve() function for the variational form.
 		"""
 		F = self.variational_form
 		J = derivative(F, self.U)
@@ -191,63 +227,105 @@ class Artery(object):
 
 
 	def update_solution(self):
-		"""Assign new values to Un.
+		"""
+		Stores current solution U as previous solution Un.
 		"""
 		self.Un.assign(self.U)
 
 
 	def update_pressure(self):
-		"""Assign new values to pn.
+		"""
+		Calculates pressure.
 		"""
 		self.pn.assign(Expression('p0 + f*(1-sqrt(A0/A))', degree=2, p0=self.p0,
 								  f=self.f, A0=self.A0, A=self.Un.split(True)[0]))
 
 
-	def compute_pressure(self, f, A0, A):
-		""" Compute the pressure at a given point x and time t.
-		:param f: Value of f(r0) in x
-		:param A0: Value of A0 in x
-		:param A: Area in x at a given time t
-		:return: Pressure in x at time t
-		"""
-		return self.p0 + f*(1-np.sqrt(A0/A))
+	# Never used!
+	# def compute_pressure(self, f, A0, A):
+	# 	""" Compute the pressure at a given point x and time t.
+	# 	:param f: Value of f(r0) in x
+	# 	:param A0: Value of A0 in x
+	# 	:param A: Area in x at a given time t
+	# 	:return: Pressure in x at time t
+	# 	"""
+	# 	return self.p0 + f*(1-np.sqrt(A0/A))
 
 
 	def compute_outlet_pressure(self, A):
-		""" Compute the outlet pressure at a given time t.
-		:param A: Area in L at a given time t
-		:return: Pressure in L at time t
+		"""
+		Computes pressure at the outlet.
+
+		Arguments
+    	---------
+    	A : float
+			Area value at the outlet
+
+		Returns
+    	-------
+		return : float
+			Pressure at the outlet
 		"""
 		return self.p0 + self.f(self.L)*(1-np.sqrt(self.A0(self.L)/A))
 
 
 	def CFL_term(self, x, A, q):
-		"""Compute the term for the CFL condition.
-		:param x: Point at which the condition is to be checked
-		:param A: Value of area at x
-		:param q: Value of flow at x
-		:return: CFL term
+		"""
+		Computes the CFL number.
+
+		Arguments
+    	---------
+    	x : float
+			Point at which the condition is to be checked
+		A : float
+			Area value at x
+		q : float
+			Flow rate value at x
+
+		Returns
+    	-------
+		return : float
+			CFL number
 		"""
 		return 1/np.abs(q/A+np.sqrt(self.f(x)/2/self.rho\
 								   *np.sqrt(self.A0(x)/A)))
 
 
 	def check_CFL(self, x, A, q):
-		"""Check the CFL condition.
-		:param x: Point at which the condition is to be checked
-		:param A: Value of area at x
-		:param q: Value of flow at x
-		:return: True if condition is verified
+		"""
+		Checks the CFL condition.
+
+		Arguments
+    	---------
+    	x : float
+			Point at which the condition is to be checked
+		A : float
+			Area value at x
+		q : float
+			Flow rate value at x
+
+		Returns
+    	-------
+		return : boolean
+			True if the CFL condition is fulfilled
 		"""
 		return self.dt/self.dex < self.CFL_term(x, A, q)
 
 
 	def adjust_dex(self, x, A, q, margin=0.05):
-		"""Adjust boundary step-size so that the CFL condition is verified.
-		:param x: Point at which the condition is to be checked
-		:param A: Value of area at x
-		:param q: Value of flow at x
-		:param margin: A number greater than or equal to one
+		"""
+		Adjusts spatial step at a bifurcation to respect the CFL condition.
+
+		Arguments
+    	---------
+    	x : float
+			Point at which the condition is to be checked
+		A : float
+			Area value at x
+		q : float
+			Flow rate value at x
+		margin : float
+			Margin of CFL number
 		"""
 		M = self.CFL_term(x, A, q)
 		self.dex = (1+margin)*self.dt/M
@@ -255,8 +333,8 @@ class Artery(object):
 
 	@property
 	def q_in(self):
-		"""Inlet flow (only for root-artery)
-		:return: Inlet flow Expression-object
+		"""
+		Inlet flow rate (only for a root artery)
 		"""
 		return self._q_in.value
 
@@ -267,8 +345,8 @@ class Artery(object):
 
 	@property
 	def U_in(self):
-		"""Inlet boundary conditions (only for non-root arteries (daughters))
-		:return: Inlet solution value
+		"""
+		Inlet boundary conditions (only for non-root arteries (daughters))
 		"""
 		return np.array([self._U_in.A, self._U_in.q])
 
@@ -280,8 +358,8 @@ class Artery(object):
 
 	@property
 	def A_out(self):
-		"""Outlet area (only in use for end arteries)
-		:return: Outlet flow value
+		"""
+		Outlet area (only in use for end arteries)
 		"""
 		return self._A_out.value
 
@@ -292,8 +370,8 @@ class Artery(object):
 
 	@property
 	def U_out(self):
-		"""Outlet boundary conditions (only for parent arteries)
-		:return: Outlet solution Expression-object
+		"""
+		Outlet boundary conditions (only for parent arteries)
 		"""
 		return np.array([self._U_out.A, self._U_out.q])
 

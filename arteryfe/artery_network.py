@@ -5,11 +5,10 @@ import numpy as np
 import numpy.linalg as npl
 
 import configparser
-from fenics import *
-from mshr import *
+from dolfin import *
 
-from bloodflow.artery import Artery
-from bloodflow.utils import *
+from arteryfe.artery import Artery
+from arteryfe.utils import *
 
 
 set_log_level(30)
@@ -17,27 +16,59 @@ set_log_level(30)
 
 class Artery_Network(object):
 	"""
-	:param order: Number of arterial levels
-	:param rc: Characteristic radius (length)
-	:param qc: Characteristic flow
-	:param Ru: Upstream radii
-	:param Rd: Downstream radii
-	:param L: Vessel lengths
-	:param k1: First constant from the relation Eh/r0
-	:param k2: Second constant from the relation Eh/r0
-	:param k3: Third constant from the relation Eh/R0
-	:param rho: Density of blood
-	:param Re: Reynolds' number
-	:param nu: Viscosity of blood
-	:param p0: Diastolic pressure
-	:param R1: First resistance from Windkessel model
-	:param R2: Second resistance from Windkessel model
-	:param CT: Compliance from Windkessel model
+	Builds an artery network from the given parameters. Arteries in the network
+	are assigned indices from left to right and top to bottomself.
+
+	Example
+	--------
+
+			0
+		  /   \
+		 1     2
+		/ \   / \
+	   3   4 5   6
+
+	Arguments
+	---------
+
+	order : int
+		Number of arterial levels
+	rc : float
+		Characteristic radius (length)
+	qc : float
+		Characteristic flow
+	Ru : list of float
+		Upstream radii of each artery in the network
+	Rd : list of float
+		Downstream radii of each artery in the network
+	L : list of float
+		Vessel lengths
+	k1 : float
+	 	First constant from the relation Eh/r0
+	k2 : float
+		Second constant from the relation Eh/r0
+	k3 : float
+		Third constant from the relation Eh/R0
+	rho : float
+		Density of blood
+	Re : float
+		Reynolds' number
+	nu : float
+		Viscosity of blood
+	p0 : float
+		Diastolic pressure
+	R1 : float
+		First resistance from Windkessel model
+	R2 : float
+		Second resistance from Windkessel model
+	CT : float
+		Compliance from Windkessel model
 	"""
+
+
 	def __init__(self, order, rc, qc, Ru, Rd, L, k1, k2, k3,
 				 rho, Re, nu, p0, R1, R2, CT):
-		"""Artery network constructor.
-		"""
+
 		self.order = order
 		self.arteries = [0] * (2**self.order-1)
 		self.range_arteries = range(2**self.order-1)
@@ -54,9 +85,18 @@ class Artery_Network(object):
 
 
 	def daughter_arteries(self, i):
-		"""Find daughter vessels.
-		:param i: Parent vessel index
-		:return: Daughter vessel indices
+		"""
+		Find and return the indices of the daughter arteries of artery i.
+
+		Arguments
+    	---------
+    	i : int
+			Index of the parent artery
+
+		Returns
+    	-------
+		return : int
+			Daughter artery indices
 		"""
 		#if i < 0 or i >= 2**(self.order-1):
 		#	raise Exception('Vessel index out of range')
@@ -65,9 +105,18 @@ class Artery_Network(object):
 
 
 	def parent_artery(self, i):
-		"""Find parent vessel.
-		:param i: Daughter vessel index
-		:return: Parent vessel index
+		"""
+		Find and return the index of the partent artery of artery i.
+
+		Arguments
+    	---------
+    	i : int
+			Index of the daughter artery
+
+		Returns
+    	-------
+		return : int
+			Parent artery index
 		"""
 		#if i <= 0 or i >= 2**self.order:
 		#	raise Exception('Vessel index out of range')
@@ -75,9 +124,18 @@ class Artery_Network(object):
 		return (i-1)//2  # d1 is odd, d2=d1+1 is pair
 
 	def sister_artery(self, i):
-		"""Find sister vessel.
-		:param i: Vessel index
-		:return: Sister vessel index
+		"""
+		Find and return the index of the sister artery of artery i.
+
+		Arguments
+    	---------
+    	i : int
+			Index of the artery
+
+		Returns
+    	-------
+		return : int
+			Sister artery index
 		"""
 		if i%2 == 0:
 			return i-1
@@ -86,11 +144,19 @@ class Artery_Network(object):
 
 
 	def define_geometry(self, Nx, Nt, T, N_cycles):
-		"""Define FEniCS geometry on the entire arterial network.
-		:param Nx: Spatial discretisation number
-		:param Nt: Number of time-steps
-		:param T: Duration of one cardiac cycle
-		:param N_cycles: Number of cardiac cycles
+		"""
+		Calls define_geometry() for each artery in the network.
+
+		Arguments
+    	---------
+    	Nx : int
+			Number of spatial points per artery
+		Nt : int
+			Number of time steps per cardiac cycle
+		T : float
+			Duration of one cardiac cycle
+		N_cycles: int
+			Number of cardiac cycles in the simulation
 		"""
 		self.Nx = Nx
 		self.Nt = Nt
@@ -102,11 +168,18 @@ class Artery_Network(object):
 
 
 	def define_solution(self, output_location, q0, theta=0.5):
-		"""Computes q0 on each artery, before calling define_solution.
-		The daughter vessel gets a flow proportional to its share of the area.
-		:param string output_location: Output location
-		:param q0: Initial flow of the root vessel
-		:param theta: Crank-Nicolson weight parameter, in the interval [0, 1]
+		"""
+		Calls define_solution() for each artery in the network.
+
+		Arguments
+    	---------
+    	output_location : string
+			Output data directory
+		q0 : float
+			Initial flow rate in the root vessel
+		theta : float
+			Weighting parameter for the Crank-Nicolson method, in the interval
+			[0, 1]
 		"""
 		self.output_location = output_location
 		self.theta = theta
@@ -123,23 +196,43 @@ class Artery_Network(object):
 
 
 	def flux(self, a, U, x):
-		"""Compute the flux term.
-		:param a: Artery on which the flux term is computed
-		:param U: Value of solution
-		:param x: Point of evaluation
-		:return: F(x)
-		U should be the value of the solution at the point x.
+		"""
+		Computes the flux term F(U) for a given artery a in the network.
+
+		Arguments
+    	---------
+    	a : Artery
+			Artery on which the flux term is computed
+		U : numpy.array
+			Value of solution
+		x : float
+			Point of evaluation
+
+		Returns
+    	-------
+		return : numpy.array
+			Flux term F(U) for artery a at point x
 		"""
 		return np.array([U[1], U[1]**2 + a.f(x)*np.sqrt(a.A0(x)*U[0])])
 
 
 	def source(self, a, U, x):
-		"""Compute the source term.
-		:param a: Artery on which the source term is computed
-		:param U: Value of solution
-		:param x: Point
-		:return: S(x)
-		U should be the value of the solution at the point x.
+		"""
+		Computes the source term S(U) for a given artery a in the network.
+
+		Arguments
+    	---------
+    	a : Artery
+			Artery on which the flux term is computed
+		U : numpy.array
+			Value of solution
+		x : float
+			Point of evaluation
+
+		Returns
+    	-------
+		return : numpy.array
+			Source term S(U) for artery a at point x
 		"""
 		S1 = 0
 		S2 = -2*np.sqrt(np.pi)/a.db/a.Re*U[1]/np.sqrt(U[0])\
@@ -150,13 +243,29 @@ class Artery_Network(object):
 
 
 	def compute_U_half(self, a, x0, x1, U0, U1):
-		"""Compute solution at half step.
-		:param a: Current artery
-		:param x0: Left point
-		:param x1: Right point
-		:param U0: Solution at right point
-		:param U1: Solution at left point
-		:return: Middle point, half a time step later
+		"""
+		Computes the solution for a given artery a in the network at a half
+		time step.
+
+		Arguments
+    	---------
+    	a : Artery
+			Artery on which the flux term is computed
+		x0 : float
+			Left point
+		x1 : float
+			Right point
+		U0 : numpy.array
+			Value of solution at x0
+		U1 : numpy.array
+			Value of solution at x1
+		x : float
+			Point of evaluation
+
+		Returns
+    	-------
+		return : numpy.array
+			Solution for artery a at the middle point after half a time step
 		"""
 		# Value of terms at time t_n
 		F0, S0 = self.flux(a, U0, x0), self.source(a, U0, x0)
@@ -166,11 +275,22 @@ class Artery_Network(object):
 
 
 	def compute_A_out(self, a, k_max=100, tol=1.0e-12):
-		"""Compute the outlet boundary condition.
-		:param a: Artery on which the outlet area is to be computed
-		:param k_max: Maximum number of iterations in Piccards scheme
-		:param tol: Tolerance for Piccards fixed point iteration scheme
-		:return: Outlet boundary value of A at time step t_(n+1)
+		"""
+		Computes the area for artery a at the outlet
+
+		Arguments
+    	---------
+    	a : Artery
+			Artery on which the flux term is computed
+		k_max : int
+			Maximum number of iterations in Piccards scheme
+		tol : float
+			Tolerance for Piccards fixed point iteration scheme
+
+		Returns
+    	-------
+		return : float
+			Outlet boundary value of A at time step t_(n+1)
 		"""
 		a.adjust_dex(a.L, a.Un(a.L)[0], a.Un(a.L)[1])
 
@@ -215,13 +335,24 @@ class Artery_Network(object):
 
 
 	def initial_x(self, p, d1, d2):
-		""" Make an initial guess for x at a bifurcation point.
-		Set same value at time t_(n+1) and t_(n+1/2) as time t_n.
-		At point M+-1/2, set same value as in point M.
-		:param p: Parent artery
-		:param d1: First daughter artery
-		:param d2: Second daughter artery
-		:return: x, an 18-dimensional vector containing guess values
+		"""
+		Computes an initial guess for x at a bifurcation point. Set same value
+		at time t_(n+1) and t_(n+1/2) as time t_n. At point M+-1/2, set same
+		value as in point M.
+
+		Arguments
+    	---------
+    	p : Artery
+			Parent artery in the bifurcation
+		d1 : Artery
+			First daughter artery in the bifurcation
+		d2 : Artery
+			Second daughter artery in the bifurcation
+
+		Returns
+    	-------
+		return : numpy.array
+			Initial guess for the 18 variables at a bifurcation
 		"""
 		x = np.zeros(18)
 		x[:3] = p.q0*np.ones(3)
@@ -234,7 +365,8 @@ class Artery_Network(object):
 
 
 	def define_x(self):
-		"""Make an initial guess for the solutions to the systems of equations.
+		"""
+		Calls initial_x() for each bifurcation in the artery network
 		"""
 		for ip in self.range_parent_arteries:
 			i1, i2 = self.daughter_arteries(ip)
@@ -243,13 +375,25 @@ class Artery_Network(object):
 
 
 	def problem_function(self, p, d1, d2, x):
-		"""Function representing the system of equations.
-		If x is the solution to the problem, then function(x) = 0.
-		:param p: Parent artery
-		:param d1: First daughter vessel
-		:param d2: Second daughter vessel
-		:param x: Current solution, an 18-dimensional vector
-		:return: Value of function in x
+		"""
+		Computes the solution f(x) = y of the system of equations at a
+		bifurcation.
+
+		Arguments
+    	---------
+    	p : Artery
+			Parent artery in the bifurcation
+		d1 : Artery
+			First daughter artery in the bifurcation
+		d2 : Artery
+			Second daughter artery in the bifurcation
+		x : numpy.array
+			Current solution
+
+		Returns
+    	-------
+		return : numpy.array
+			Function value f(x)
 		"""
 		# Abbreviations
 		A0p, A01, A02 = p.A0(p.L), d1.A0(0), d2.A0(0)
@@ -324,12 +468,25 @@ class Artery_Network(object):
 
 
 	def jacobian(self, p, d1, d2, x):
-		"""Compute the analytical jacobian matrix for the system of equations.
-		:param p: Parent artery
-		:param d1: First daughter vessel
-		:param d2: Second daughter vessel
-		:param x: Current solution, an 18-dimensional vector
-		:return: Jacobian matrix
+		"""
+		Computes the analytical Jacobian of the system of equations at a
+		bifurcation.
+
+		Arguments
+    	---------
+    	p : Artery
+			Parent artery in the bifurcation
+		d1 : Artery
+			First daughter artery in the bifurcation
+		d2 : Artery
+			Second daughter artery in the bifurcation
+		x : numpy.array
+			Current solution
+
+		Returns
+    	-------
+		return : numpy.array
+			Jacobian matrix
 		"""
 		# Abbreviations
 		A0p, A01, A02 = p.A0(p.L), d1.A0(0), d2.A0(0)
@@ -413,14 +570,29 @@ class Artery_Network(object):
 
 
 	def newton(self, p, d1, d2, x=np.ones(18), k_max=30, tol=1.e-10):
-		"""Compute solution to the system of equations.
-		:param p: Parent artery
-		:param d1: First daughter vessel
-		:param d2: Second daughter vessel
-		:param x: Current solution, 18-dimensional vector
-		:param k_max: Maximum number of iterations
-		:param tol: Tolerance for difference between two steps
-		:return: Solution to the system of equations
+		"""
+		Computes the solution of the system of equations at a bifurcation
+		using Newton's method.
+
+		Arguments
+    	---------
+    	p : Artery
+			Parent artery in the bifurcation
+		d1 : Artery
+			First daughter artery in the bifurcation
+		d2 : Artery
+			Second daughter artery in the bifurcation
+		x : numpy.array
+			Current solution
+		k_max: int
+			Maximum number of iterations
+		tol : float
+			Tolerance for the solution
+
+		Returns
+    	-------
+		return : numpy.array
+			Solution to the system of equations
 		"""
 		for k in range(k_max):
 
@@ -443,11 +615,20 @@ class Artery_Network(object):
 
 
 	def adjust_bifurcation_step(self, p, d1, d2, margin=0.05):
-		"""Set dex to respect CFL-condition for all arteries in a bifurcation.
-		:param p: Parent artery
-		:param d1: First daughter artery
-		:param d2: Second daughter artery
-		:param margin: Number greater than or equal to one
+		"""
+		Chooses spatial step at a bifurcation to respect the CFL condition
+		for all three arteries
+
+		Arguments
+    	---------
+    	p : Artery
+			Parent artery in the bifurcation
+		d1 : Artery
+			First daughter artery in the bifurcation
+		d2 : Artery
+			Second daughter artery in the bifurcation
+		margin : float
+			Margin of CFL number
 		"""
 		Mp = p.CFL_term(p.L, p.Un(p.L)[0], p.Un(p.L)[1])
 		M1 = d1.CFL_term(0, d1.Un(0)[0], d1.Un(0)[1])
@@ -458,10 +639,18 @@ class Artery_Network(object):
 
 
 	def set_inner_bc(self, ip, i1, i2):
-		"""Compute the inter-arterial boundary conditions for one bifurcation.
-		:param ip: Parent artery index
-		:param i1: First daughter vessel index
-		:param i2: Second daughter vessel index
+		"""
+		Calls newton() for each bifurcation to calculate the boundary values
+		for each artery at the bifurcation.
+
+		Arguments
+    	---------
+    	ip : int
+			Parent artery index in the bifurcation
+		i1 : int
+			First daughter artery index in the bifurcation
+		i2 : int
+			Second daughter artery index in the bifurcation
 		"""
 		p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
 
@@ -475,8 +664,13 @@ class Artery_Network(object):
 
 
 	def set_bcs(self, q_in):
-		""" Update boundary conditions for time t_(n+1) at all boundaries.
-		:param q_in: Value of inflow for root artery at time t_(n+1)
+		"""
+		Updates all boundary values using the appropriate boundary conditions.
+
+		Arguments
+    	---------
+    	q_in : float
+			Inflow rate in the root vessel at time t_(n+1)
 		"""
 		# Update inlet boundary conditions
 		self.arteries[0].q_in = q_in
@@ -493,10 +687,19 @@ class Artery_Network(object):
 
 	def dump_metadata(self, Nt_store, N_cycles_store, store_area,
 					  store_pressure):
-		"""Save mesh.
-		Dump metadata necessary for interpretation of xdmf-files.
-		:param boolean store_area: Store area if True
-		:param boolean store_pressure: Store pressure if True
+		"""
+		Save metadata for the interpretation of XDMF files.
+
+		Arguments
+    	---------
+    	Nt_store : int
+			Number of time steps to store
+		N_cycles_store : int
+			Number of cardiac cycles to store
+		store_area : boolean
+			Store area if True
+		store_pressure : boolean
+			Store pressure if True
 		"""
 		# Assemble strings
 		mesh_locations = ''
@@ -522,7 +725,7 @@ class Artery_Network(object):
 			locations += ',' + self.output_location + '/pressure'
 
 		# Save metadata
-		config = configparser.RawConfigParser()
+		config = configparser.SafeConfigParser()
 		config.add_section('data')
 		config.set('data', 'order', str(self.order))
 		config.set('data', 'Nx', str(self.Nx))
@@ -542,12 +745,21 @@ class Artery_Network(object):
 
 	def solve(self, q_ins, Nt_store, N_cycles_store=1, store_area=False,
 			  store_pressure=True):
-		"""Solve the equation on the entire arterial network.
-		:param q_ins: Vector containing inlet flow for the first artery
-		:param Nt_store: Number of time-steps to be stored per cycle
-		:param N_cycles_store: Number of cycles to be stored (starting at last)
-		:param boolean store_area: Store area if true
-		:param boolean store_pressure: Store pressure if true
+		"""
+		Call solve for each artery in the network.
+
+		Arguments
+    	---------
+		q_ins : numpy.array
+			Array containing inflow rates for the root artery at every time step
+    	Nt_store : int
+			Number of time steps to store
+		N_cycles_store : int
+			Number of cardiac cycles to store
+		store_area : boolean
+			Store area if True
+		store_pressure : boolean
+			Store pressure if True
 		"""
 		self.define_x()
 
