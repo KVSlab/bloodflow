@@ -61,9 +61,9 @@ def main(config_location):
 	q_ins = q(t)
 	#q_ins = np.zeros(Nt)
 
-	# Adimensionalise data and compute Reynolds' number
+	# Nondimensionalise data and compute Reynolds' number
 	Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q_ins, T  =\
-		adimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3,
+		nondimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3,
 								   rho, nu, p0, R1, R2, CT, q_ins, T)
 
 	# Create artery network
