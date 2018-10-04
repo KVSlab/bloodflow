@@ -7,8 +7,9 @@ Welcome to artery.fe's documentation!
 =====================================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   README
+   arteryfe
+   modules
 
 
 
