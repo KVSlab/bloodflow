@@ -1,6 +1,6 @@
 import sys
+sys.path.insert(0, 'arteryfe/')
 
-sys.path.insert(0, 'bloodflow/')
 from utils import *
 from utils import is_near as near
 

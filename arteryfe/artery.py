@@ -259,7 +259,7 @@ class Artery(object):
         return : float
             Pressure at the outlet
         """
-    	return self.p0 + f*(1-np.sqrt(A0/A))
+        return self.p0 + f*(1-np.sqrt(A0/A))
 
 
     def compute_outlet_pressure(self, A):

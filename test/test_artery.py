@@ -1,15 +1,16 @@
 import sys
+# sys.path.insert(0, './arteryfe/')
+
 import numpy as np
 
 import pytest
 
-from configparser import ConfigParser
+from configparser import SafeConfigParser
 import fenics as fn
 
-sys.path.insert(0, 'bloodflow/')
-from utils import *
-from utils import is_near as near
-from artery import Artery
+from arteryfe.utils import *
+from arteryfe.utils import is_near as near
+from arteryfe.artery import Artery
 
 
 def test_constructor(artery, param):
@@ -222,7 +223,7 @@ def config_location():
 
 @pytest.fixture
 def param(config_location):
-    config = ConfigParser()
+    config = SafeConfigParser()
     config.read(config_location)
 
     # Constructor parameters
@@ -252,7 +253,7 @@ def param(config_location):
     # Adimensionalise parameters
     R1 = R2 = CT = 0
     Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q0, T = \
-        adimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0,
+        nondimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3, rho, nu, p0,
                                    R1, R2, CT, q0, T)
 
     return root_vessel, end_vessel, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu,\

@@ -1,16 +1,15 @@
 import sys
+sys.path.insert(0, 'arteryfe/')
 
 import numpy as np
-from configparser import ConfigParser
+from configparser import SafeConfigParser
 
 import pytest
 
-sys.path.insert(0, 'bloodflow/')
-
 import test_artery as ta
-from artery_network import Artery_Network
-from utils import *
-from utils import is_near as near
+from arteryfe.artery_network import Artery_Network
+from arteryfe.utils import *
+from arteryfe.utils import is_near as near
 
 
 def test_constructor(arterynetwork, param):
@@ -23,7 +22,7 @@ def test_constructor(arterynetwork, param):
     an = arterynetwork
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     assert(an.order == order)
     assert(len(an.arteries) == 2**order-1)
@@ -55,7 +54,7 @@ def test_define_geometry(arterynetwork, param):
     an = arterynetwork
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     an.define_geometry(Nx, Nt, T, N_cycles)
 
@@ -74,10 +73,10 @@ def test_define_solution(arterynetwork, param):
     an = arterynetwork
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     an.define_geometry(Nx, Nt, T, N_cycles)
-    an.define_solution(output_location, q_ins[0], theta)
+    an.define_solution(output_location, q0, theta)
 
     assert(an.output_location == output_location)
     assert(an.theta == theta)
@@ -91,7 +90,7 @@ def test_daughter_arteries(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     for ip in an.range_parent_arteries:
         i1, i2 = an.daughter_arteries(ip)
@@ -107,7 +106,7 @@ def test_parent_artery(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     for i in an.range_daughter_arteries:
         ip = an.parent_artery(i)
@@ -125,7 +124,7 @@ def test_sister_artery(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     for i in an.range_daughter_arteries:
         s = an.sister_artery(i)
@@ -143,7 +142,7 @@ def test_flux(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     for a in an.arteries:
         for x in np.linspace(0, a.L, 100):
@@ -163,7 +162,7 @@ def test_source(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     for a in an.arteries:
         for x in np.linspace(0, a.L, 100):
@@ -182,7 +181,7 @@ def test_compute_U_half(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     for a in an.arteries:
         for x in [[0, a.dex], [a.L-a.dex, a.L]]:
@@ -203,7 +202,7 @@ def test_compute_A_out(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     for a in an.arteries:
         pn = a.compute_outlet_pressure(a.Un(a.L)[0])
@@ -222,7 +221,7 @@ def test_initial_x(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     for ip in an.range_parent_arteries:
         i1, i2 = an.daughter_arteries(ip)
@@ -244,7 +243,7 @@ def test_define_x(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     an.define_x()
     for ip in an.range_parent_arteries:
@@ -265,7 +264,7 @@ def test_problem_function(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     x = np.ones(18)
     for ip in an.range_parent_arteries:
@@ -330,7 +329,7 @@ def test_jacobian(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     # Higher tolerance since the numerical jacobian is inaccurate
     tol = 1.e-3
@@ -363,7 +362,7 @@ def test_newton(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     for ip in an.range_parent_arteries:
         i1, i2 = an.daughter_arteries(ip)
@@ -387,7 +386,7 @@ def test_adjust_bifurcation_step(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     for ip in an.range_parent_arteries:
         i1, i2 = an.daughter_arteries(ip)
@@ -408,7 +407,7 @@ def test_set_inner_bc(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     for ip in an.range_parent_arteries:
         i1, i2 = an.daughter_arteries(ip)
@@ -441,7 +440,7 @@ def test_set_bcs(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     q_in = an.arteries[0].q0
     an.set_bcs(q_in)
@@ -457,7 +456,7 @@ def test_dump_metadata(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
     an.dump_metadata(Nt_store, N_cycles_store, store_area, store_pressure)
 
@@ -498,8 +497,12 @@ def test_solve(arterynetwork_def, param):
     an = arterynetwork_def
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
 
+    q_first = np.linspace(q0, q_half, an.Nt//2)
+    q_second = np.linspace(q_half, q0, an.Nt//2)
+
+    q_ins = np.concatenate([q_first, q_second])
     an.solve(q_ins, Nt_store, N_cycles_store, store_area, store_pressure)
 
     for artery in arterynetwork_def.arteries:
@@ -517,7 +520,7 @@ def test_solve(arterynetwork_def, param):
 
 @pytest.fixture
 def param(config_location):
-    config = ConfigParser()
+    config = SafeConfigParser()
     config.read(config_location)
 
     # Constructor parameters
@@ -540,28 +543,28 @@ def param(config_location):
     # Geometry parameters
     Nt = config.getint('Geometry', 'Nt')
     Nx = config.getint('Geometry', 'Nx')
+    T = config.getfloat('Geometry', 'T')
     N_cycles = config.getint('Geometry', 'N_cycles')
 
     # Solution parameters
-    inlet_flow_location = config.get('Solution', 'inlet_flow_location')
     output_location = config.get('Solution', 'output_location')
     theta = config.getfloat('Solution', 'theta')
     Nt_store = config.getint('Solution', 'Nt_store')
     N_cycles_store = config.getint('Solution', 'N_cycles_store')
     store_area = config.getint('Solution', 'store_area')
     store_pressure = config.getint('Solution', 'store_pressure')
+    q0 = config.getfloat('Solution', 'q0')
+    q_half = config.getfloat('Solution', 'q_half')
 
-    # Inlet flow
-    T, q_ins = read_inlet(inlet_flow_location, Nt)
-
-    # Adimensionalise parameters
-    Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q_ins, T =\
-        adimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3,
-                                   rho, nu, p0, R1, R2, CT, q_ins, T)
+    # Nondimensionalise parameters
+    Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q0, T =\
+        nondimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3,
+                                   rho, nu, p0, R1, R2, CT, q0, T)
+    q_half = nondimensionalise(rc, qc, rho, q_half, 'flow')
 
     param = order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
-            Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-            N_cycles_store, store_area, store_pressure, q_ins
+                           Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
+                           N_cycles_store, store_area, store_pressure, q0, q_half
 
     return param
 
@@ -579,7 +582,7 @@ def config_location():
 def arterynetwork(param):
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
     an = Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,
                         R1, R2, CT)
     return an
@@ -589,10 +592,10 @@ def arterynetwork(param):
 def arterynetwork_def(arterynetwork, param):
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-        N_cycles_store, store_area, store_pressure, q_ins = param
+        N_cycles_store, store_area, store_pressure, q0, q_half = param
     arterynetwork_def = arterynetwork
     arterynetwork_def.define_geometry(Nx, Nt, T, N_cycles)
-    arterynetwork_def.define_solution(output_location, q_ins[0], theta)
+    arterynetwork_def.define_solution(output_location, q0, theta)
     return arterynetwork_def
 
 
@@ -617,6 +620,7 @@ CT = 1.3384e-6
 [Geometry]
 Nx = 400
 Nt = 4000
+T = 1
 N_cycles = 1
 
 [Solution]
@@ -627,4 +631,6 @@ Nt_store = 200
 N_cycles_store = 1
 store_area = 1
 store_pressure = 1
+q0 = 2.0
+q_half = 5.0
 """
