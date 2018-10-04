@@ -23,7 +23,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 # Fields marked as "Optional" may be commented out.
 
 setup(
-    name='bloodflow',  # Required
+    name='arteryfe',  # Required
 
     version='0.1.0',  # Required
 
@@ -32,7 +32,7 @@ setup(
     long_description=long_description,  # Optional
     long_description_content_type='text/markdown',  # Optional (see note above)
 
-    url='https://github.com/syverda/bloodflow',  # Optional
+    url='https://github.com/akdiem/bloodflow',  # Optional
 
     author='Syver D. Agdestein, Kristian Valen-Sendstad, Alexandra K. Diem',  # Optional
     author_email='alexandra@simula.no',  # Optional
