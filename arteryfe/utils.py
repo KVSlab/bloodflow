@@ -14,12 +14,12 @@ def unit_to_mmHg(p):
     Arguments
     ---------
     p : float
-    Pressure value in g cm-1 s-2
+        Pressure value in g cm-1 s-2
 
     Returns
     -------
     return : float
-    Pressure value in mmHg
+        Pressure value in mmHg
     """
     return 76/101325*p
 
@@ -31,12 +31,12 @@ def mmHg_to_unit(p):
     Arguments
     ---------
     p : float
-    Pressure value in mmHg
+        Pressure value in mmHg
 
     Returns
     -------
     return : float
-    Pressure value in g cm-1 s-2
+        Pressure value in g cm-1 s-2
     """
     return 101325/76*p
 
@@ -49,34 +49,34 @@ def nondimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3, rho,
     Arguments
     ---------
     rc : float
-    Characteristic radius (length)
+        Characteristic radius (length)
     qc : float
-    Characteristic flow
+        Characteristic flow
     Ru : float
-    Upstream radius
+        Upstream radius
     Rd : float
-    Downstream radius
+        Downstream radius
     L : float
-    Vessel length
+        Vessel length
     k1 : float
      	First constant from the relation Eh/r0
     k2 : float
-    Second constant from the relation Eh/r0
+        Second constant from the relation Eh/r0
     k3 : float
-    Third constant from the relation Eh/R0
+        Third constant from the relation Eh/R0
     rho : float
-    Density of blood
+        Density of blood
     Re : float
-    Reynolds' number
+        Reynolds' number
     nu : float
-    Viscosity of blood
+        Viscosity of blood
     p0 : float
-    Diastolic pressure
+        Diastolic pressure
 
     Returns
     -------
     return : tuple
-    Tuple of dimensionless quantities, including Reynold's number
+        Tuple of dimensionless quantities, including Reynold's number
     """
     Ru = Ru/rc
     Rd = Rd/rc
@@ -102,15 +102,15 @@ def nondimensionalise(rc, qc, rho, x, nature):
     Arguments
     ---------
     rc : float
-    Characteristic radius (length)
+        Characteristic radius (length)
     qc : float
-    Characteristic flow
+        Characteristic flow
     rho : float
-    Density of blood
+        Density of blood
     x : float
-    Parameter to redimensionalise
+        Parameter to redimensionalise
     nature : string
-    Nature of parameter to be redimensionalised
+        Nature of parameter to be redimensionalised
 
     Returns
     -------
@@ -135,20 +135,20 @@ def redimensionalise(rc, qc, rho, x, nature):
     Arguments
     ---------
     rc : float
-    Characteristic radius (length)
+        Characteristic radius (length)
     qc : float
-    Characteristic flow
+        Characteristic flow
     rho : float
-    Density of blood
+        Density of blood
     x : float
-    Parameter to redimensionalise
+        Parameter to redimensionalise
     nature : string
-    Nature of parameter to be redimensionalised
+        Nature of parameter to be redimensionalised
 
     Returns
     -------
     return : float
-    Redimensionalised quantity
+        Redimensionalised quantity
     """
     if nature == 'time':
         x = x*rc**3/qc
@@ -168,14 +168,14 @@ def read_inlet(data_location, Nt):
     Arguments
     ---------
     data_location: string
-    Location of inlet flow data file
+        Location of inlet flow data file
     Nt : int
-    Number of time steps
+        Number of time steps
 
     Returns
     -------
     return : tuple
-    Length of a cariac cycle, inlet flow rate data
+        Length of a cariac cycle, inlet flow rate data
     """
     # Import inlet flow data
     data_q = np.genfromtxt(data_location, delimiter=',')
@@ -198,12 +198,12 @@ def read_output(filename):
     Arguments
     ---------
     rc : string
-    Data file name
+        Data file name
 
     Returns
     -------
     return : tuple
-    Tuple of all parameters stored in the file
+        Tuple of all parameters stored in the file
     """
     config = SafeConfigParser()
     config.read(filename)
@@ -232,20 +232,20 @@ def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
     Arguments
     ---------
     Nx : int
-    Number of spatial points per artery
+        Number of spatial points per artery
     Nt : int
-    Number of time steps per cardiac cycle
+        Number of time steps per cardiac cycle
     mesh_location : string
-    File name of the mesh to be loaded
+        File name of the mesh to be loaded
     location : string
-    File name of the XDMF file
+        File name of the XDMF file
     name : string
-    Name of the function in the XDMF file
+        Name of the function in the XDMF file
 
     Returns
     -------
     return : numpy.array
-    Array containing the values loaded from the XDMF file
+        Array containing the values loaded from the XDMF file
     """
     print('Loading %s to matrix.' % (location))
     M = np.zeros([Nx+1, Nt])
@@ -267,13 +267,13 @@ def plot_matrix(t, x, M, label, output):
     Arguments
     ---------
     t : numpy.array
-    Array containing time point values
+        Array containing time point values
     x : numpy.array
-    Array containing spatial point values
+        Array containing spatial point values
     M : numpy.array
-    Array to be plotted, with dimension (t, x)
+        Array to be plotted, with dimension (t, x)
     output : string
-    File name to store plot
+        File name to store plot
     """
     print('Making plot of %s-matrix.' % (label))
     T, X = np.meshgrid(t, x)
@@ -298,18 +298,18 @@ def is_near(a, b, tol=1.e-14, reltol=1.e-10):
     Arguments
     ---------
     a : float
-    First number
+        First number
     b : float
-    Second number
+        Second number
     tol : float
-    Tolerance for near-equality
+        Tolerance for near-equality
     reltol : float
-    Relative tolerance for near-equality
+        Relative tolerance for near-equality
 
     Returns
     -------
     return : boolean
-    True if a and b are near-equal
+        True if a and b are near-equal
     """
     # Neglect relative error if numbers are close to zero
     if np.abs(b) > 1.e-10:
@@ -325,13 +325,13 @@ def write_file(f, u, label, t):
     Arguments
     ---------
     f : XDMFFile
-    XDMFFile to write to
+        XDMFFile to write to
     u : Function
-    Function to write to f
+        Function to write to f
     label : string
-    Label for the Function
+        Label for the Function
     t : float
-    Time point
+        Time point
     """
     set_log_level(40)
     f.write_checkpoint(u, label, t)
@@ -345,13 +345,13 @@ def read_file(f, u, label, i):
     Arguments
     ---------
     f : XDMFFile
-    XDMFFile to write to
+        XDMFFile to write to
     u : Function
-    Function to write to f
+        Function to write to f
     label : string
-    Label for the Function
+        Label for the Function
     i : int
-    Index of time point
+        Index of time point
     """
     set_log_level(40)
     f.read_checkpoint(u, label, i)
@@ -365,11 +365,11 @@ def print_progress(n_cycle, n, dt):
     Arguments
     ---------
     n_cycle : int
-    Current cardiac cycle
+        Current cardiac cycle
     n : int
-    Current iteration within cardiac cycle
+        Current iteration within cardiac cycle
     dt : float
-    Current time step
+        Current time step
     """
     print('Current cycle: %i, Cycle iteration: %i, Time-step %i'\
     % (n_cycle, n, dt), end='\r')

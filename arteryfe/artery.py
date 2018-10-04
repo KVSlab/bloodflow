@@ -13,35 +13,35 @@ class Artery(object):
     ---------
 
     root_vessel : boolean
-    True if the artery is a root vessel in the artery network (has no
-    parent)
+        True if the artery is a root vessel in the artery network (has no
+        parent)
     end_vessel : boolean
-    True if the artery is a terminal vessel in the artery network (has no
-    daughters)
+        True if the artery is a terminal vessel in the artery network (has no
+        daughters)
     rc : float
-    Characteristic radius (length)
+        Characteristic radius (length)
     qc : float
-    Characteristic flow
+        Characteristic flow
     Ru : float
-    Upstream radius
+        Upstream radius
     Rd : float
-    Downstream radius
+        Downstream radius
     L : float
-    Vessel length
+        Vessel length
     k1 : float
      	First constant from the relation Eh/r0
     k2 : float
-    Second constant from the relation Eh/r0
+        Second constant from the relation Eh/r0
     k3 : float
-    Third constant from the relation Eh/R0
+        Third constant from the relation Eh/R0
     rho : float
-    Density of blood
+        Density of blood
     Re : float
-    Reynolds' number
+        Reynolds' number
     nu : float
-    Viscosity of blood
+        Viscosity of blood
     p0 : float
-    Diastolic pressure
+        Diastolic pressure
     """
 
 
@@ -69,15 +69,15 @@ class Artery(object):
         temporal refinement and FEniCS objects.
 
         Arguments
-        	---------
-        	Nx : int
-        Number of spatial points per artery
+        ---------
+        Nx : int
+            Number of spatial points per artery
         Nt : int
-        Number of time steps per cardiac cycle
+            Number of time steps per cardiac cycle
         T : float
-        Duration of one cardiac cycle
+            Duration of one cardiac cycle
         N_cycles: int
-        Number of cardiac cycles in the simulation
+            Number of cardiac cycles in the simulation
         """
         self.Nx = Nx
         self.Nt = Nt
@@ -116,14 +116,14 @@ class Artery(object):
         form of the problem.
 
         Arguments
-        	---------
+        ---------
         q0 : float
-        Initial flow rate in the root vessel
+            Initial flow rate in the root vessel
         theta : float
-        Weighting parameter for the Crank-Nicolson method, in the interval
-        [0, 1]
+            Weighting parameter for the Crank-Nicolson method, in the interval
+            [0, 1]
         bc_tol : float
-        Inlet and outlet boundary thickness (tolerance)
+            Inlet and outlet boundary thickness (tolerance)
         """
         # Initial flow value
         self.q0 = q0
@@ -241,15 +241,25 @@ class Artery(object):
                                   ))
 
 
-    # Never used!
-    # def compute_pressure(self, f, A0, A):
-    # 	""" Compute the pressure at a given point x and time t.
-    # 	:param f: Value of f(r0) in x
-    # 	:param A0: Value of A0 in x
-    # 	:param A: Area in x at a given time t
-    # 	:return: Pressure in x at time t
-    # 	"""
-    # 	return self.p0 + f*(1-np.sqrt(A0/A))
+    def compute_pressure(self, f, A0, A):
+        """
+        Computes pressure.
+
+        Arguments
+        ---------
+        f : numpy.array
+            Elasticity relation
+        A0: numpy.array
+            Area at rest
+	    A : numpy.array
+            Area
+
+        Returns
+        -------
+        return : float
+            Pressure at the outlet
+        """
+    	return self.p0 + f*(1-np.sqrt(A0/A))
 
 
     def compute_outlet_pressure(self, A):
@@ -257,14 +267,14 @@ class Artery(object):
         Computes pressure at the outlet.
 
         Arguments
-        	---------
-        	A : float
-        Area value at the outlet
+        ---------
+        A : float
+            Area value at the outlet
 
         Returns
-        	-------
+        -------
         return : float
-        Pressure at the outlet
+            Pressure at the outlet
         """
         return self.p0 + self.f(self.L)*(1-np.sqrt(self.A0(self.L)/A))
 
@@ -274,18 +284,18 @@ class Artery(object):
         Computes the CFL number.
 
         Arguments
-        	---------
-        	x : float
-        Point at which the condition is to be checked
+        ---------
+        x : float
+            Point at which the condition is to be checked
         A : float
-        Area value at x
+            Area value at x
         q : float
-        Flow rate value at x
+            Flow rate value at x
 
         Returns
-        	-------
+        -------
         return : float
-        CFL number
+            CFL number
         """
         return 1/np.abs(q/A+np.sqrt(self.f(x)/2/self.rho\
                                    *np.sqrt(self.A0(x)/A)))
@@ -296,18 +306,18 @@ class Artery(object):
         Checks the CFL condition.
 
         Arguments
-        	---------
-        	x : float
-        Point at which the condition is to be checked
+        ---------
+        x : float
+            Point at which the condition is to be checked
         A : float
-        Area value at x
+            Area value at x
         q : float
-        Flow rate value at x
+            Flow rate value at x
 
         Returns
-        	-------
+        -------
         return : boolean
-        True if the CFL condition is fulfilled
+            True if the CFL condition is fulfilled
         """
         return self.dt/self.dex < self.CFL_term(x, A, q)
 
@@ -317,15 +327,15 @@ class Artery(object):
         Adjusts spatial step at a bifurcation to respect the CFL condition.
 
         Arguments
-        	---------
-        	x : float
-        Point at which the condition is to be checked
+        ---------
+        x : float
+            Point at which the condition is to be checked
         A : float
-        Area value at x
+            Area value at x
         q : float
-        Flow rate value at x
+            Flow rate value at x
         margin : float
-        Margin of CFL number
+            Margin of CFL number
         """
         M = self.CFL_term(x, A, q)
         self.dex = (1+margin)*self.dt/M
