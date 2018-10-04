@@ -1,10 +1,15 @@
-.. bloodflow documentation master file, created by
-   sphinx-quickstart on Thu Jul 12 17:56:02 2018.
+.. artery.fe documentation master file, created by
+   sphinx-quickstart on Thu Oct  4 11:36:35 2018.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to bloodflow's documentation!
+Welcome to artery.fe's documentation!
 =====================================
+
+.. toctree::
+   README
+   arteryfe
+   modules
 
 .. toctree::
    :maxdepth: 2

@@ -19,15 +19,16 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'bloodflow'
-copyright = '2018, Syver Døving Agdestein'
-author = 'Syver Døving Agdestein'
+project = 'artery.fe'
+copyright = '2018, Syver D. Agdestein, Kristian Valen-Sendstad, Alexandra K. Diem'
+author = 'Syver D. Agdestein, Kristian Valen-Sendstad, Alexandra K. Diem'
 
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = ''
+release = '0.1.0'
 
+autodoc_mock_imports = ["dolfin", "matplotlib", "mpl_toolkits", "scipy"]
 
 # -- General configuration ---------------------------------------------------
 
@@ -39,7 +40,9 @@ release = ''
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.imgmath',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.viewcode',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -63,11 +66,11 @@ language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-# This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+# This pattern also affects html_static_path and html_extra_path.
+exclude_patterns = []
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = None
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -102,7 +105,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'bloodflowdoc'
+htmlhelp_basename = 'arteryfedoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -129,8 +132,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'bloodflow.tex', 'bloodflow Documentation',
-     'Syver Døving Agdestein', 'manual'),
+    (master_doc, 'arteryfe.tex', 'artery.fe Documentation',
+     'Syver D. Agdestein, Kristian Valen-Sendstad, Alexandra K. Diem', 'manual'),
 ]
 
 
@@ -139,7 +142,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'bloodflow', 'bloodflow Documentation',
+    (master_doc, 'arteryfe', 'artery.fe Documentation',
      [author], 1)
 ]
 
@@ -150,10 +153,28 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'bloodflow', 'bloodflow Documentation',
-     author, 'bloodflow', 'One line description of project.',
+    (master_doc, 'arteryfe', 'artery.fe Documentation',
+     author, 'arteryfe', 'One line description of project.',
      'Miscellaneous'),
 ]
+
+
+# -- Options for Epub output -------------------------------------------------
+
+# Bibliographic Dublin Core info.
+epub_title = project
+
+# The unique identifier of the text. This can be a ISBN number
+# or the project homepage.
+#
+# epub_identifier = ''
+
+# A unique identification for the text.
+#
+# epub_uid = ''
+
+# A list of files that should not be packed into the epub file.
+epub_exclude_files = ['search.html']
 
 
 # -- Extension configuration -------------------------------------------------
