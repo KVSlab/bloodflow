@@ -4,7 +4,7 @@ Implementation of the 1D blood flow equations in FEniCS.
 
 ## Documentation
 
-Setup documentation. Also include usage in documentation.
+The documentation was build using Sphinx autobuild and is hosted on Readthedocs https://bloodflow.readthedocs.io/en/latest/index.html
 
 ## Installation and dependencies
 
