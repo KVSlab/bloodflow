@@ -3,11 +3,6 @@ artery.fe
 
 Implementation of the 1D blood flow equations in FEniCS.
 
-Documentation
--------------
-
-Setup documentation. Also include usage in documentation.
-
 Installation and dependencies
 -----------------------------
 
