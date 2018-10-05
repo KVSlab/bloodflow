@@ -1,5 +1,5 @@
 ---
-title: 'ArtEniCS: An implementation the 1D blood flow equations in FEniCS'
+title: 'Artery.FE: An implementation of the 1D blood flow equations in FEniCS'
 tags:
 - Python
 - FEniCS
