@@ -175,7 +175,7 @@ def read_inlet(data_location, Nt):
     Returns
     -------
     return : tuple
-        Length of a cariac cycle, inlet flow rate data
+        Length of a cardiac cycle, inlet flow rate data
     """
     # Import inlet flow data
     data_q = np.genfromtxt(data_location, delimiter=',')
@@ -290,7 +290,7 @@ def plot_matrix(t, x, M, label, output):
     plt.savefig(output)
 
 
-def is_near(a, b, tol=1.e-14, reltol=1.e-10):
+def is_near(a, b, tol=1.e-11, reltol=1.e-10):
     """
     Check near-equality between two floats to a certain tolerance. Name
     contains 'is_' to differentiate it from DOLFIN near()-function.
