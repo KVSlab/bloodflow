@@ -25,11 +25,18 @@ This requires FEniCS version 2017.2.0 or higher.
 
 .. raw:: html
 
-   <!---
-   ## Attribution
+Getting started
+-----------------------------
 
-   Will be added after JOSS publication
-   -->
+The file ``run_from_config.py`` provides an example for running a simulation using artery.fe and reproduces the results presented in reference [Kolachalama:2007]. Use
+
+``python run_from_config.py config/4cycles_last.cfg``
+
+to run a simulation over four cardiac cycles, storing the output for the final cardiac cycle only. This automatically creates a directory inside the output directory, which has the same name as the .cfg file used in the simulation. All output is stored in this directory. Additionally, the simulation creates a file 'data.cfg' inside the output directory, which can be used to configure postprocessing and create figures from the output. To produce figures from the output use
+
+``python postprocess.py output/4cycles_last/data.cfg``
+
+This creates three directories area, flow, and pressure inside the output directory, which contain the corresponding figures.
 
 License
 -------
