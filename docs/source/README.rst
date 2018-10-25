@@ -23,7 +23,6 @@ Alternatively, artery.fe can be installed using the provided
 
 This requires FEniCS version 2017.2.0 or higher.
 
-.. raw:: html
 
 Getting started
 -----------------------------
