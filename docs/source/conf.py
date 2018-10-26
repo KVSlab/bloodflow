@@ -46,7 +46,7 @@ extensions = [
 ]
 
 autodoc_mock_imports = ['dolfin', 'configparser', 'mpl_toolkits', 'matplotlib',
-                        'numpy', 'scipy', 'sys']
+                        'numpy', 'scipy', 'sys', 'set_log_level']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
