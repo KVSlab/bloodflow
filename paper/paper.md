@@ -1,16 +1,18 @@
 ---
-title: 'ArtEniCS: An implementation the 1D blood flow equations in FEniCS'
+title: 'Artery.FE: An implementation of the 1D blood flow equations in FEniCS'
 tags:
-- Python
-- FEniCS
-- Blood flow
+- python
+- fenics
+- blood flow
+- pde
+- finite element
 authors:
-- name: Syver Døving Agdestein
+- name: Syver D. Agdestein
   orcid: 0000-0002-1589-2916
 - name: Kristian Valen-Sendstad
 - name: Alexandra K. Diem
   orcid: 0000-0003-1719-1942
-date: 29 August 2018
+date: 09 October 2018
 bibliography: paper.bib
 ---
 
@@ -39,11 +41,6 @@ $$
 where $U = (A, q)$, $F(U) = (q, \frac{q^2}{A} + f(r_0) \sqrt{A_0 A})$, $S(U) = (0, -\frac{2\sqrt{\pi}}{\delta_b Re} \frac{q}{\sqrt{A}} + (2 \sqrt{A} (\sqrt{\pi} f(r_0) + \sqrt{A_0} \frac{df}{dr_0}(r_0)) - A \frac{df}{dr_0}(r_0))\frac{dr_0}{dx})$. A is the cross-sectional area, q is the flow.
 
 The above system of equations governs the time-development of the cross-sectional artery and blood flow rate in one artery. The associated boundary conditions are as follows: The initial radii respect the relation $r_0(x) = Ru (\frac{Rd}{Ru})^{x/L}$ and the initial cross-sectional area for each artery is thus $A = \pi (r_0(x))^2$. A prescribed flow rate at the inlet of the root artery serves as the inlet boundary condition. For each artery, the initial flow is computed according to the artery's share of the cross-sectional area at the bifurcation. At each bifurcation point, the area and the flow is computed using Richtmyer's two-step Lax-Wendroff method, by solving a system of equations with 18 unknowns. At the terminal arteries, pressure is computed using a Windkessel model and prescribed as the outlet boundary condition. When the pressure is known, the area can be computed from the state equation: $p - p_0 = f(r_0) (1 - \sqrt{\frac{A_0}{A}})$. The derivation of the governing system of equations and boundary conditions can be found in [@Olufssen:2000, @Kolachalama:2007, @Diem:2016].
-
-
-# Acknowlegdments
-
-The authors would like to thank the Simula Research Laboratory for its contributions to this package.
 
 
 # References

@@ -30,12 +30,12 @@ def test_constructor(arterynetwork, param):
     assert(an.range_parent_arteries == range(2**(order-1)-1))
     assert(an.range_daughter_arteries == range(1, 2**order-1))
     assert(an.range_end_arteries == range(2**(order-1)-1, 2**order-1))
-    assert(an.rc == rc)
-    assert(an.qc == qc)
-    assert(an.rho == rho)
-    assert(an.R1 == R1)
-    assert(an.R2 == R2)
-    assert(an.CT == CT)
+    assert(near(an.rc, rc))
+    assert(near(an.qc, qc))
+    assert(near(an.rho, rho))
+    assert(near(an.R1, R1))
+    assert(near(an.R2, R2))
+    assert(near(an.CT, CT))
 
     for i, artery in enumerate(an.arteries):
         assert(artery.root_vessel if i==0 else not artery.root_vessel)
@@ -79,7 +79,7 @@ def test_define_solution(arterynetwork, param):
     an.define_solution(output_location, q0, theta)
 
     assert(an.output_location == output_location)
-    assert(an.theta == theta)
+    assert(near(an.theta, theta))
 
 
 def test_daughter_arteries(arterynetwork_def, param):
@@ -271,6 +271,9 @@ def test_problem_function(arterynetwork_def, param):
         i1, i2 = an.daughter_arteries(ip)
         p, d1, d2 = an.arteries[ip], an.arteries[i1], an.arteries[i2]
 
+        A0p, A01, A02 = p.A0(p.L), d1.A0(0), d2.A0(0)
+        fp, f1, f2 = p.f(p.L), d1.f(0), d2.f(0)
+
         Um1p, Um0p = p.Un(p.L-p.dex), p.Un(p.L)
         U0d1, U1d1 = d1.Un(0), d1.Un(d1.dex)
         U0d2, U1d2 = d2.Un(0), d2.Un(d2.dex)
@@ -319,6 +322,80 @@ def test_problem_function(arterynetwork_def, param):
         x[16] = (x[17] + U_half_d2[0])/2
         assert(near(F(x)[5], 0))
         x[16] = 1
+
+        # 6
+        x[0] = x[3] + x[6]
+        assert(near(F(x)[6], 0))
+        x[0] = 1
+
+        # 7
+        x[1] = x[4] + x[7]
+        assert(near(F(x)[7], 0))
+        x[1] = 1
+
+        # 8
+        x[13] = A01/(1 - fp/f1*(1-np.sqrt(A0p/x[10])))**2
+        assert(near(F(x)[8], 0))
+        x[13] = 1
+
+        # 9
+        x[16] = A02/(1 - fp/f2*(1-np.sqrt(A0p/x[10])))**2
+        assert(near(F(x)[9], 0))
+        x[16] = 1
+
+        # 10
+        x[12] = A01/(1 - fp/f1*(1-np.sqrt(A0p/x[9])))**2
+        assert(near(F(x)[10], 0))
+        x[12] = 1
+
+        # 11
+        x[15] = A02/(1 - fp/f2*(1-np.sqrt(A0p/x[9])))**2
+        assert(near(F(x)[11], 0))
+        x[15] = 1
+
+        # Ghost half terms
+        Fp = an.flux(p, np.array([x[11], x[2]]), p.L + p.dex/2)
+        F1 = an.flux(d1, np.array([x[14], x[5]]), -d1.dex/2)
+        F2 = an.flux(d2, np.array([x[17], x[8]]), -d2.dex/2)
+        Sp = an.source(p, np.array([x[11], x[2]]), p.L + p.dex/2)
+        S1 = an.source(d1, np.array([x[14], x[5]]), -d1.dex/2)
+        S2 = an.source(d2, np.array([x[17], x[8]]), -d2.dex/2)
+
+        # 12
+        x[0] = Um0p[1] - p.dt/p.dex*(Fp[1]-F_half_p[1])\
+             + p.dt/2*(Sp[1]+S_half_p[1])
+        assert(near(F(x)[12], 0))
+        x[0] = 1
+
+        # 13
+        x[3] = U0d1[1] - d1.dt/d1.dex*(F_half_d1[1]-F1[1])\
+             + d1.dt/2*(S_half_d1[1]+S1[1])
+        assert(near(F(x)[13], 0))
+        x[3] = 1
+
+        # 14
+        x[6] = U0d2[1] - d2.dt/d2.dex*(F_half_d2[1]-F2[1])\
+             + d2.dt/2*(S_half_d2[1]+S2[1])
+        assert(near(F(x)[14], 0))
+        x[6] = 1
+
+        # 15
+        x[9] = Um0p[0] - p.dt/p.dex*(Fp[0]-F_half_p[0])\
+             + p.dt/2*(Sp[0]+S_half_p[0])
+        assert(near(F(x)[15], 0))
+        x[9] = 1
+
+        # 16
+        x[12] = U0d1[0] - d1.dt/d1.dex*(F_half_d1[0]-F1[0])\
+              + d1.dt/2*(S_half_d1[0]+S1[0])
+        assert(near(F(x)[16], 0))
+        x[12] = 1
+
+        # 17
+        x[15] = U0d2[0] - d2.dt/d2.dex*(F_half_d2[0]-F2[0])\
+              + d2.dt/2*(S_half_d2[0]+S2[0])
+        assert(near(F(x)[17], 0))
+        x[15] = 1
 
 
 def test_jacobian(arterynetwork_def, param):
@@ -506,11 +583,13 @@ def test_solve(arterynetwork_def, param):
     an.solve(q_ins, Nt_store, N_cycles_store, store_area, store_pressure)
 
     for artery in arterynetwork_def.arteries:
+
         if artery.root_vessel:
             assert(near(artery.U(0)[1], artery.q_in))
         else:
             assert(near(artery.U(0)[0], artery.U_in[0]))
             assert(near(artery.U(0)[1], artery.U_in[1]))
+
         if artery.end_vessel:
             assert(near(artery.U(artery.L)[0], artery.A_out))
         else:
@@ -559,12 +638,12 @@ def param(config_location):
     # Nondimensionalise parameters
     Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q0, T =\
         nondimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3,
-                                   rho, nu, p0, R1, R2, CT, q0, T)
+                                     rho, nu, p0, R1, R2, CT, q0, T)
     q_half = nondimensionalise(rc, qc, rho, q_half, 'flow')
 
     param = order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
-                           Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
-                           N_cycles_store, store_area, store_pressure, q0, q_half
+            Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
+            N_cycles_store, store_area, store_pressure, q0, q_half
 
     return param
 

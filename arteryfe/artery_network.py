@@ -83,9 +83,6 @@ class Artery_Network(object):
         return : int
             Daughter artery indices
         """
-        #if i < 0 or i >= 2**(self.order-1):
-        #	raise Exception('Vessel index out of range')
-        return 2*i+1, 2*i+2
 
 
     def parent_artery(self, i):
@@ -382,11 +379,6 @@ class Artery_Network(object):
         # Abbreviations
         A0p, A01, A02 = p.A0(p.L), d1.A0(0), d2.A0(0)
         fp, f1, f2 = p.f(p.L),  d1.f(0), d2.f(0)
-        dbp, db1, db2 = p.db, d1.db, d2.db
-        Rep, Re1, Re2 = p.Re, d1.Re, d2.Re
-        dfdrp, dfdr1, dfdr2 = p.dfdr(p.L), d1.dfdr(0), d2.dfdr(0)
-        drdxp, drdx1, drdx2 = p.drdx(p.L), d1.drdx(0), d2.drdx(0)
-        rpi = sqrt(np.pi)
 
         # Ghost half terms
         Fp = self.flux(p, np.array([x[11], x[2]]), p.L+p.dex/2)
