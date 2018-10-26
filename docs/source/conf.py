@@ -42,6 +42,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
+    'sphinx.ext.napoleon',
 ]
 
 autodoc_mock_imports = ['dolfin', 'configparser', 'mpl_toolkits', 'matplotlib',
