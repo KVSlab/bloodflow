@@ -24,7 +24,7 @@ copyright = '2018, Syver D. Agdestein, Kristian Valen-Sendstad, Alexandra K. Die
 author = 'Syver D. Agdestein, Kristian Valen-Sendstad, Alexandra K. Diem'
 
 # The short X.Y version
-version = ''
+version = 'v0.1'
 # The full version, including alpha/beta/rc tags
 release = '0.1.0'
 
