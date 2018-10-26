@@ -9,9 +9,6 @@ from arteryfe.artery import Artery
 from arteryfe.utils import *
 
 
-set_log_level(30)
-
-
 class Artery_Network(object):
     """
     Builds an artery network from the given parameters. Arteries in the network
@@ -20,15 +17,14 @@ class Artery_Network(object):
     Example
     --------
 
-    0
+        0
       /   \
      1     2
     / \   / \
-       3   4 5   6
+    3   4 5   6
 
     Arguments
     ---------
-
     order : int
         Number of arterial levels
     rc : float
@@ -66,6 +62,7 @@ class Artery_Network(object):
 
     def __init__(self, order, rc, qc, Ru, Rd, L, k1, k2, k3,
                                                 rho, Re, nu, p0, R1, R2, CT):
+        set_log_level(30)
         self.order = order
         self.arteries = [0] * (2**self.order-1)
         self.range_arteries = range(2**self.order-1)
