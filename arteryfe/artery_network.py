@@ -9,9 +9,6 @@ from arteryfe.artery import Artery
 from arteryfe.utils import *
 
 
-set_log_level(30)
-
-
 class Artery_Network(object):
     """
     Builds an artery network from the given parameters. Arteries in the network
@@ -95,7 +92,7 @@ class Artery_Network(object):
         -------
         return : int
             Daughter artery indices
-        ""*i+2
+        """
 
 
     def parent_artery(self, i):
