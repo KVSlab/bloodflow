@@ -20,11 +20,11 @@ class Artery_Network(object):
     Example
     --------
 
-    0
+        0
       /   \
      1     2
     / \   / \
-       3   4 5   6
+   3   4 5   6
 
     Arguments
     ---------
@@ -66,6 +66,7 @@ class Artery_Network(object):
 
     def __init__(self, order, rc, qc, Ru, Rd, L, k1, k2, k3,
                                                 rho, Re, nu, p0, R1, R2, CT):
+        set_log_level(30)
         self.order = order
         self.arteries = [0] * (2**self.order-1)
         self.range_arteries = range(2**self.order-1)
@@ -94,10 +95,7 @@ class Artery_Network(object):
         -------
         return : int
             Daughter artery indices
-        """
-        #if i < 0 or i >= 2**(self.order-1):
-        #	raise Exception('Vessel index out of range')
-        return 2*i+1, 2*i+2
+        ""*i+2
 
 
     def parent_artery(self, i):
