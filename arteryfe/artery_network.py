@@ -63,7 +63,7 @@ class Artery_Network(object):
 		Second resistance from Windkessel model
 	CT : float
 		Compliance from Windkessel model
-	"""
+	""" 
 
 
 	def __init__(self, order, rc, qc, Ru, Rd, L, k1, k2, k3,
