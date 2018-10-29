@@ -1,16 +1,37 @@
 Tutorial
 =========
 
-To use the package, the Artery_Network file has to be imported. All interaction with the solver goes throught the Artery_Network class. The utils file helps handling data.
+The base folder of the artery.fe repository contains the demo file `run_from_config.py`, which we will disect here to demonstrate how to run a simulation. Start by importing artery.fe and applying the short name 'af' for convenience.
 
-Parameters should be without dimension before the package takes them into use. The utils-file provides adimensionalisation methods. For the package to work correctly, an Artery_Network object should be created. Define_geometry should be called next, with spatial and temporal discretisation, and then Define_solution may be called. Solve should be called lastly. This will generate an output folder, containing a file called data.cfg, mesh-files, and folders for area, flow or pressure containing the solution in xdmf-format, according to the specified storage options. All files are enumerated from 0 to the number of arteries in the same way as in the package.
+``import arteryfe as af``
 
-A post processing file is preconfigured to make plots of the data. The only parameter needed is the location of the data.cfg file in the output folder.
+Parameters are loaded from a .cfg file using the class `ParamParser`, where the .cfg file is stored in `config_location`
 
-A run_from_config file is preconfigured to read parameters from a cfg-file and run the necessary functions in the right order. The structure of the config files may be found in the example-config-files in the config folder. In a FEniCS-enabled terminal window, an example command is:
+``param = af.ParamParser(config_location)``
 
-> python3 run_from_config.py 'config/4cycles.cfg'
+Parameters can then be explicitly loaded using the syntax
 
-The above command will create an output folder containing the solution on four cardiac cycles.
+``order = param.param['order']``
 
-Unit test are provided in the test folder, along with associated configuration files. To run unit tests, one can either run a test file directly, passing the config-file-location as a (string) parameter, or import the file to run the tests individually.
+Inlet flow rates for the parent artery should be prescribed using a .csv file whose location is provided in the parameter `inlet_flow_location`. It should not contain any header lines. The first column should correspond to time points, while the second column should correspond to the flow rate values.
+
+Parameters are nondimensionalised and the Reynold's number is calculated using
+
+``Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q_ins, T =\
+        af.nondimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3,
+                                   rho, nu, p0, R1, R2, CT, q_ins, T)``
+
+We are now ready to create an `ArteryNetwork` object. This is done in three steps, where the first step calls the `ArteryNetwork` constructor, the second step calls a function to set up the geometry of the artery, and the third step calls a function to set up the solver for the problem.
+
+```
+an = af.ArteryNetwork(order, rc, qc, Ru, Rd, L, k1, k2,
+                      k3,	rho, Re, nu, p0, R1, R2, CT)
+an.define_geometry(Nx, Nt, T, N_cycles)
+an.define_solution(output_location, q_ins[0], theta)
+```
+
+The solution is then calculated using
+
+``an.solve(q_ins, Nt_store, N_cycles_store, store_area, store_pressure)``
+
+The solution is stored in `output`.
