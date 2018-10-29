@@ -34,4 +34,4 @@ The solution is then calculated using
 
 ``an.solve(q_ins, Nt_store, N_cycles_store, store_area, store_pressure)``
 
-The solution is stored in `output`.
+The solution is stored in `output` in a separate folder defined in the parameter `output_location`.
