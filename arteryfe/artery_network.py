@@ -83,6 +83,7 @@ class Artery_Network(object):
         return : int
             Daughter artery indices
         """
+        return 2*i+1, 2*i+2
 
 
     def parent_artery(self, i):
