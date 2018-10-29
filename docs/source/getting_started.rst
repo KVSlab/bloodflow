@@ -1,4 +1,4 @@
-artery.fe
+Getting started
 =========
 
 Implementation of the 1D blood flow equations in FEniCS.
@@ -24,7 +24,7 @@ Alternatively, artery.fe can be installed using the provided
 This requires FEniCS version 2017.2.0 or higher.
 
 
-Getting started
+Running artery.fe
 -----------------------------
 
 The file ``run_from_config.py`` provides an example for running a simulation using artery.fe and reproduces the results presented in reference [Kolachalama:2007]. Use
@@ -36,6 +36,7 @@ to run a simulation over four cardiac cycles, storing the output for the final c
 ``python postprocess.py output/4cycles_last/data.cfg``
 
 This creates three directories area, flow, and pressure inside the output directory, which contain the corresponding figures.
+
 
 License
 -------
