@@ -14,18 +14,8 @@ class Artery_Network(object):
     Builds an artery network from the given parameters. Arteries in the network
     are assigned indices from left to right and top to bottomself.
 
-    Example
-    --------
-
-        0
-      /   \
-     1     2
-    / \   / \
-   3   4 5   6
-
     Arguments
     ---------
-
     order : int
         Number of arterial levels
     rc : float
@@ -93,6 +83,7 @@ class Artery_Network(object):
         return : int
             Daughter artery indices
         """
+        return 2*i+1, 2*i+2
 
 
     def parent_artery(self, i):

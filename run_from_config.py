@@ -3,8 +3,7 @@ import sys
 import numpy as np
 import configparser
 
-from arteryfe.utils import *
-from arteryfe.artery_network import Artery_Network
+import arteryfe as af
 
 
 def main(config_location):
@@ -47,15 +46,15 @@ def main(config_location):
     store_pressure = config.getint('Solution', 'store_pressure')
 
     # Import inlet flow data
-    T, q_ins = read_inlet(inlet_flow_location, Nt)
+    T, q_ins = af.read_inlet(inlet_flow_location, Nt)
 
     # Nondimensionalise data and compute Reynolds' number
     Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q_ins, T =\
-        nondimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3,
+        af.nondimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3,
                                    rho, nu, p0, R1, R2, CT, q_ins, T)
 
     # Create artery network
-    an = Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2,
+    an = af.Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2,
                         k3,	rho, Re, nu, p0, R1, R2, CT)
     an.define_geometry(Nx, Nt, T, N_cycles)
     an.define_solution(output_location, q_ins[0], theta)
