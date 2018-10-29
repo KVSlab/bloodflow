@@ -53,7 +53,7 @@ def main(config_location):
                                    rho, nu, p0, R1, R2, CT, q_ins, T)
 
     # Create artery network
-    an = af.Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2,
+    an = af.ArteryNetwork(order, rc, qc, Ru, Rd, L, k1, k2,
                         k3,	rho, Re, nu, p0, R1, R2, CT)
     an.define_geometry(Nx, Nt, T, N_cycles)
     an.define_solution(output_location, q_ins[0], theta)
