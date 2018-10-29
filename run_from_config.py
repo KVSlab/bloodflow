@@ -11,39 +11,38 @@ def main(config_location):
     Run the necessary functions to compute the solution.
     :param string config_location: Location of config file
     """
-    config = configparser.ConfigParser()
-    config.read(config_location)
+    param = af.ParamParser(config_location)
 
     # Constructor parameters
-    order = config.getint('Parameters', 'order')
-    rc = config.getfloat('Parameters', 'rc')
-    qc = config.getfloat('Parameters', 'qc')
-    Ru = np.array([float(f) for f in config.get('Parameters', 'Ru').split(',')])
-    Rd = np.array([float(f) for f in config.get('Parameters', 'Rd').split(',')])
-    L = np.array([float(f) for f in config.get('Parameters', 'L').split(',')])
-    k1 = config.getfloat('Parameters', 'k1')
-    k2 = config.getfloat('Parameters', 'k2')
-    k3 = config.getfloat('Parameters', 'k3')
-    rho = config.getfloat('Parameters', 'rho')
-    nu = config.getfloat('Parameters', 'nu')
-    p0 = config.getfloat('Parameters', 'p0')
-    R1 = config.getfloat('Parameters', 'R1')
-    R2 = config.getfloat('Parameters', 'R2')
-    CT = config.getfloat('Parameters', 'CT')
+    order = param.param['order']
+    rc = param.param['rc']
+    qc = param.param['qc']
+    Ru = param.param['Ru']
+    Rd = param.param['Rd']
+    L = param.param['L']
+    k1 = param.param['k1']
+    k2 = param.param['k2']
+    k3 = param.param['k3']
+    rho = param.param['rho']
+    nu = param.param['nu']
+    p0 = param.param['p0']
+    R1 = param.param['R1']
+    R2 = param.param['R2']
+    CT = param.param['CT']
 
     # Geometry parameters
-    Nt = config.getint('Geometry', 'Nt')
-    Nx = config.getint('Geometry', 'Nx')
-    N_cycles = config.getint('Geometry', 'N_cycles')
+    Nt = param.geo['Nt']
+    Nx = param.geo['Nx']
+    N_cycles = param.geo['N_cycles']
 
     # Solution parameters
-    inlet_flow_location = config.get('Solution', 'inlet_flow_location')
-    output_location = config.get('Solution', 'output_location')
-    theta = config.getfloat('Solution', 'theta')
-    Nt_store = config.getint('Solution', 'Nt_store')
-    N_cycles_store = config.getint('Solution', 'N_cycles_store')
-    store_area = config.getint('Solution', 'store_area')
-    store_pressure = config.getint('Solution', 'store_pressure')
+    inlet_flow_location = param.solution['inlet_flow_location']
+    output_location = param.solution['output_location']
+    theta = param.solution['theta']
+    Nt_store = param.solution['Nt_store']
+    N_cycles_store = param.solution['N_cycles_store']
+    store_area = param.solution['store_area']
+    store_pressure = param.solution['store_pressure']
 
     # Import inlet flow data
     T, q_ins = af.read_inlet(inlet_flow_location, Nt)
