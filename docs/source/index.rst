@@ -13,6 +13,7 @@ Welcome to artery.fe's documentation!
     getting_started
     tutorial
     theory
+    numerical
 
 
 Indices and tables
