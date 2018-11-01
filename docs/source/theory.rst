@@ -3,12 +3,49 @@
 Blood flow dynamics in 1D
 =========================
 
-artery.fe implements the 1D system of equations derived by [Olufsen:2000] that is commonly used to numerically model blood flow dynamics. Its derivation is provided here for the mathematically interested reader and for completeness.
+artery.fe implements the 1D system of equations derived by [Olufsen:2000] that is commonly used to numerically model blood flow dynamics. We assume that the reader is familiar with the general methods of modelling laminar fluid flow in 1D and provide a derivation for completeness.
+
+Nomenclature
+------------
+
+We use the nomenclature listed in the table below.
+
+===================================  ====================
+Symbol                               Interpretation
+===================================  ====================
+:math:`r`                            radial direction
+:math:`z`                            axial direction
+:math:`t`                            time
+:math:`\boldsymbol{u} = (u_z, u_r)`  velocity
+:math:`A`                            cross-sectional area
+:math:`R`                            radius
+:math:`q`                            flow rate
+:math:`p`                            pressure
+:math:`\rho`                         density
+:math:`\nu`                          viscosity
+:math:`Q`                            characteristic flow rate
+:math:`T`                            cardiac cycle length
+:math:`\delta`                       artery boundary layer
+:math:`\bar{\cdot}`                  average
+:math:`E`                            Young's modulus
+:math:`h`                            artery wall thickness
+:math:`k_i`                          elastic parameters
+:math:`f`                            elastic relation
+:math:`\mathcal{Re}`                 Reynold's number
+:math:`\Delta t`                     discrete time step size
+:math:`\Delta x`                     discrete spatial step size
+:math:`m`                            grid location
+:math:`M`                            outlet grid location
+:math:`\mathcal{M}`                  bifurcation grid location, that is :math:`M` for the parent vessel and 0 for its daughter vessels
+:math:`n`                            time point
+:math:`R_i`                          resistance parameters
+:math:`C`                            compliance parameters
+===================================  ====================
 
 Governing equations
 -------------------
 
-Arteries are modelled as axisymmetric tubes in a cylindrical coordinate system with radial direction *r* and axial direction *z*. Therefore, the continuity equation is
+Consider an arterial segment that we model as an axisymmetric tube in a cylindrical coordinate system with radial direction :math:`r` and axial direction :math:`z`. Therefore, the governing equation reduces to
 
 .. math::
 
@@ -20,13 +57,15 @@ where :math:`\boldsymbol{u} = (u_z(r,z,t), u_r(r,z,t))`. Integration of (1) over
   2 \pi \int_0^{R(z,t)} \left( \frac{\partial u_z(r,z,t)}{\partial z} + \frac{1}{r} \frac{\partial(ru_r(r,z,t))}{\partial r} \right) r dr = 0,\\
   2 \pi \int_0^{R(z,t)} \frac{\partial u_z(r,z,t)}{\partial z} r dr + 2 \pi \left[ r u_r(r,z,t) \right]_0^{R(z,t)} = 0 \qquad (2)
 
-where :math:`R(z,t)` describes the vessel radius. The first term of (2) can be evaluated using Leibniz' integral rule ("differentiation under the integral sign")
+where :math:`R(z,t)` describes the vessel radius.
+
+The first term of (2) can be evaluated using Leibniz' integral rule ("differentiation under the integral sign"), which states
 
 .. math::
 
-  \frac{\partial}{\partial x} \int_{a(x)}^{b(x)} f(x, y) dy = \int_{a(x)}^{b(x)} \frac{\partial f(x,y)}{\partial x} dy + f(x,b(x)) \frac{\partial b(x)}{\partial x} - f(x,a(x)) \frac{\partial a(x)}{\partial x}
+  \frac{\partial}{\partial x} \int_{a(x)}^{b(x)} f(x, y) dy = \int_{a(x)}^{b(x)} \frac{\partial f(x,y)}{\partial x} dy + f(x,b(x)) \frac{\partial b(x)}{\partial x} - f(x,a(x)) \frac{\partial a(x)}{\partial x}.
 
-and results in
+Applying this rule to (2) results in
 
 .. math::
   2 \pi \frac{\partial}{\partial z} \int_0^{R(z,t)} u_z(r,z,t) r dr - 2 \pi \frac{\partial R(z,t)}{\partial z}\left[ r u_z(r,z,t) \right]_{R(z,t)} + 2 \pi \left[ r u_r(r,z,t) \right]_0^{R(z,t)} = 0.
@@ -42,24 +81,24 @@ yields
 .. math::
   \frac{\partial q(r,z,t)}{\partial z} - 2 \pi \frac{\partial R(z,t)}{\partial z}\left[ r u_z(r,z,t) \right]_{R(z,t)} + 2 \pi \left[ r u_r(r,z,t) \right]_0^{R(z,t)} = 0. \qquad (3)
 
-Due to no-slip :math:`r` vanishes at the boundary :math:`R(z,t)`
+Due to no-slip :math:`u_z` vanishes at the boundary :math:`r = R(z,t)`
 
 .. math::
-  \left. u_z(r,z,t) \right|_{R(z,t)} = 0 \qquad (4)
+  \left. u_z(r,z,t) \right|_{R(z,t)} = 0. \qquad (4)
 
-and longitudinal tether of the vessel leads to
+An arterial segment is embedded within an arterial tree and thus stretch along the :math:`z`-direction is restricted (tether). Thus
 
 .. math::
 
-  \left. u_r(r,z,t) \right|_{R(z,t)} = \frac{\partial R(z,t)}{\partial t}. \qquad(5)
+  \left. u_r(r,z,t) \right|_{R(z,t)} = \frac{\partial R(z,t)}{\partial t}, \qquad(5)
 
-Thus, (3) reduces to
+which allows us to write the continuity equation (1) in terms of flow rate :math:`q` and cross-sectional area :math:`A`
 
 .. math::
 
   \frac{\partial q(r,z,t)}{\partial z} + \frac{\partial A(z,t)}{\partial t} = 0. \qquad (6)
 
-The momentum equation for axisymmetric flow with no swirl is
+We treat the momentum equation in the same coordinate system in a similar fashion. For Poiseuille flow it reads
 
 .. math::
 
@@ -111,39 +150,39 @@ Using these results in (8) gives
   2\pi & \nu R(z,t) \left. \frac{\partial u_z(r,z,t)}{\partial r} \right|_{R(z,t)}. \qquad (9)
   \end{split}
 
-To solve the remaining terms it is necessary to make assumptions about the velocity profile of blood flow through an artery. Blood flow is considered pulsatile laminar and vessels are considered slightly tapered, therefore the velocity profile is assumed to be mostly flat with a thin boundary layer with cardiac cycle length :math:`T` and width :math:`\delta_b = (\nu T / (2\pi))^{0.5}`, such that :math:`\delta_b \ll R(z,t)`. The axial velocity :math:`u_z(r,z,t)` thus has the form
+To solve the remaining terms it is necessary to make assumptions about the velocity profile of blood flow through an artery. Blood flow is considered positively pulsatile and laminar, and vessels can be considered slightly tapered, therefore the velocity profile is assumed to be mostly flat with a thin boundary layer with cardiac cycle length :math:`T` and width :math:`\delta = (\nu T / (2\pi))^{0.5}`, such that :math:`\delta \ll R(z,t)`. The axial velocity :math:`u_z(r,z,t)` thus has the form
 
 .. math::
 
   u_z(r,z,t) = \begin{cases}
-  \bar{u}_z(z,t) & r \leq R(z,t)-\delta_b\\
-  \bar{u}_z(z,t) (R(z,t)-r)/\delta_b & R(z,t)-\delta_b < r \leq R(z,t),
+  \bar{u}_z(z,t) & r \leq R(z,t)-\delta\\
+  \bar{u}_z(z,t) (R(z,t)-r)/\delta & R(z,t)-\delta < r \leq R(z,t),
   \end{cases} \qquad (10)
 
-where :math:`\bar{u}_z(z,t)` is the average axial velocity outside the boundary layer. This leads to a flat velocity profile outside the boundary layer and linearly increasing profile (from 0 to :math:`\bar{u}_z(z,t)`) inside the boundary layer. Note that a physiological cardiac cycle at rest has between 40 and 70 beats per minute (0.6 s :math:`\leq T \leq` 1.1 s), therefore the boundary layer is 0.07--0.09 cm in size. The minimal inlet radius of arteries considered in this work is 0.14 cm, therefore (10) is appropriate for the desired velocity profile. The first and second terms of (9) can then be expressed as a power series in :math:`\delta_b`
+where :math:`\bar{u}_z(z,t)` is the average axial velocity outside the boundary layer. This leads to a flat velocity profile outside the boundary layer and linearly increasing profile (from 0 to :math:`\bar{u}_z(z,t)`) inside the boundary layer. Note that a physiological cardiac cycle at rest has between 60 and 70 beats per minute (0.6 s :math:`\leq T \leq` 1.1 s), therefore the boundary layer is 0.07--0.09 cm in size. This is much smaller than the minimal inlet radius of arteries considered in this work, namely 0.14 cm, and therefore (10) is appropriate for the desired velocity profile. The first and second terms of (9) can then be expressed as a power series in :math:`\delta`
 
 .. math::
 
-  q = 2\pi \int_0^{R(z,t)} u_z(r,z,t) r dr = A \bar{u}_z(z,t) \left( 1 - \frac{\delta_b}{R(z,t)} + \mathcal{O}(\delta_b^2) \right),\\
-  2\pi \frac{\partial}{\partial z} \int_0^{R(z,t)} u_z(r,z,t)^2 r dr = A \bar{u}_z(z,t) \left( 1 - \frac{4}{3} \frac{\delta_b}{R(z,t)} + \mathcal{O}(\delta_b^2) \right).
+  q = 2\pi \int_0^{R(z,t)} u_z(r,z,t) r dr = A \bar{u}_z(z,t) \left( 1 - \frac{\delta}{R(z,t)} + \mathcal{O}(\delta^2) \right),\\
+  2\pi \frac{\partial}{\partial z} \int_0^{R(z,t)} u_z(r,z,t)^2 r dr = A \bar{u}_z(z,t) \left( 1 - \frac{4}{3} \frac{\delta}{R(z,t)} + \mathcal{O}(\delta^2) \right).
 
 Using these solutions the second term of (9) becomes
 
 .. math::
 
-  2\pi \frac{\partial}{\partial z} \int_0^{R(z,t)} u_z(r,z,t)^2 r dr = \frac{q(z,t)^2}{A(z,t)} \left( 1 + \frac{2}{3} \frac{\delta_b}{R(z,t)} + \mathcal{O}(\delta_b^2) \right).
+  2\pi \frac{\partial}{\partial z} \int_0^{R(z,t)} u_z(r,z,t)^2 r dr = \frac{q(z,t)^2}{A(z,t)} \left( 1 + \frac{2}{3} \frac{\delta}{R(z,t)} + \mathcal{O}(\delta^2) \right).
 
 This leaves the term on the right-hand side (RHS) of (9) to be evaluated using the velocity profile
 
 .. math::
 
-  2 \pi \nu R(z,t) \frac{\partial u_z(r,z,t)}{\partial r} = - \frac{2 \pi \nu R(z,t)}{\delta_b} \frac{q(z,t)}{A(z,t)} + \mathcal{O}(\delta_b)
+  2 \pi \nu R(z,t) \frac{\partial u_z(r,z,t)}{\partial r} = - \frac{2 \pi \nu R(z,t)}{\delta} \frac{q(z,t)}{A(z,t)} + \mathcal{O}(\delta)
 
-such that finally, keeping only leading order terms in :math:`\delta_b`, the momentum equation reads
+such that finally, keeping only leading order terms in :math:`\delta`, the momentum equation reads
 
 .. math::
 
-  \frac{\partial q(z,t)}{\partial t} + \frac{\partial}{\partial z} \left( \frac{q(z,t)^2}{A(z,t)} \right) + \frac{A(z,t)}{\rho} \frac{\partial p(z,t)}{\partial z} = - \frac{2 \pi \nu R(z,t)}{\delta_b} \frac{q(z,t)}{A(z,t)}. \qquad (11)
+  \frac{\partial q(z,t)}{\partial t} + \frac{\partial}{\partial z} \left( \frac{q(z,t)^2}{A(z,t)} \right) + \frac{A(z,t)}{\rho} \frac{\partial p(z,t)}{\partial z} = - \frac{2 \pi \nu R(z,t)}{\delta} \frac{q(z,t)}{A(z,t)}. \qquad (11)
 
 In order to solve the system of (6) and (11) they need to be written in conservation form
 
@@ -158,7 +197,7 @@ The quantity :math:`B` is introduced and chosen to fulfill
 
 with :math:`r_0(z)` initial radius at rest such that
 
-.. math:
+.. math::
 
   \frac{\partial B(r_0(z), p(z,t))}{\partial z} = \frac{A}{\rho} \frac{\partial p(z,t)}{\partial z} + \frac{\partial B(r_0(z), p(z,t))}{\partial r_0(z)} \frac{\partial r_0(z)}{\partial z}
 
@@ -167,16 +206,16 @@ Then, adding the term :math:`(\partial B / \partial r_0) (\partial r_0 / \partia
 .. math::
 
   \begin{split}
-  \dfrac{\partial}{\partial t} \begin{pmatrix} A(z,t) \\ q(z,t) \end{pmatrix} + \dfrac{\partial}{\partial z} & \begin{pmatrix} q(z,t)\\ \dfrac{q(z,t)^2}{A(z,t)} + B(r_0(z), p(z,t)) \end{pmatrix} =\\ & \qquad \begin{pmatrix} 0 \\ - \dfrac{2 \pi \nu R(z,t)}{\delta_b} \dfrac{q(z,t)}{A(z,t)} + \dfrac{\partial B(r_0(z), p(z,t))}{\partial r_0(z)} \dfrac{\partial r_0(z)}{\partial z} \end{pmatrix}. \qquad (13)
+  \dfrac{\partial}{\partial t} \begin{pmatrix} A(z,t) \\ q(z,t) \end{pmatrix} + \dfrac{\partial}{\partial z} & \begin{pmatrix} q(z,t)\\ \dfrac{q(z,t)^2}{A(z,t)} + B(r_0(z), p(z,t)) \end{pmatrix} =\\ & \qquad \begin{pmatrix} 0 \\ - \dfrac{2 \pi \nu R(z,t)}{\delta} \dfrac{q(z,t)}{A(z,t)} + \dfrac{\partial B(r_0(z), p(z,t))}{\partial r_0(z)} \dfrac{\partial r_0(z)}{\partial z} \end{pmatrix}. \qquad (13)
   \end{split}
 
 Currently, (13) contains three unknowns (:math:`q, A, p`) for two equations, thus a third relation is needed to solve the system of equations. The aforementioned equation, referred to as the state equation, describes the relationship between :math:`A(z,t)` and :math:`p(z,t)`. One choice for the state equation is the linearly elastic relation
 
-.. math:
+.. math::
 
   p(z,t) - p_0 = \frac{4}{3} \frac{Eh}{r_0(z)} \left( 1 - \sqrt{\frac{A_0(z)}{A(z,t)}} \right) \qquad (14),
 
-where the constant $p_0$ is the diastolic pressure, $E$ is the Young's modulus of the vessel wall, $h$ is the wall width and $A_0(z) = \pi r_0(z)^2$. The relationship $Eh/r_0$ is based on compliance estimates
+where the constant :math:`p_0` is the diastolic pressure, :math:`E` is the Young's modulus of the vessel wall, :math:`h` is the wall width and :math:`A_0(z) = \pi r_0(z)^2`. The relationship :math:`Eh/r_0` is based on compliance estimates
 
 .. math::
 
@@ -198,22 +237,10 @@ thus, (13) becomes
 
   \begin{split}
   &\dfrac{\partial}{\partial t} \begin{pmatrix} A(z,t) \\ q(z,t) \end{pmatrix} + \dfrac{\partial}{\partial z} \begin{pmatrix} q(z,t)\\ \dfrac{q(z,t)^2}{A(z,t)} + \frac{f(r_0)}{\rho} \sqrt{A_0(z) A(z,t)} \end{pmatrix} =\\
-  &\begin{pmatrix} 0 \\ -\dfrac{2 \pi \nu q(z,t) R(z,t)}{\delta_b A(z,t)} + \dfrac{1}{\rho} \left( 2 \sqrt{A(z,t)} \left( \sqrt{\pi} f(r_0) + \sqrt{A_0(z)} \frac{df(r_0)}{dr_0 } \right) - A(z,t) \dfrac{df(r_0)}{dr_0} \right) \dfrac{dr_0(z)}{dz} \end{pmatrix}. \qquad (16)
+  &\begin{pmatrix} 0 \\ -\dfrac{2 \pi \nu q(z,t) R(z,t)}{\delta A(z,t)} + \dfrac{1}{\rho} \left( 2 \sqrt{A(z,t)} \left( \sqrt{\pi} f(r_0) + \sqrt{A_0(z)} \frac{df(r_0)}{dr_0 } \right) - A(z,t) \dfrac{df(r_0)}{dr_0} \right) \dfrac{dr_0(z)}{dz} \end{pmatrix}. \qquad (16)
   \end{split}
 
-To nondimensionalise we define some characteristic parameters
-
-================================  ================
-Parameter                         Physical meaning
-================================  ================
-R                                 radius
-Q                                 flow rate
-:math:`\rho`                      blood density
-:math:`\nu`                       blood viscosity
-:math:`\mathcal{Re} = Q/(\nu R)`  Reynold's number
-================================  ================
-
-and rescale variables accordingly
+To nondimensionalise we choose appropriate scaling parameters for the system variables:
 
 ================================  ====================
 Variable                          Physical meaning
@@ -232,7 +259,7 @@ The resulting dimensionless system of equations is
 
   \begin{split}
   &\dfrac{\partial}{\partial t} \begin{pmatrix} A(z,t) \\ q(z,t) \end{pmatrix} + \dfrac{\partial}{\partial z} \begin{pmatrix} q(z,t)\\ \dfrac{q(z,t)^2}{A(z,t)} + f(r_0) \sqrt{A_0(z) A(z,t)} \end{pmatrix} =\\
-  &\begin{pmatrix} 0 \\ -\dfrac{2 \pi R(z,t)}{\delta_b \mathcal{Re}} \dfrac{q(z,t)}{A(z,t)} +\left( 2 \sqrt{A(z,t)} \left( \sqrt{\pi} f(r_0) + \sqrt{A_0(z)} \frac{df(r_0)}{dr_0 } \right) - A(z,t) \dfrac{df(r_0)}{dr_0} \right) \dfrac{dr_0(z)}{dz} \end{pmatrix}. \qquad (17)
+  &\begin{pmatrix} 0 \\ -\dfrac{2 \pi R(z,t)}{\delta \mathcal{Re}} \dfrac{q(z,t)}{A(z,t)} +\left( 2 \sqrt{A(z,t)} \left( \sqrt{\pi} f(r_0) + \sqrt{A_0(z)} \frac{df(r_0)}{dr_0 } \right) - A(z,t) \dfrac{df(r_0)}{dr_0} \right) \dfrac{dr_0(z)}{dz} \end{pmatrix}. \qquad (17)
   \end{split}
 
 Boundary conditions
@@ -261,13 +288,16 @@ with :math:`q_0^{n+1/2}` evaluated directly from the inlet flux function and :ma
 
   \boldsymbol{U}_j^{n+1/2} = \frac{\boldsymbol{U}_{j+1/2}^n + \boldsymbol{U}_{j-1/2}^n}{2} + \frac{\Delta t}{2} \left( - \frac{\boldsymbol{F}_{j+1/2}^n - \boldsymbol{F}_{j-1/2}^n}{\Delta z} + \frac{\boldsymbol{S}_{j+1/2}^n + \boldsymbol{S}_{j-1/2}^n}{2} \right) \qquad (20)
 
+Outlet
+^^^^^^
+
 The outlet boundary condition is a three-element Windkessel (3WK), which is given by
 
 .. math::
 
-  \frac{\partial p(z,t)}{\partial t} = R_1 \frac{\partial q(z,t)}{\partial t} - \frac{p(z,t)}{R_2 C_T} + \frac{q(z,t) (R_1 + R_2)}{R_2 C_T}
+  \frac{\partial p(z,t)}{\partial t} = R_1 \frac{\partial q(z,t)}{\partial t} - \frac{p(z,t)}{R_2 C} + \frac{q(z,t) (R_1 + R_2)}{R_2 C}.
 
-and discretisation yields
+The 3WK model uses an electrical circuit analog representation of the downstream arterial tree, where electrical current represents :math:`q` and voltage represents :math:`p`, using resistance (:math:`R_i`) and compliance (:math:`C`) parameters . Discretisation yields
 
 .. math::
 
@@ -319,7 +349,7 @@ On both sides of the boundary q and A are calculated from the Lax-Wendroff discr
   &\frac{\Delta t}{2} \left(\left( S_2^{(i)} \right)_{\mathcal{M}+1/2}^{n+1/2} + \left( S_2^{(i)} \right)_{\mathcal{M}-1/2}^{n+1/2} \right), \qquad (27)
   \end{split}
 
-where :math:`i = p, d1, d2` and :math:`\mathcal{M} = M` if :math:`i = p` and :math:`\mathcal{M} = 0` otherwise. Analogously to the inlet boundary condition the ghost points :math:`q_{M+1/2}^{n+1/2}` and :math:`A_{M+1/2}^{n+1/2}` can be evaluated from
+where :math:`i = p, d1, d2` and :math:`\mathcal{M} = M` if :math:`i = p` and :math:`\mathcal{M} = 0` otherwise. We introduce the ghost points :math:`q_{M+1/2}^{n+1/2}` and :math:`A_{M+1/2}^{n+1/2}`, which are not part of the geometry of the parent vessel, but lie beyond the outlet point. These are, analogously to the inlet boundary condition, evaluated using
 
 .. math:
 
