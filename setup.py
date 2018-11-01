@@ -25,7 +25,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name='arteryfe',  # Required
 
-    version='0.1.0',  # Required
+    version='1.0',  # Required
 
     description='Implementation of the 1D blood flow equations in FEniCS.',  # Optional
 
