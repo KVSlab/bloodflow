@@ -6,7 +6,7 @@ This page explains the numerical implementation of the equations derived in :ref
 Time discretisation
 -------------------
 
-Time is discretised using a finite difference :math:`theta`-rule based algorithm, that is given the previous solution :math:`U^n` one can find the next solution :math:`U^{n+1}` using
+Time is discretised using a finite difference :math:`\theta`-rule based algorithm, that is given the previous solution :math:`U^n` one can find the next solution :math:`U^{n+1}` using
 
 .. math::
   U^{n+1} = U^n + k \left[ \theta U^{n+1} + (1-\theta) U^{n} \right]
@@ -24,8 +24,8 @@ with :math:`k = \delta t` and :math:`0 \leq \theta \leq 1`, where :math:`\theta 
         - self.dt*self.theta*S_v_dx\
         - self.dt*(1-self.theta)*Sn_v_dx
 
-Spatial discretisation
-----------------------
+Finite element discretisation
+-----------------------------
 
 Arteries are discretised using the finite element (FE) method implemented in FEniCS_. Because we model arteries in 1D using their cross-sectional area along the longitudinal axis, we can use FEniCS built-in interval mesh to initialise the geometry using :meth:`arteryfe.Artery.define_geometry`::
 
@@ -54,8 +54,29 @@ The FE method requires rewriting the system of equations in its variational form
 .. math::
   \begin{split}
   &\dfrac{\partial}{\partial t} \begin{pmatrix} A(z,t) \\ q(z,t) \end{pmatrix} + \dfrac{\partial}{\partial z} \begin{pmatrix} q(z,t)\\ \dfrac{q(z,t)^2}{A(z,t)} + f(r_0) \sqrt{A_0(z) A(z,t)} \end{pmatrix} =\\
-  &\begin{pmatrix} 0 \\ -\dfrac{2 \pi R(z,t)}{\delta_b \mathcal{Re}} \dfrac{q(z,t)}{A(z,t)} +\left( 2 \sqrt{A(z,t)} \left( \sqrt{\pi} f(r_0) + \sqrt{A_0(z)} \frac{df(r_0)}{dr_0 } \right) - A(z,t) \dfrac{df(r_0)}{dr_0} \right) \dfrac{dr_0(z)}{dz} \end{pmatrix}.
+  &\begin{pmatrix} 0 \\ -\dfrac{2 \pi R(z,t)}{\delta_b \mathcal{Re}} \dfrac{q(z,t)}{A(z,t)} +\left( 2 \sqrt{A(z,t)} \left( \sqrt{\pi} f(r_0) + \sqrt{A_0(z)} \frac{df(r_0)}{dr_0 } \right) - A(z,t) \dfrac{df(r_0)}{dr_0} \right) \dfrac{dr_0(z)}{dz} \end{pmatrix},
   \end{split}
+
+which is a conservation system of equations.
+
+.. math::
+  \dfrac{\partial}{\partial t} \boldsymbol{U} + \dfrac{\partial}{\partial z} \boldsymbol{F} =
+  \boldsymbol{S}.
+
+The terms of the governing equations are hence implemented in terms of the vectors :math:`\boldsymbol{U}, \boldsymbol{F}, \boldsymbol{S}` in :meth:`arteryfe.ArteryNetwork.flux`::
+
+  def flux(self, a, U, x):
+    return np.array([U[1], U[1]**2 + a.f(x)*np.sqrt(a.A0(x)*U[0])])
+
+and :meth:`arteryfe.ArteryNetwork.source`::
+
+  def source(self, a, U, x):
+    S1 = 0
+    S2 = -2*np.sqrt(np.pi)/a.db/a.Re*U[1]/np.sqrt(U[0])\
+        + (2*np.sqrt(U[0])*(np.sqrt(np.pi)*a.f(x)\
+                            +np.sqrt(a.A0(x))*a.dfdr(x))\
+           -U[0]*a.dfdr(x))*a.drdx(x)
+    return np.array([S1, S2])
 
 The variational form is implemented in :meth:`arteryfe.Artery.define_solution` as::
 
