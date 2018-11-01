@@ -5,6 +5,9 @@ Blood flow dynamics in 1D
 
 artery.fe implements the 1D system of equations derived by [Olufsen:2000] that is commonly used to numerically model blood flow dynamics. Its derivation is provided here for the mathematically interested reader and for completeness.
 
+Governing equations
+-------------------
+
 Arteries are modelled as axisymmetric tubes in a cylindrical coordinate system with radial direction *r* and axial direction *z*. Therefore, the continuity equation is
 
 .. math::
@@ -226,7 +229,118 @@ Variable                          Physical meaning
 The resulting dimensionless system of equations is
 
 .. math::
+
   \begin{split}
   &\dfrac{\partial}{\partial t} \begin{pmatrix} A(z,t) \\ q(z,t) \end{pmatrix} + \dfrac{\partial}{\partial z} \begin{pmatrix} q(z,t)\\ \dfrac{q(z,t)^2}{A(z,t)} + f(r_0) \sqrt{A_0(z) A(z,t)} \end{pmatrix} =\\
   &\begin{pmatrix} 0 \\ -\dfrac{2 \pi R(z,t)}{\delta_b \mathcal{Re}} \dfrac{q(z,t)}{A(z,t)} +\left( 2 \sqrt{A(z,t)} \left( \sqrt{\pi} f(r_0) + \sqrt{A_0(z)} \frac{df(r_0)}{dr_0 } \right) - A(z,t) \dfrac{df(r_0)}{dr_0} \right) \dfrac{dr_0(z)}{dz} \end{pmatrix}. \qquad (17)
   \end{split}
+
+Boundary conditions
+-------------------
+
+Boundary conditions are applied at both ends of each vessel and are either an inlet, outlet or bifurcation condition.
+
+Inlet
+^^^^^
+
+The inlet boundary condition only used at the inlet of the parent vessel. For a given :math:`q_0^{n+1}` :math:`A_0^{n+1}` is calculated as
+
+.. math::
+
+  A_0^{n+1} = A_0^n - \frac{\Delta t}{\Delta z} \left( q_{1/2}^{n+1/2} - q_{-1/2}^{n+1/2} \right), \qquad (18)
+
+where :math:`q_{-1/2}^{n+1/2}` can be evaluated using
+
+.. math::
+
+  q_0^{n+1/2} = (q_{1/2}^{n+1/2} + q_{-1/2}^{n+1/2})/2 \qquad (19)
+
+with :math:`q_0^{n+1/2}` evaluated directly from the inlet flux function and :math:`q_{1/2}^{n+1/2}`, evaluated from the Lax-Wendroff approximation
+
+.. math::
+
+  \boldsymbol{U}_j^{n+1/2} = \frac{\boldsymbol{U}_{j+1/2}^n + \boldsymbol{U}_{j-1/2}^n}{2} + \frac{\Delta t}{2} \left( - \frac{\boldsymbol{F}_{j+1/2}^n - \boldsymbol{F}_{j-1/2}^n}{\Delta z} + \frac{\boldsymbol{S}_{j+1/2}^n + \boldsymbol{S}_{j-1/2}^n}{2} \right) \qquad (20)
+
+The outlet boundary condition is a three-element Windkessel (3WK), which is given by
+
+.. math::
+
+  \frac{\partial p(z,t)}{\partial t} = R_1 \frac{\partial q(z,t)}{\partial t} - \frac{p(z,t)}{R_2 C_T} + \frac{q(z,t) (R_1 + R_2)}{R_2 C_T}
+
+and discretisation yields
+
+.. math::
+
+  \frac{p_m^{n+1} - p_m^n}{\Delta t} = R_1 \frac{q_m^{n+1} - q_m^n}{\Delta t} - \frac{p_m^n}{R_2 C_T} + \frac{q_m^n (R_1 + R_2)}{R_2 C_T}, \qquad (21)
+
+which is used as the outlet boundary condition. Solutions for :math:`A_m^{n+1}` and the discretised state equation
+
+.. math::
+
+  p_m^{n+1} = \frac{4}{3} \frac{E h}{(r_0)_m} \left( 1 - \sqrt{\frac{(A_0)_m}{A_m^{n+1}}} \right)
+
+are found using an iterative scheme, starting with an initial guess for :math:`p_m^{n+1}`. Then, :math:`q_m^{n+1}` can be evaluated using (21). Using
+
+.. math::
+
+  A_m^{n+1} = A_m^n - \frac{\Delta t}{\Delta z} \left( q_{m+1/2}^{n+1/2} - q_{m-1/2}^{n+1/2} \right)
+
+the next iteration of :math:`p_m^{n+1}` can then be calculated until the difference between two iterations has dropped below a threshold value.
+
+Bifurcation
+^^^^^^^^^^^
+
+Lastly, bifurcation boundary conditions apply between a parent vessel p and two daughter vessels d1 and d2. Conservation of flow implies
+
+.. math::
+
+  \left( q^{(p)} \right)_M^n = \left( q^{(d1)} \right)_0^n + \left( q^{(d2)} \right)_0^n \qquad (22)
+
+and continuity of pressure yields
+
+.. math::
+
+  \left( p^{(p)} \right)_M^n = \left( p^{(d1)} \right)_0^n = \left( p^{(d2)} \right)_0^n. \qquad (23)
+
+Written in terms of A (23) becomes
+
+.. math::
+
+  \left( f^{(p)} \right)_M \left( 1 - \sqrt{\frac{\left( A_0^{(p)} \right)_M}{\left( A^{(p)} \right)_M^n}} \right) = \left( f^{(d1)} \right)_0 \left( 1 - \sqrt{\frac{\left( A_0^{(d1)} \right)_0}{\left( A^{(d1)} \right)_0^n}} \right), \qquad (24)\\
+  \left( f^{(p)} \right)_M \left( 1 - \sqrt{\frac{\left( A_0^{(p)} \right)_M}{\left( A^{(p)} \right)_M^n}} \right) = \left( f^{(d2)} \right)_0 \left( 1 - \sqrt{\frac{\left( A_0^{(d2)} \right)_0}{\left( A^{(d2)} \right)_0^n}} \right). \qquad (25)
+
+On both sides of the boundary q and A are calculated from the Lax-Wendroff discretisation
+
+.. math::
+
+  \left( A^{(i)} \right)_{\mathcal{M}}^{n+1} = \left( A^{(i)} \right)_{\mathcal{M}}^n - \frac{\Delta t}{\Delta z} \left(\left( F_1^{(i)} \right)_{\mathcal{M}+1/2}^{n+1/2} - \left( F_1^{(i)} \right)_{\mathcal{M}-1/2}^{n+1/2} \right) \qquad (26)\\
+  \begin{split}
+  \left( q^{(i)} \right)_{\mathcal{M}}^{n+1} = \left( q^{(i)} \right)_{\mathcal{M}}^n - \frac{\Delta t}{\Delta z} \left(\left( F_2^{(i)} \right)_{\mathcal{M}+1/2}^{n+1/2} - \right.&\left. \left( F_2^{(i)} \right)_{\mathcal{M}-1/2}^{n+1/2} \right) +\\
+  &\frac{\Delta t}{2} \left(\left( S_2^{(i)} \right)_{\mathcal{M}+1/2}^{n+1/2} + \left( S_2^{(i)} \right)_{\mathcal{M}-1/2}^{n+1/2} \right), \qquad (27)
+  \end{split}
+
+where :math:`i = p, d1, d2` and :math:`\mathcal{M} = M` if :math:`i = p` and :math:`\mathcal{M} = 0` otherwise. Analogously to the inlet boundary condition the ghost points :math:`q_{M+1/2}^{n+1/2}` and :math:`A_{M+1/2}^{n+1/2}` can be evaluated from
+
+.. math:
+
+  q_M^{n+1/2} = \frac{q_{M-1/2}^{n+1/2} + q_{M+1/2}^{n+1/2}}{2}, \qquad (28)\\
+  A_M^{n+1/2} = \frac{A_{M-1/2}^{n+1/2} + A_{M+1/2}^{n+1/2}}{2}. \qquad (29)
+
+(22)--(29) defines a system of eighteen equations for eighteen unknowns
+
+.. math ::
+
+  x_1 = \left( q^{(p)} \right)_M^{n+1} \qquad x_2 = \left( q^{(p)} \right)_M^{n+1/2} \qquad x_3 = \left( q^{(p)} \right)_{M+1/2}^{n+1/2}\\
+  x_4 = \left( q^{(d1)} \right)_0^{n+1} \qquad x_5 = \left( q^{(d1)} \right)_0^{n+1/2} \qquad x_6 = \left( q^{(d1)} \right)_{-1/2}^{n+1/2}\\
+  x_7 = \left( q^{(d1)} \right)_0^{n+1} \qquad x_8 = \left( q^{(d1)} \right)_0^{n+1/2} \qquad x_9 = \left( q^{(d1)} \right)_{-1/2}^{n+1/2}\\
+  x_{10} = \left( A^{(p)} \right)_M^{n+1} \qquad x_{11} = \left( A^{(p)} \right)_M^{n+1/2} \qquad x_{12} = \left( A^{(p)} \right)_{M+1/2}^{n+1/2}\\
+  x_{13} = \left( A^{(d1)} \right)_0^{n+1} \qquad x_{14} = \left( A^{(d1)} \right)_0^{n+1/2} \qquad x_{15} = \left( A^{(d1)} \right)_{-1/2}^{n+1/2}\\
+  x_{16} = \left( A^{(d1)} \right)_0^{n+1} \qquad x_{17} = \left( A^{(d1)} \right)_0^{n+1/2} \qquad x_{18} = \left( A^{(d1)} \right)_{-1/2}^{n+1/2}.
+
+The system of equations can be solved using Newton's method
+
+.. math::
+
+  \boldsymbol{x}_{k+1} = \boldsymbol{x}_k - \left( \boldsymbol{J}(\boldsymbol{x}_k) \right)^{-1} \boldsymbol{f_J}(\boldsymbol{x}_k) \text{ for } k = 0, 1, 2, \ldots,
+
+where k indicates the current iteration, :math:`\boldsymbol{x} = (x_1, x_2, \ldots, x_{18})`, :math:`\boldsymbol{J}(\boldsymbol{x}_k)` is the Jacobian of the system of equations and :math:`\boldsymbol{f_J}(\boldsymbol{x})` are the residual equations.
