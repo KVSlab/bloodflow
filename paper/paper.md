@@ -9,10 +9,16 @@ tags:
 authors:
 - name: Syver D. Agdestein
   orcid: 0000-0002-1589-2916
+  affiliation: 1
 - name: Kristian Valen-Sendstad
+  affiliation: 1
 - name: Alexandra K. Diem
   orcid: 0000-0003-1719-1942
-date: 09 October 2018
+  affiliation: 1
+affiliations:
+- name: Department of Computational Physiology, Simula Research Laboratory
+  index: 1
+date: 06 November 2018
 bibliography: paper.bib
 ---
 
