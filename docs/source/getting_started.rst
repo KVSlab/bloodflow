@@ -22,7 +22,7 @@ To create and enter a Docker container run::
 
 Alternatively, artery.fe can be installed using the provided `setup.py` file by running::
 
-  $ python setup.py install
+  $ python3 setup.py install
 
 artery.fe requires FEniCS_ version 2017.2.0 or higher and Python 3.5 or higher
 
@@ -34,11 +34,11 @@ Running artery.fe
 
 The file ``run_from_config.py`` provides an example for running a simulation using artery.fe and reproduces the results presented in reference [Kolachalama:2007]::
 
-  $ python demo_arterybranch.py config/demo_arterybranch.cfg
+  $ python3 demo_arterybranch.py config/demo_arterybranch.cfg
 
 to run a simulation over four cardiac cycles, storing the output for the final cardiac cycle only. This automatically creates a directory inside the output directory, which has the same name as the .cfg file used in the simulation. All output is stored in this directory. Additionally, the simulation creates a file 'data.cfg' inside the output directory, which can be used to configure postprocessing and create figures from the output. To produce figures from the output use::
 
-  $ python postprocess.py output/4cycles_last/data.cfg
+  $ python3 postprocess.py output/4cycles_last/data.cfg
 
 This creates three directories area, flow, and pressure inside the output directory, which contain the corresponding figures.
 

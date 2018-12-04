@@ -18,7 +18,7 @@ To create and enter a Docker container run
 
 Alternatively, artery.fe can be installed using the provided ``setup.py`` file by running
 
-`python setup.py install`
+`python3 setup.py install`
 
 This requires FEniCS version 2017.2.0 or higher.
 
