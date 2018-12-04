@@ -662,7 +662,7 @@ def arterynetwork(param):
     order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0, R1, R2, CT,\
         Nt, Nx, T, N_cycles, output_location, theta, Nt_store,\
         N_cycles_store, store_area, store_pressure, q0, q_half = param
-    an = Artery_Network(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,
+    an = ArteryNetwork(order, rc, qc, Ru, Rd, L, k1, k2, k3, rho, Re, nu, p0,
                         R1, R2, CT)
     return an
 
