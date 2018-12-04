@@ -7,7 +7,7 @@ from configparser import SafeConfigParser
 import pytest
 
 import test_artery as ta
-from arteryfe.artery_network import Artery_Network
+from arteryfe.artery_network import ArteryNetwork
 from arteryfe.utils import *
 from arteryfe.utils import is_near as near
 
