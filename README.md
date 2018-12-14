@@ -22,6 +22,12 @@ Alternatively, artery.fe can be installed using the provided ``setup.py`` file b
 
 This requires FEniCS version 2017.2.0 or higher.
 
+## Usage
+
+The demo can be run using
+
+`python3 demo_arterybranch.py config/demo_arterybranch.cfg`
+
 ## License
 
 artery.fe is free software made available under the BSD 3-clause License. For details see the LICENSE file.
