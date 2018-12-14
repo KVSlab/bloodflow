@@ -28,6 +28,10 @@ The demo can be run using
 
 `python3 demo_arterybranch.py config/demo_arterybranch.cfg`
 
+## Support
+
+Active contributions and bug reports from users are welcome and encouraged. Should you experience any issues, please do not hesitate to contact @akdiem for advice.
+
 ## License
 
 artery.fe is free software made available under the BSD 3-clause License. For details see the LICENSE file.
