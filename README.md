@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/138987449.svg)](https://zenodo.org/badge/latestdoi/138987449)
+
 # artery.fe
 
 Implementation of the 1D blood flow equations in FEniCS.
