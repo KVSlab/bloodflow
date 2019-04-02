@@ -3,6 +3,13 @@ import numpy as np
 
 from dolfin import *
 
+# Compiler parameters
+flags = ["-O3", "-ffast-math", "-march=native"]
+parameters["form_compiler"]["quadrature_degree"] = 4
+parameters["form_compiler"]["representation"] = "uflacs"
+parameters["form_compiler"]["cpp_optimize"] = True
+parameters["form_compiler"]["cpp_optimize_flags"] = " ".join(flags)
+
 
 class Artery(object):
     """
@@ -222,7 +229,12 @@ class Artery(object):
         """
         F = self.variational_form
         J = derivative(F, self.U)
-        solve(F == 0, self.U, self.bcs, J=J)
+        prob = NonlinearVariationalProblem(F, self.U, self.bcs, J=J)
+        sol = NonlinearVariationalSolver(prob)
+        sol.parameters['newton_solver']['linear_solver'] = 'mumps'
+        sol.parameters['newton_solver']['lu_solver']['reuse_factorization'] = True
+        sol.parameters['newton_solver']['maximum_iterations'] = 1000
+        sol.solve()
 
 
     def update_solution(self):
