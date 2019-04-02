@@ -6,6 +6,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from configparser import SafeConfigParser
 from scipy.interpolate import interp1d
 
+comm = mpi_comm_world()
+
 
 def unit_to_mmHg(p):
     """
@@ -249,8 +251,11 @@ def XDMF_to_matrix(Nx, Nt, mesh_location, location, name):
     """
     print('Loading %s to matrix.' % (location))
     M = np.zeros([Nx+1, Nt])
-    f = XDMFFile(location)
-    mesh = Mesh(mesh_location)
+    f = XDMFFile(comm, location)
+    h = HDF5File(comm, mesh_location, 'r')
+    mesh = Mesh()
+    h.read(mesh, "/mesh", False)
+    h.close()
     V = FunctionSpace(mesh, 'CG', 1)
     u = Function(V)
     for n in range(Nt):

@@ -8,6 +8,8 @@ from dolfin import *
 from arteryfe.artery import Artery
 from arteryfe.utils import *
 
+comm = mpi_comm_world()
+
 
 class ArteryNetwork(object):
     """
@@ -681,8 +683,11 @@ class ArteryNetwork(object):
         # Assemble strings
         mesh_locations = ''
         for i in self.range_arteries:
-            mesh_location = self.output_location + '/mesh_%i.xml.gz' % (i)
-            File(mesh_location) << self.arteries[i].mesh  # Save mesh
+            mesh_location = self.output_location + '/mesh_%i.h5' % (i)
+            # Save mesh
+            f = HDF5File(comm, mesh_location, 'w')
+            f.write(self.arteries[i].mesh, "/mesh")
+            f.close()
             if i > 0:
                 mesh_locations += ','
             mesh_locations += mesh_location
