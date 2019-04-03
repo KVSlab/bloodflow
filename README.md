@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2383815.svg)](https://doi.org/10.5281/zenodo.2383815) [![DOI](http://joss.theoj.org/papers/10.21105/joss.01107/status.svg)](https://doi.org/10.21105/joss.01107)
+
 # artery.fe
 
 Implementation of the 1D blood flow equations in FEniCS.
@@ -21,6 +23,16 @@ Alternatively, artery.fe can be installed using the provided ``setup.py`` file b
 `python3 setup.py install`
 
 This requires FEniCS version 2017.2.0 or higher.
+
+## Usage
+
+The demo can be run using
+
+`python3 demo_arterybranch.py config/demo_arterybranch.cfg`
+
+## Support
+
+Active contributions and bug reports from users are welcome and encouraged. Should you experience any issues, please do not hesitate to contact @akdiem for advice.
 
 ## License
 
