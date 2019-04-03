@@ -8,7 +8,7 @@ from dolfin import *
 from arteryfe.artery import Artery
 from arteryfe.utils import *
 
-comm = mpi_comm_world()
+comm = mpi_comm_world().tompi4py()
 
 
 class ArteryNetwork(object):
@@ -258,7 +258,7 @@ class ArteryNetwork(object):
         return (U0+U1)/2 - a.dt/(x1-x0)*(F1-F0) + a.dt/4*(S0+S1)
 
 
-    def compute_A_out(self, a, k_max=100, tol=1.0e-12):
+    def windkessel(self, a, k_max=100, tol=1.0e-12):
         """
         Computes the area for artery a at the outlet
 
@@ -609,9 +609,11 @@ class ArteryNetwork(object):
         margin : float
             Margin of CFL number
         """
+        # p_q = p.Un.vector().gather_on_zero()
         Mp = p.CFL_term(p.L, p.Un(p.L)[0], p.Un(p.L)[1])
         M1 = d1.CFL_term(0, d1.Un(0)[0], d1.Un(0)[1])
         M2 = d2.CFL_term(0, d2.Un(0)[0], d2.Un(0)[1])
+        # from IPython import embed; embed()
 
         # dex is chosen to respect all three CFL-conditions
         p.dex = d1.dex = d2.dex = (1+margin)*self.dt/min([Mp, M1, M2])
@@ -661,7 +663,7 @@ class ArteryNetwork(object):
 
         # Update outlet boundary conditions
         for i in self.range_end_arteries:
-            self.arteries[i].A_out = self.compute_A_out(self.arteries[i])
+            self.arteries[i].A_out = self.windkessel(self.arteries[i])
 
 
     def dump_metadata(self, Nt_store, N_cycles_store, store_area,
@@ -685,7 +687,7 @@ class ArteryNetwork(object):
         for i in self.range_arteries:
             mesh_location = self.output_location + '/mesh_%i.h5' % (i)
             # Save mesh
-            f = HDF5File(comm, mesh_location, 'w')
+            f = HDF5File(mpi_comm_world(), mesh_location, 'w')
             f.write(self.arteries[i].mesh, "/mesh")
             f.close()
             if i > 0:
