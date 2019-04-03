@@ -1,15 +1,20 @@
 __author__ = "Alexandra Diem <alexandra@simula.no>"
 
 from configparser import SafeConfigParser
+import argparse
 import numpy as np
 
 
 class ParamParser(object):
 
-    def __init__(self, fparams):
-        self.fparams = fparams
+    def __init__(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--cfg")
+        args = parser.parse_args()
+        self.fparams = args.cfg
+
         try:
-            f = open(fparams, 'r')
+            f = open(self.fparams, 'r')
             data = f.read()
             f.close()
         except Exception as e:
@@ -30,66 +35,47 @@ class ParamParser(object):
         # Read parameters
         param = ParamParser.get_param_section(config)
 
-        # Read geometry tags section
-        geo = ParamParser.get_geo_section(config)
+        # Read geometry
+        geom = ParamParser.get_section(config, "Geometry")
 
-        # Read solution tags
-        solution = ParamParser.get_solution_section(config)
+        # Read solution parameters
+        sol = ParamParser.get_section(config, "Solution")
 
-        return param, geo, solution
+        return param, geom, sol
 
 
     @staticmethod
     def get_param_section(config):
         """
-        Get config file options from section.
+        Get config file options from section containing strings.
 
         :param config: ConfigParser object.
+        :param section: Name of the section to be read.
         """
         section = 'Parameters'
         options = config.items(section)
         section_dict = {}
         for key, value in options:
             if "," in value:
-                value = np.array([float(v) for v in value.split(',')])
-            elif key == 'order':
-                value = int(value)
+                value = np.array([float(val) for val in value.split(',')])
             else:
-                value = float(value)
+                value = eval(value)
             section_dict[key] = value
         return section_dict
 
 
     @staticmethod
-    def get_geo_section(config):
+    def get_section(config, section):
         """
-        Get config file options from section.
+        Get config file options from section containing strings.
 
         :param config: ConfigParser object.
         """
-        section = 'Geometry'
         options = config.items(section)
         section_dict = {}
         for key, value in options:
-            section_dict[key] = int(value)
-        return section_dict
-
-
-    @staticmethod
-    def get_solution_section(config):
-        """
-        Get config file options from section.
-
-        :param config: ConfigParser object.
-        """
-        section = 'Solution'
-        options = config.items(section)
-        section_dict = {}
-        for key, value in options:
-            if 'location' in key:
+            try:
+                section_dict[key] = eval(value)
+            except:
                 section_dict[key] = value
-            elif key == 'theta':
-                section_dict[key] = float(value)
-            else:
-                section_dict[key] = int(value)
         return section_dict

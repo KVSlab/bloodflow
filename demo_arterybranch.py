@@ -11,7 +11,7 @@ def main(config_location):
     Run the necessary functions to compute the solution.
     :param string config_location: Location of config file
     """
-    param = af.ParamParser(config_location)
+    param = af.ParamParser()
 
     # Constructor parameters
     order = param.param['order']
