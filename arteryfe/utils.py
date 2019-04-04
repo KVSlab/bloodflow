@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from configparser import SafeConfigParser
 from scipy.interpolate import interp1d
+import copy
 
 comm = mpi_comm_world()
 
@@ -43,8 +44,7 @@ def mmHg_to_unit(p):
     return 101325/76*p
 
 
-def nondimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3, rho,
-       nu, p0, R1, R2, CT, q_ins, T):
+def nondimensionalise_parameters(params):
     """
     Nondimensionalise parameters.
 
@@ -80,21 +80,26 @@ def nondimensionalise_parameters(rc, qc, Ru, Rd, L, k1, k2, k3, rho,
     return : tuple
         Tuple of dimensionless quantities, including Reynold's number
     """
-    Ru = Ru/rc
-    Rd = Rd/rc
-    L = L/rc
-    k1 = k1*rc**4/rho/qc**2
-    k2 = k2*rc
-    k3 = k3*rc**4/rho/qc**2
-    Re = qc/nu/rc
-    nu = nu*rc/qc
-    p0 = p0*rc**4/rho/qc**2
-    R1 = R1*rc**4/rho/qc
-    R2 = R2*rc**4/rho/qc
-    CT = CT*rho*qc**2/rc**7
-    q_ins = q_ins/qc
-    T = T*qc/rc**3
-    return Ru, Rd, L, k1, k2, k3, Re, nu, p0, R1, R2, CT, q_ins, T
+    param = params.param
+    sol = params.solution
+    geo = params.geo
+    nondim = copy.deepcopy(param)
+    rc = param['rc']
+    rho = param['rho']
+    qc = param['qc']
+    nondim['Ru'] = param['Ru']/rc
+    nondim['Rd'] = param['Rd']/rc
+    nondim['L'] = param['L']/rc
+    nondim['k1'] = param['k1']*rc**4/rho/qc**2
+    nondim['k2'] = param['k2']*rc
+    nondim['k3'] = param['k3']*rc**4/rho/qc**2
+    nondim['Re'] = param['qc']/param['nu']/rc
+    nondim['nu'] = param['nu']*rc/qc
+    nondim['p0'] = param['p0']*rc**4/rho/qc**2
+    nondim['R1'] = param['R1']*rc**4/rho/qc
+    nondim['R2'] = param['R2']*rc**4/rho/qc
+    nondim['CT'] = param['CT']*rho*qc**2/rc**7
+    return nondim
 
 
 def nondimensionalise(rc, qc, rho, x, nature):
@@ -215,7 +220,7 @@ def read_output(filename):
     Nt = config.getint('data', 'Nt')
     T0 = config.getfloat('data', 'T0')
     T = config.getfloat('data', 'T')
-    L = [float(f) for f in config.get('data', 'L').split(',')]
+    L = [float(f) for f in config.get('data', 'L').split()]
     rc = config.getfloat('data', 'rc')
     qc = config.getfloat('data', 'qc')
     rho = config.getfloat('data', 'rho')
