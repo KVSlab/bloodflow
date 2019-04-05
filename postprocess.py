@@ -20,18 +20,20 @@ def main(data_location):
 
         for j in range(2**order-1):
 
-            M = XDMF_to_matrix(Nx, Nt, mesh_locations[j],
-                '%s/%s_%i.xdmf' % (locations[i], name, j), name)
+            if L[j] > 0.0:
 
-            M = redimensionalise(rc, qc, rho, M, name)
+                M = XDMF_to_matrix(Nx, Nt, mesh_locations[j],
+                    '%s/%s_%i.xdmf' % (locations[i], name, j), name)
 
-            # Convert pressure units
-            if name == 'pressure':
-                M = unit_to_mmHg(M)
+                M = redimensionalise(rc, qc, rho, M, name)
 
-            x = np.linspace(0, L[j], Nx+1)
+                # Convert pressure units
+                if name == 'pressure':
+                    M = unit_to_mmHg(M)
 
-            plot_matrix(t, x, M, name, '%s/%s_%i.png' % (locations[i], name, j))
+                x = np.linspace(0, L[j], Nx+1)
+
+                plot_matrix(t, x, M, name, '%s/%s_%i.png' % (locations[i], name, j))
 
 
 if __name__ == '__main__':

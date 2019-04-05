@@ -20,10 +20,10 @@ class Artery(object):
     Arguments
     ---------
 
-    root_vessel : boolean
+    root : boolean
         True if the artery is a root vessel in the artery network (has no
         parent)
-    end_vessel : boolean
+    leaf : boolean
         True if the artery is a terminal vessel in the artery network (has no
         daughters)
     rc : float
@@ -53,9 +53,10 @@ class Artery(object):
     """
 
 
-    def __init__(self, i, root_vessel, end_vessel, T, param):
-        self.root_vessel = root_vessel
-        self.end_vessel = end_vessel
+    def __init__(self, i, root, leaf, T, param):
+        self.i = i
+        self.root = root
+        self.leaf = leaf
         self.T = T
         self.param = copy.deepcopy(param)
         self.param['Ru'] = param['Ru'][i]
@@ -163,7 +164,7 @@ class Artery(object):
             return on_boundary and near(x[0], L, bc_tol)
 
         # Inlet boundary conditions
-        if self.root_vessel:
+        if self.root:
             self._q_in = Expression('value', degree=0, value=self.q0)
             bc_inlet = DirichletBC(self.V2.sub(1), self._q_in, inlet_bdry)
         else:
@@ -172,7 +173,7 @@ class Artery(object):
             bc_inlet = DirichletBC(self.V2, self._U_in, inlet_bdry)
 
         # Outlet boundary conditions
-        if self.end_vessel:
+        if self.leaf:
             self._A_out = Expression('value', degree=0, value=self.A0(L))
             bc_outlet = DirichletBC(self.V2.sub(0), self._A_out, outlet_bdry)
         else:

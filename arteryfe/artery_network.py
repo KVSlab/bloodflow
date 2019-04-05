@@ -58,12 +58,11 @@ class ArteryNetwork(object):
         self.nondim = nondimensionalise_parameters(param)
         self.geo = param.geo
         self.sol = param.solution
+
         order = self.nondim['order']
-        self.arteries = [0] * (2**order-1)
-        self.range_arteries = range(2**order-1)
-        self.range_parent_arteries = range(2**(order-1)-1)
-        self.range_daughter_arteries = range(1, 2**order-1)
-        self.range_end_arteries = range(2**(order-1)-1, 2**order-1)
+        self.N = 2**order-1
+        self.arteries = [0] * self.N
+
         rc, qc, rho = self.nondim['rc'], self.nondim['qc'], self.nondim['rho']
         Nt = self.geo['Nt']
 
@@ -72,11 +71,37 @@ class ArteryNetwork(object):
         self.q_ins = self.q_ins/qc
         self.dt = self.T/Nt
 
-        for i in self.range_arteries:
-            root_vessel = (i==0)
-            end_vessel = (i in self.range_end_arteries)
-            self.arteries[i] = Artery(i, root_vessel, end_vessel, self.T,
-                                        self.nondim)
+        for i in range(self.N):
+            root = (i==0)
+            leaf = False
+            if self.nondim['Ru'][i] == 0:
+                self.arteries[i] = None
+            else:
+                self.arteries[i] = Artery(i, root, leaf, self.T, self.nondim)
+
+        self.range_parent_arteries = list(range(self.N))
+        self.range_daughter_arteries = list(range(self.N))
+        self.range_leaf_arteries = list(range(self.N))
+        for i in range(self.N):
+            if i == 0:
+                # root is neither daughter nor leaf
+                self.range_daughter_arteries.remove(i)
+                self.range_leaf_arteries.remove(i)
+            elif self.arteries[i] is None:
+                # remove arteries that don't exist from lists
+                self.range_parent_arteries.remove(i)
+                self.range_daughter_arteries.remove(i)
+                self.range_leaf_arteries.remove(i)
+            else:
+                # Test if artery is parent
+                d1, d2 = self.daughter_arteries(i)
+                if d1 is None and d2 is None:
+                    self.range_parent_arteries.remove(i)
+                    self.arteries[i].leaf = True
+                # If artery is parent it's not a leaf
+                else:
+                    self.range_leaf_arteries.remove(i)
+                    self.arteries[i].leaf = False
 
         self.define_geometry()
         self.define_solution()
@@ -96,7 +121,13 @@ class ArteryNetwork(object):
         return : int
             Daughter artery indices
         """
-        return 2*i+1, 2*i+2
+        d1 = 2*i+1
+        d2 = 2*i+2
+        if d1 > self.N-1 or (d1 < self.N and self.arteries[d1] is None):
+            d1 = None
+        if d2 > self.N-1 or (d2 < self.N and self.arteries[d2] is None):
+            d2 = None
+        return d1, d2
 
 
     def parent_artery(self, i):
@@ -147,8 +178,9 @@ class ArteryNetwork(object):
         geo : dict
             Dictionary containing geometry parameters
         """
-        for i in self.range_arteries:
-            self.arteries[i].define_geometry(self.geo)
+        for artery in self.arteries:
+            if artery is not None:
+                artery.define_geometry(self.geo)
 
 
     def define_solution(self):
@@ -164,12 +196,13 @@ class ArteryNetwork(object):
         q0 = self.q_ins[0]
         self.arteries[0].define_solution(q0, theta)
         for i in self.range_daughter_arteries:
-            p = self.parent_artery(i)
-            s = self.sister_artery(i)
-            q0 = self.arteries[i].A0(0)/(self.arteries[i].A0(0)\
-                                        +self.arteries[s].A0(0))\
-               * self.arteries[p].q0
-            self.arteries[i].define_solution(q0, theta)
+            if self.arteries[i] is not None:
+                p = self.parent_artery(i)
+                s = self.sister_artery(i)
+                q0 = self.arteries[i].A0(0)/(self.arteries[i].A0(0)\
+                                            +self.arteries[s].A0(0))\
+                   * self.arteries[p].q0
+                self.arteries[i].define_solution(q0, theta)
 
         self.x = np.ones([len(self.range_parent_arteries), 18])
 
@@ -673,7 +706,7 @@ class ArteryNetwork(object):
             self.set_inner_bc(ip, i1, i2)
 
         # Update outlet boundary conditions
-        for i in self.range_end_arteries:
+        for i in self.range_leaf_arteries:
             self.arteries[i].A_out = self.windkessel(self.arteries[i])
 
 
@@ -695,19 +728,23 @@ class ArteryNetwork(object):
         # Assemble strings
         mesh_locations = ''
         output_location = self.sol['output_location']
-        for i in self.range_arteries:
-            mesh_location = output_location + '/mesh_%i.h5' % (i)
-            # Save mesh
-            f = HDF5File(mpi_comm_world(), mesh_location, 'w')
-            f.write(self.arteries[i].mesh, "/mesh")
-            f.close()
-            if i > 0:
-                mesh_locations += ','
-            mesh_locations += mesh_location
+        for artery in self.arteries:
+            if artery is not None:
+                i = artery.i
+                mesh_location = output_location + '/mesh_%i.h5' % (i)
+                # Save mesh
+                f = HDF5File(mpi_comm_world(), mesh_location, 'w')
+                f.write(artery.mesh, "/mesh")
+                f.close()
+                if i > 0:
+                    mesh_locations += ','
+                mesh_locations += mesh_location
         L = ''
         for artery in self.arteries[:-1]:
-            L += str(artery.param['L'])+','
-        L += str(self.arteries[-1].param['L'])
+            if artery is not None:
+                L += str(artery.param['L'])+','
+        if artery is not None:
+            L += str(self.arteries[-1].param['L'])
         names = ''
         locations = ''
         names += 'flow'
@@ -767,20 +804,22 @@ class ArteryNetwork(object):
         store_pressure = self.sol['store_pressure']
         output_location = self.sol['output_location']
         # Setup storage files
-        xdmffile_flow = [0] * len(self.range_arteries)
+        xdmffile_flow = [0] * self.N
         if store_area:
-            xdmffile_area = [0] * len(self.range_arteries)
+            xdmffile_area = [0] * self.N
         if store_pressure:
-            xdmffile_pressure = [0] * len(self.range_arteries)
-        for i in self.range_arteries:
-            xdmffile_flow[i] = XDMFFile('%s/flow/flow_%i.xdmf'\
-                                        % (output_location, i))
-            if store_area:
-                xdmffile_area[i] = XDMFFile('%s/area/area_%i.xdmf'\
+            xdmffile_pressure = [0] * self.N
+        for artery in self.arteries:
+            if artery is not None:
+                i = artery.i
+                xdmffile_flow[i] = XDMFFile('%s/flow/flow_%i.xdmf'\
                                             % (output_location, i))
-            if store_pressure:
-                xdmffile_pressure[i] = XDMFFile('%s/pressure/pressure_%i.xdmf'\
+                if store_area:
+                    xdmffile_area[i] = XDMFFile('%s/area/area_%i.xdmf'\
                                                 % (output_location, i))
+                if store_pressure:
+                    xdmffile_pressure[i] = XDMFFile('%s/pressure/pressure_%i.xdmf'\
+                                                    % (output_location, i))
 
         # Initialise time
         t = 0
@@ -803,27 +842,29 @@ class ArteryNetwork(object):
                 # Solve equation on each artery
                 for i, artery in enumerate(self.arteries):
 
-                    # Store solution at time t_n
-                    cycle_store = (n_cycle >= N_cycles-N_cycles_store)
+                    if artery is not None:
 
-                    if cycle_store and n % (Nt/Nt_store) == 0:
+                        # Store solution at time t_n
+                        cycle_store = (n_cycle >= N_cycles-N_cycles_store)
 
-                        # Split solution for storing, with deepcopy
-                        area, flow = artery.Un.split(True)
+                        if cycle_store and n % (Nt/Nt_store) == 0:
 
-                        write_file(xdmffile_flow[i], flow, 'flow', t)
+                            # Split solution for storing, with deepcopy
+                            area, flow = artery.Un.split(True)
 
-                        if store_area:
-                            write_file(xdmffile_area[i], area, 'area', t)
+                            write_file(xdmffile_flow[i], flow, 'flow', t)
 
-                        if store_pressure:
-                            artery.update_pressure()
-                            write_file(xdmffile_pressure[i], artery.pn, 'pressure', t)
+                            if store_area:
+                                write_file(xdmffile_area[i], area, 'area', t)
 
-                    # Solve problem on artery for time t_(n+1)
-                    artery.solve()
+                            if store_pressure:
+                                artery.update_pressure()
+                                write_file(xdmffile_pressure[i], artery.pn, 'pressure', t)
 
-                    # Update current solution on artery
-                    artery.update_solution()
+                        # Solve problem on artery for time t_(n+1)
+                        artery.solve()
+
+                        # Update current solution on artery
+                        artery.update_solution()
 
                 t += self.dt
