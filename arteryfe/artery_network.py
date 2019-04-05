@@ -55,6 +55,7 @@ class ArteryNetwork(object):
 
     def __init__(self, param):
         set_log_level(30)
+
         self.nondim = nondimensionalise_parameters(param)
         self.geo = param.geo
         self.sol = param.solution
@@ -70,6 +71,8 @@ class ArteryNetwork(object):
         self.T = self.T*qc/rc**3
         self.q_ins = self.q_ins/qc
         self.dt = self.T/Nt
+
+        self.check_geometry()
 
         for i in range(self.N):
             root = (i==0)
@@ -167,6 +170,30 @@ class ArteryNetwork(object):
             return i-1
         else:
             return i+1
+
+
+    def check_geometry(self):
+        order = self.nondim['order']
+        Ru = self.nondim['Ru']
+        Rd = self.nondim['Rd']
+        L = self.nondim['L']
+        R1 = self.nondim['R1']
+        R2 = self.nondim['R2']
+        CT = self.nondim['CT']
+        assert len(Ru) == self.N,\
+            "A network of order {} requires {} values for Ru, {} were provided".format(order, self.N, len(Ru))
+        assert len(Rd) == self.N,\
+            "A network of order {} requires {} values for Rd, {} were provided".format(order, self.N, len(Rd))
+        assert len(L) == self.N,\
+            "A network of order {} requires {} values for L, {} were provided".format(order, self.N, len(L))
+        if self.nondim['R1'] is list:
+            leaves = 2**(order-2)
+            assert len(R1) > leaves,\
+                "A network of order {} must have at least {} values for R1, {} were provided".format(order, leaves, len(R1))
+            assert len(R1) == len(R2),\
+                "R2 must have the same number of values as R1. {} != {}".format(len(R2), len(R1))
+            assert len(R1) == len(CT),\
+                "CT must have the same number of values as R1. {} != {}".format(len(CT), len(R1))
 
 
     def define_geometry(self):
