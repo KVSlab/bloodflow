@@ -53,7 +53,7 @@ class Artery(object):
     """
 
 
-    def __init__(self, i, root, leaf, T, param):
+    def __init__(self, i, T, param, root=False, leaf=False):
         self.i = i
         self.root = root
         self.leaf = leaf

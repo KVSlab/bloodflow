@@ -56,12 +56,21 @@ class ArteryNetwork(object):
     def __init__(self, param):
         set_log_level(30)
 
+        order = param.param['order']
+        self.N = 2**order-1
+
+        if 'alpha' in param.param.keys():
+            Ru, Rd, L = self.build_geometry(param.param['order'],
+                                param.param['Ru'], param.param['Rd'],
+                                param.param['alpha'], param.param['L'])
+            param.param['Ru'] = Ru
+            param.param['Rd'] = Rd
+            param.param['L'] = L
+
         self.nondim = nondimensionalise_parameters(param)
         self.geo = param.geo
         self.sol = param.solution
 
-        order = self.nondim['order']
-        self.N = 2**order-1
         self.arteries = [0] * self.N
 
         rc, qc, rho = self.nondim['rc'], self.nondim['qc'], self.nondim['rho']
@@ -80,7 +89,7 @@ class ArteryNetwork(object):
             if self.nondim['Ru'][i] == 0:
                 self.arteries[i] = None
             else:
-                self.arteries[i] = Artery(i, root, leaf, self.T, self.nondim)
+                self.arteries[i] = Artery(i, self.T, self.nondim)
 
         self.range_parent_arteries = list(range(self.N))
         self.range_daughter_arteries = list(range(self.N))
@@ -90,6 +99,7 @@ class ArteryNetwork(object):
                 # root is neither daughter nor leaf
                 self.range_daughter_arteries.remove(i)
                 self.range_leaf_arteries.remove(i)
+                self.arteries[i].root = True
             elif self.arteries[i] is None:
                 # remove arteries that don't exist from lists
                 self.range_parent_arteries.remove(i)
@@ -105,6 +115,14 @@ class ArteryNetwork(object):
                 else:
                     self.range_leaf_arteries.remove(i)
                     self.arteries[i].leaf = False
+
+        # assign leaf boundary condition values
+        j = 0
+        for i in self.range_leaf_arteries:
+            self.arteries[i].param['R1'] = self.nondim['R1'][j]
+            self.arteries[i].param['R2'] = self.nondim['R2'][j]
+            self.arteries[i].param['CT'] = self.nondim['CT'][j]
+            j += 1
 
         self.define_geometry()
         self.define_solution()
@@ -126,9 +144,9 @@ class ArteryNetwork(object):
         """
         d1 = 2*i+1
         d2 = 2*i+2
-        if d1 > self.N-1 or (d1 < self.N and self.arteries[d1] is None):
+        if d1 > self.N-1 or self.arteries[d1] is None:
             d1 = None
-        if d2 > self.N-1 or (d2 < self.N and self.arteries[d2] is None):
+        if d2 > self.N-1 or self.arteries[d2] is None:
             d2 = None
         return d1, d2
 
@@ -172,6 +190,26 @@ class ArteryNetwork(object):
             return i+1
 
 
+    def build_geometry(self, order, Ru, Rd, alpha, L):
+        j = 0 # contains first artery ID on current level
+        k = 0
+        Ll = np.zeros(self.N)
+        Ll[0] = L * Ru[0]
+        for level in range(order):
+            for p in range(j, k):
+                d1 = 2*p+1
+                d2 = 2*p+2
+                Ru[d1] = alpha * Ru[p]
+                Ru[d2] = max(0, alpha * Ru[p] - 0.01)
+                Rd[d1] = alpha * Rd[p]
+                Rd[d2] = max(0, alpha * Rd[p] - 0.01)
+                Ll[d1] = L * Ru[d1]
+                Ll[d2] = L * Ru[d2]
+            j += int(2**(level-1))
+            k += int(2**level)
+        return Ru, Rd, Ll
+
+
     def check_geometry(self):
         order = self.nondim['order']
         Ru = self.nondim['Ru']
@@ -193,7 +231,7 @@ class ArteryNetwork(object):
             assert len(R1) == len(R2),\
                 "R2 must have the same number of values as R1. {} != {}".format(len(R2), len(R1))
             assert len(R1) == len(CT),\
-                "CT must have the same number of values as R1. {} != {}".format(len(CT), len(R1))
+                "CT must have the same number of values as R1. {} != {}".format(len(CT), len(R2))
 
 
     def define_geometry(self):
@@ -360,9 +398,9 @@ class ArteryNetwork(object):
         # Fixed point iteration
         pn = a.compute_outlet_pressure(Um0[0])
         p = pn
-        R1 = self.nondim['R1']
-        R2 = self.nondim['R2']
-        CT = self.nondim['CT']
+        R1 = a.param['R1']
+        R2 = a.param['R2']
+        CT = a.param['CT']
         for k in range(k_max):
             p_old = p
             qm0 = Um0[1]\
