@@ -62,7 +62,8 @@ class ArteryNetwork(object):
         if 'alpha' in param.param.keys():
             Ru, Rd, L = self.build_geometry(param.param['order'],
                                 param.param['Ru'], param.param['Rd'],
-                                param.param['alpha'], param.param['L'])
+                                param.param['alpha'], param.param['L'],
+                                param.param['R_term'])
             param.param['Ru'] = Ru
             param.param['Rd'] = Rd
             param.param['L'] = L
@@ -119,10 +120,11 @@ class ArteryNetwork(object):
         # assign leaf boundary condition values
         j = 0
         for i in self.range_leaf_arteries:
-            self.arteries[i].param['R1'] = self.nondim['R1'][j]
-            self.arteries[i].param['R2'] = self.nondim['R2'][j]
-            self.arteries[i].param['CT'] = self.nondim['CT'][j]
-            j += 1
+            if self.arteries[i] != None:
+                self.arteries[i].param['R1'] = self.nondim['R1'][j]
+                self.arteries[i].param['R2'] = self.nondim['R2'][j]
+                self.arteries[i].param['CT'] = self.nondim['CT'][j]
+                j += 1
 
         self.define_geometry()
         self.define_solution()
@@ -190,7 +192,7 @@ class ArteryNetwork(object):
             return i+1
 
 
-    def build_geometry(self, order, Ru, Rd, alpha, L):
+    def build_geometry(self, order, Ru, Rd, alpha, L, R_term):
         j = 0 # contains first artery ID on current level
         k = 0
         Ll = np.zeros(self.N)
@@ -199,12 +201,17 @@ class ArteryNetwork(object):
             for p in range(j, k):
                 d1 = 2*p+1
                 d2 = 2*p+2
-                Ru[d1] = alpha * Ru[p]
-                Ru[d2] = max(0, alpha * Ru[p] - 0.01)
-                Rd[d1] = alpha * Rd[p]
-                Rd[d2] = max(0, alpha * Rd[p] - 0.01)
+                Ru[d1] = alpha * Ru[p] * Ru[d1]
+                Ru[d2] = max(0, alpha * Ru[p]) * Ru[d2]
+                # check if the daughters are leaves
+                if 2**(level+1)-1 < len(Rd):
+                    Rd[d1] = alpha * Rd[p] * Rd[d1]
+                    Rd[d2] = max(0, alpha * Rd[p]) * Rd[d2]
+                else:
+                    Rd[d1] = R_term
+                    Rd[d2] = R_term
                 Ll[d1] = L * Ru[d1]
-                Ll[d2] = L * Ru[d2]
+                Ll[d2] = L * Ru[d2] - 0.01
             j += int(2**(level-1))
             k += int(2**level)
         return Ru, Rd, Ll
@@ -398,8 +405,8 @@ class ArteryNetwork(object):
         # Fixed point iteration
         pn = a.compute_outlet_pressure(Um0[0])
         p = pn
-        R1 = a.param['R1']
-        R2 = a.param['R2']
+        R1 = a.param['R1']*0.3
+        R2 = a.param['R2']*0.01
         CT = a.param['CT']
         for k in range(k_max):
             p_old = p
@@ -461,7 +468,9 @@ class ArteryNetwork(object):
         for ip in self.range_parent_arteries:
             i1, i2 = self.daughter_arteries(ip)
             p, d1, d2 = self.arteries[ip], self.arteries[i1], self.arteries[i2]
-            self.x[ip] = self.initial_x(p, d1, d2)
+            # Map artery index to range_parent_arteries index
+            i = self.range_parent_arteries.index(ip)
+            self.x[i] = self.initial_x(p, d1, d2)
 
 
     def problem_function(self, p, d1, d2, x):
@@ -746,11 +755,13 @@ class ArteryNetwork(object):
 
         self.adjust_bifurcation_step(p, d1, d2)
 
-        self.x[ip] = self.newton(p, d1, d2, self.x[ip])
+        # Map artery index to range_parent_arteries index
+        i = self.range_parent_arteries.index(ip)
+        self.x[i] = self.newton(p, d1, d2, self.x[i])
 
-        p.U_out = [self.x[ip, 9], self.x[ip, 0]]
-        d1.U_in = [self.x[ip, 12], self.x[ip, 3]]
-        d2.U_in = [self.x[ip, 15], self.x[ip, 6]]
+        p.U_out = [self.x[i, 9], self.x[i, 0]]
+        d1.U_in = [self.x[i, 12], self.x[i, 3]]
+        d2.U_in = [self.x[i, 15], self.x[i, 6]]
 
 
     def set_bcs(self, q_in):

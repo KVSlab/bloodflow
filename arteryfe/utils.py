@@ -89,6 +89,7 @@ def nondimensionalise_parameters(params):
     qc = param['qc']
     nondim['Ru'] = param['Ru']/rc
     nondim['Rd'] = param['Rd']/rc
+    nondim['R_term'] = param['R_term']/rc
     nondim['L'] = param['L']/rc
     nondim['k1'] = param['k1']*rc**4/rho/qc**2
     nondim['k2'] = param['k2']*rc
@@ -96,6 +97,7 @@ def nondimensionalise_parameters(params):
     nondim['Re'] = param['qc']/param['nu']/rc
     nondim['nu'] = param['nu']*rc/qc
     nondim['p0'] = param['p0']*rc**4/rho/qc**2
+    nondim['p_term'] = param['p_term']*rc**4/rho/qc**2
     nondim['R1'] = param['R1']*rc**4/rho/qc
     nondim['R2'] = param['R2']*rc**4/rho/qc
     nondim['CT'] = param['CT']*rho*qc**2/rc**7

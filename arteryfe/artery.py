@@ -86,6 +86,7 @@ class Artery(object):
         L = self.param['L']
         Ru = self.param['Ru']
         Rd = self.param['Rd']
+        R_term = self.param['R_term']
         k1 = self.param['k1']
         k2 = self.param['k2']
         k3 = self.param['k3']
@@ -104,8 +105,10 @@ class Artery(object):
         self.V2 = FunctionSpace(self.mesh, self.elV*self.elV)
 
         # Initial vessel-radius and deduced quantities
+        if self.leaf and Rd == 1:
+            Rd = R_term
         self.r0 = Expression('Ru*pow(Rd/Ru, x[0]/L)',
-                             degree=2, Ru=Ru, Rd=Rd, L=L)
+                         degree=2, Ru=Ru, Rd=Rd, L=L)
         self.A0 = Expression('pi*pow(r0, 2)', degree=2, r0=self.r0)
         self.f = Expression('4.0/3.0*(k1*exp(k2*r0) + k3)', degree=2,
                             k1=k1, k2=k2, k3=k3, r0=self.r0)
@@ -149,6 +152,7 @@ class Artery(object):
 
         # Current solution, initialised
         self.Un = Function(self.V2)
+        self.Un.set_allow_extrapolation(True)
         self.Un.assign(Expression(('A0', 'q0'), degree=2,
                                   A0=self.A0, q0=self.q0))
 
