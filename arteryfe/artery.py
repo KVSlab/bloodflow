@@ -155,6 +155,7 @@ class Artery(object):
         self.Un.set_allow_extrapolation(True)
         self.Un.assign(Expression(('A0', 'q0'), degree=2,
                                   A0=self.A0, q0=self.q0))
+        self.U.assign(self.Un)
 
         # Current pressure, initialised
         self.pn = Function(self.V)
@@ -318,8 +319,10 @@ class Artery(object):
         return : float
             CFL number
         """
-        return 1/np.abs(q/A+np.sqrt(self.f(x)/2/self.param['rho']\
-                                   *np.sqrt(self.A0(x)/A)))
+        rho = self.param['rho']
+        denom_plus = q/A+np.sqrt(self.f(x)/2/rho*np.sqrt(self.A0(x)/A))
+        denom_minus = q/A-np.sqrt(self.f(x)/2/rho*np.sqrt(self.A0(x)/A))
+        return 1/max(abs(denom_plus), abs(denom_minus))
 
 
     def check_CFL(self, x, A, q):
